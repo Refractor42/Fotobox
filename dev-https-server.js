@@ -14,11 +14,38 @@ const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { parseEnv } = require('util');
 
 const selfsigned = require('selfsigned');
 
 const DIST_DIR = __dirname;
-const PORT = 8443;
+
+// ---- Environment ----
+// Load .env so the Supabase credentials live in one place. Variables that are
+// already set in the shell win, which keeps CI/overrides working.
+function loadEnvFile(file) {
+  let raw;
+  try {
+    raw = fs.readFileSync(file, 'utf8');
+  } catch {
+    return; // no .env: rely on the process environment
+  }
+  let parsed;
+  try {
+    parsed = parseEnv(raw);
+  } catch (err) {
+    console.warn('.env could not be parsed:', err.message);
+    return;
+  }
+  for (const [key, value] of Object.entries(parsed)) {
+    if (process.env[key] === undefined) process.env[key] = value;
+  }
+}
+
+loadEnvFile(path.join(DIST_DIR, '.env'));
+
+// PORT can be overridden (e.g. to run a second instance while another is up).
+const PORT = Number(process.env.PORT) || 8443;
 
 // Map file extensions to MIME types
 const MIME = {
@@ -47,16 +74,23 @@ const MIME = {
 // Each photo is stored as one object: photos/<timestamp>-<random>.jpg
 const PHOTO_PREFIX = 'photos/';
 
-function getSupabaseConfig() {
-  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET } = process.env;
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_BUCKET) {
-    throw new Error('SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY or SUPABASE_BUCKET is not set');
+function getSupabaseRestConfig() {
+  const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY } = process.env;
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+    throw new Error('SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set');
   }
   return {
     baseUrl: SUPABASE_URL.replace(/\/+$/, ''),
-    key: SUPABASE_SERVICE_ROLE_KEY,
-    bucket: SUPABASE_BUCKET
+    key: SUPABASE_SERVICE_ROLE_KEY
   };
+}
+
+function getSupabaseConfig() {
+  const { SUPABASE_BUCKET } = process.env;
+  if (!SUPABASE_BUCKET) {
+    throw new Error('SUPABASE_BUCKET is not set');
+  }
+  return { ...getSupabaseRestConfig(), bucket: SUPABASE_BUCKET };
 }
 
 // Calls the Supabase Storage API and throws on a non-2xx response.
@@ -74,6 +108,107 @@ async function supabaseFetch(cfg, url, options = {}) {
     throw new Error(`Supabase Storage ${res.status}: ${text}`);
   }
   return res;
+}
+
+// ---- Daily streaks (Supabase Postgres, REST API) ----
+// The streak belongs to the photobox as a whole: every device reads and writes
+// the single global row id = 1 in the profiles table.
+const PROFILE_TABLE = 'profiles';
+const GLOBAL_PROFILE_ID = '1';
+const STREAK_FIELDS = 'current_streak,highest_streak,last_photo_timestamp';
+const HOUR_MS = 60 * 60 * 1000;
+
+// Calls the Supabase PostgREST API and throws on a non-2xx response.
+async function restFetch(url, options = {}) {
+  const cfg = getSupabaseRestConfig();
+  const res = await fetch(`${cfg.baseUrl}/rest/v1${url}`, {
+    ...options,
+    headers: {
+      apikey: cfg.key,
+      Authorization: `Bearer ${cfg.key}`,
+      'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Supabase REST ${res.status}: ${text}`);
+  }
+  return res;
+}
+
+async function fetchProfile() {
+  const res = await restFetch(
+    `/${PROFILE_TABLE}?id=eq.${GLOBAL_PROFILE_ID}&select=${STREAK_FIELDS}`,
+    { method: 'GET' }
+  );
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+async function saveProfile(streak) {
+  const res = await restFetch(`/${PROFILE_TABLE}?on_conflict=id`, {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify([{ id: GLOBAL_PROFILE_ID, ...streak }])
+  });
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows[0] || null : null;
+}
+
+// Streak rules, evaluated when a photo is saved:
+//   no previous photo          -> streak starts at 1
+//   24h <= elapsed <= 48h      -> streak + 1
+//   elapsed < 24h              -> streak unchanged
+//   elapsed > 48h              -> streak resets to 1
+function computeStreak(previous, now = new Date()) {
+  const current = Number(previous && previous.current_streak) || 0;
+  const highest = Number(previous && previous.highest_streak) || 0;
+  const last = previous && previous.last_photo_timestamp
+    ? new Date(previous.last_photo_timestamp)
+    : null;
+  const timestamp = now.toISOString();
+
+  if (!last || Number.isNaN(last.getTime())) {
+    return { current_streak: 1, highest_streak: Math.max(1, highest), last_photo_timestamp: timestamp };
+  }
+
+  const elapsed = now.getTime() - last.getTime();
+
+  if (elapsed > 48 * HOUR_MS) {
+    return { current_streak: 1, highest_streak: Math.max(1, highest), last_photo_timestamp: timestamp };
+  }
+
+  if (elapsed >= 24 * HOUR_MS) {
+    const next = current + 1;
+    return {
+      current_streak: next,
+      highest_streak: Math.max(next, highest),
+      last_photo_timestamp: timestamp
+    };
+  }
+
+  // Same day: reposting a photo keeps the streak where it is.
+  return {
+    current_streak: current,
+    highest_streak: Math.max(current, highest),
+    last_photo_timestamp: timestamp
+  };
+}
+
+function pickStreak(row) {
+  return {
+    current_streak: Number(row && row.current_streak) || 0,
+    highest_streak: Number(row && row.highest_streak) || 0,
+    last_photo_timestamp: (row && row.last_photo_timestamp) || null
+  };
+}
+
+async function updateStreak() {
+  const previous = await fetchProfile();
+  const next = computeStreak(previous);
+  const saved = await saveProfile(next);
+  return pickStreak(saved || next);
 }
 
 function readBody(req, limit) {
@@ -100,6 +235,19 @@ function sendJson(res, status, body) {
     'Cache-Control': 'no-store'
   });
   res.end(JSON.stringify(body));
+}
+
+async function handleStreakApi(req, res) {
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  try {
+    const profile = await fetchProfile();
+    return sendJson(res, 200, pickStreak(profile));
+  } catch (err) {
+    console.error('Streak API error:', err.message);
+    return sendJson(res, 500, { error: 'Server error' });
+  }
 }
 
 async function handlePhotosApi(req, res) {
@@ -142,7 +290,16 @@ async function handlePhotosApi(req, res) {
         },
         body: Buffer.from(match[1], 'base64')
       });
-      return sendJson(res, 201, { id: key });
+
+      // The photo is stored, so advance the global streak. A streak failure
+      // must not report the upload as failed; the client skips the toast.
+      let streak = null;
+      try {
+        streak = await updateStreak();
+      } catch (err) {
+        console.warn('Streak could not be updated:', err.message);
+      }
+      return sendJson(res, 201, { id: key, streak });
     }
 
     return sendJson(res, 405, { error: 'Method not allowed' });
@@ -153,8 +310,12 @@ async function handlePhotosApi(req, res) {
 }
 
 const requestHandler = (req, res) => {
-  if (req.url.split('?')[0] === '/api/photos') {
+  const route = req.url.split('?')[0];
+  if (route === '/api/photos') {
     return handlePhotosApi(req, res);
+  }
+  if (route === '/api/streak') {
+    return handleStreakApi(req, res);
   }
 
   let urlPath = decodeURIComponent(req.url.split('?')[0]);

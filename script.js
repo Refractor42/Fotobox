@@ -24,6 +24,11 @@ const $permission    = document.getElementById('permission');
 const $galleryBadge  = document.getElementById('galleryBadge');
 const $discardBtn    = document.getElementById('discardBtn');
 const $galleryBtn    = document.getElementById('galleryBtn');
+const $filterCanvas  = document.getElementById('filterCanvas');
+const $filterBar     = document.getElementById('filterBar');
+const $streakPill    = document.getElementById('streakPill');
+const $streakCount   = document.getElementById('streakCount');
+const $toast         = document.getElementById('toast');
 
 const photos = [];
 
@@ -34,14 +39,49 @@ let photoCount = 0;
 let videoPlaying = false;
 let viewfinderVisible = false;
 let isCapturing = false;
+let currentStreak = 0;
+let lastPhotoTimestamp = null;
 
 // ============================================================
 //  CAMERA ACCESS
 // ============================================================
 let stream = null;
 
+// getUserMedia failures all look the same in the UI, so map the ones users can
+// actually act on to a concrete instruction.
+const CAMERA_ERROR_MESSAGES = {
+  NotAllowedError: 'Camera access is blocked for this site. Open the site controls next to the address bar, allow Camera, then try again.',
+  PermissionDeniedError: 'Camera access is blocked for this site. Open the site controls next to the address bar, allow Camera, then try again.',
+  NotFoundError: 'No camera was found on this device.',
+  DevicesNotFoundError: 'No camera was found on this device.',
+  NotReadableError: 'The camera is already in use by another app. Close it and try again.',
+  TrackStartError: 'The camera is already in use by another app. Close it and try again.',
+  OverconstrainedError: 'This camera does not support the requested video mode.',
+  SecurityError: 'Camera access needs a secure page. Open SnapBox over HTTPS and try again.'
+};
+
+function cameraErrorMessage(err) {
+  return (err && CAMERA_ERROR_MESSAGES[err.name]) || 'Camera access required for SnapBox';
+}
+
+// Browsers with strict autoplay policies (Brave blocks it by default) can hand
+// us a live stream that never starts playing, which looks like a dead camera.
+// Retry on the next tap instead of leaving the placeholder up forever.
+async function playVideo() {
+  try {
+    await $video.play();
+  } catch (err) {
+    console.warn('Camera preview could not start playing, waiting for a tap:', err);
+    document.addEventListener('pointerdown', function resume() {
+      document.removeEventListener('pointerdown', resume);
+      $video.play().catch(() => {});
+    }, { once: true });
+  }
+}
+
 async function initCamera() {
   $permission.classList.remove('visible');
+  if (filterEngine) filterEngine.start();
 
   // already have a stream (returning from gallery or re-entering)
   if (stream) {
@@ -51,10 +91,15 @@ async function initCamera() {
       $video.srcObject = stream;
     }
     $video.style.transform = 'scaleX(-1)';
-    $video.play().catch((e) => console.warn('video.play() failed:', e)); // resume playback
+    playVideo(); // resume playback
     gsap.set($placeholder, { opacity: 0 });
     showViewfinder();
     return true;
+  }
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    showPermissionPrompt('Camera access is unavailable on this page. Open SnapBox over HTTPS (or on localhost).');
+    return false;
   }
 
   try {
@@ -64,6 +109,9 @@ async function initCamera() {
     });
     $video.srcObject = stream;
     $video.classList.add('has-source');
+    // A camera-only stream is still autoplay media, so it must be muted for
+    // browsers that block autoplay.
+    $video.muted = true;
 
     // once video can play, hide placeholder and show viewfinder
     $video.onplaying = () => {
@@ -75,15 +123,18 @@ async function initCamera() {
     // mirror the video for a natural selfie feel
     $video.style.transform = 'scaleX(-1)';
 
+    playVideo();
     return true;
   } catch (err) {
-    console.warn('Camera access denied:', err.message);
-    showPermissionPrompt();
+    console.warn('Camera access failed:', err.name, err.message);
+    showPermissionPrompt(cameraErrorMessage(err));
     return false;
   }
 }
 
-function showPermissionPrompt() {
+function showPermissionPrompt(message) {
+  const text = $permission.querySelector('.permission__text');
+  if (text) text.textContent = message || 'Camera access required for SnapBox';
   $permission.classList.add('visible');
   gsap.from('.permission__content > *', {
     y: 20, opacity: 0, stagger: 0.1,
@@ -99,6 +150,53 @@ function stopCamera() {
 }
 
 // ============================================================
+//  FACE FILTERS
+// ============================================================
+// The engine itself lives in filters.js: it draws the mirrored preview frame
+// and can render the same scene at full sensor resolution for a photo.
+let filterEngine = null;
+try {
+  if (window.SnapBoxFilters && $filterCanvas) {
+    filterEngine = window.SnapBoxFilters.create({ video: $video, canvas: $filterCanvas });
+  }
+} catch (err) {
+  console.warn('Face filters could not start, camera will run without them:', err);
+}
+
+function initFilterBar() {
+  if (!filterEngine || !$filterBar || !window.SnapBoxFilters) return;
+
+  window.SnapBoxFilters.FILTERS.forEach((filter) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'filter-chip';
+    chip.dataset.filter = filter.id;
+    chip.setAttribute('aria-pressed', String(filter.id === filterEngine.getFilter()));
+    if (filter.id === filterEngine.getFilter()) chip.classList.add('is-active');
+
+    const emoji = document.createElement('span');
+    emoji.className = 'filter-chip__emoji';
+    emoji.setAttribute('aria-hidden', 'true');
+    emoji.textContent = filter.emoji;
+
+    const label = document.createElement('span');
+    label.textContent = filter.label;
+
+    chip.append(emoji, label);
+    chip.addEventListener('click', () => {
+      const active = filterEngine.setFilter(filter.id);
+      $filterBar.querySelectorAll('.filter-chip').forEach((el) => {
+        const isActive = el.dataset.filter === active;
+        el.classList.toggle('is-active', isActive);
+        el.setAttribute('aria-pressed', String(isActive));
+      });
+    });
+
+    $filterBar.appendChild(chip);
+  });
+}
+
+// ============================================================
 //  PHOTO CAPTURE (video frame snapshot)
 // ============================================================
 function captureFromVideo() {
@@ -110,7 +208,14 @@ function captureFromVideo() {
     canvas.height = h;
     const ctx = canvas.getContext('2d');
 
-    // mirror to match the displayed (flipped) video
+    // The filter engine draws the mirrored frame plus the active overlay, so
+    // saved photos match the preview.
+    if (filterEngine && filterEngine.drawCapture(ctx, w, h)) {
+      resolve(canvas.toDataURL('image/jpeg', 0.92));
+      return;
+    }
+
+    // Without the engine, fall back to the plain mirrored frame.
     ctx.save();
     ctx.scale(-1, 1);
     ctx.drawImage($video, -w, 0, w, h);
@@ -333,6 +438,59 @@ function resetCameraView() {
 
 
 // ============================================================
+//  DAILY STREAK
+// ============================================================
+// The streak is global: the server reads and writes the single Supabase row
+// id = 1, so every device shows the same counter. Nothing is kept in browser
+// storage — the database is the only source of truth.
+const STREAK_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function isPhotoTakenRecently(isoTimestamp) {
+  if (!isoTimestamp) return false;
+  const then = new Date(isoTimestamp).getTime();
+  if (Number.isNaN(then)) return false;
+  return Date.now() - then < STREAK_WINDOW_MS;
+}
+
+function renderStreak() {
+  const takenRecently = isPhotoTakenRecently(lastPhotoTimestamp);
+  $streakCount.textContent = String(currentStreak);
+  $streakPill.classList.add('visible');
+  $streakPill.classList.toggle('streak--active', takenRecently);
+  $streakPill.classList.toggle('streak--due', !takenRecently);
+  $streakPill.setAttribute(
+    'aria-label',
+    'Daily streak: ' + currentStreak + (currentStreak === 1 ? ' day, ' : ' days, ')
+      + (takenRecently ? 'photo taken in the last 24 hours' : 'no photo in the last 24 hours')
+  );
+}
+
+function applyStreak(streak) {
+  if (!streak) return;
+  currentStreak = Number(streak.current_streak) || 0;
+  lastPhotoTimestamp = streak.last_photo_timestamp || null;
+  renderStreak();
+}
+
+async function loadStreak() {
+  try {
+    const res = await fetch('/api/streak', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    applyStreak(await res.json());
+  } catch (err) {
+    console.warn('Streak could not be loaded:', err);
+  }
+}
+
+let toastTimer = null;
+function showToast(message) {
+  $toast.textContent = message;
+  $toast.classList.add('is-visible');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => $toast.classList.remove('is-visible'), 2400);
+}
+
+// ============================================================
 //  GALLERY MANAGEMENT
 // ============================================================
 let lightbox = null;
@@ -345,7 +503,11 @@ function savePhotoToServer(photoUrl) {
     body: JSON.stringify({ image: photoUrl })
   }).then((res) => {
     if (!res.ok) throw new Error('HTTP ' + res.status);
-  }).catch((err) => console.warn('Photo could not be saved to database:', err));
+    return res.json();
+  }).catch((err) => {
+    console.warn('Photo could not be saved to database:', err);
+    return null;
+  });
 }
 
 // Loads all stored photos from the database when the page starts.
@@ -360,7 +522,13 @@ function loadPhotosFromServer() {
 }
 
 function addToGallery(photoUrl, save = true) {
-  if (save) savePhotoToServer(photoUrl);
+  if (save) {
+    savePhotoToServer(photoUrl).then((saved) => {
+      if (!saved) return;
+      applyStreak(saved.streak);
+      showToast('Streak updated! 🔥');
+    });
+  }
 
   const card = document.createElement('div');
   card.className = 'gallery__card';
@@ -790,6 +958,8 @@ document.querySelectorAll('[data-action]').forEach((el) => {
 window.addEventListener('load', () => {
   animateSplashIn();
   loadPhotosFromServer();
+  loadStreak();
+  initFilterBar();
 
   // Fetch the shutter recording up front; it is decoded on the first gesture.
   preloadShutterSound();
