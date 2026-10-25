@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SnapBox — Minimalist Photobox</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Landing / Splash -->
+  <section class="splash" id="splash">
+    <div class="splash__bg">
+      <div class="splash__gradient"></div>
+    </div>
+    <div class="splash__content">
+      <h1 class="splash__title">SnapBox</h1>
+      <p class="splash__subtitle">Capture. Animate. Remember.</p>
+      <button class="btn btn--primary splash__cta" data-action="start">Start Photobox</button>
+    </div>
+  </section>
+
+  <!-- Camera -->
+  <section class="camera" id="camera">
+    <div class="camera__stage">
+      <div class="viewfinder">
+        <video class="camera__video" id="cameraVideo" autoplay playsinline></video>
+        <div class="viewfinder__frame">
+          <div class="viewfinder__corner viewfinder__corner--tl"></div>
+          <div class="viewfinder__corner viewfinder__corner--tr"></div>
+          <div class="viewfinder__corner viewfinder__corner--bl"></div>
+          <div class="viewfinder__corner viewfinder__corner--br"></div>
+        </div>
+        <div class="countdown" id="countdown">3</div>
+        <div class="flash" id="flash"></div>
+        <div class="camera__placeholder">
+          <svg class="camera__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 16v-4a4 4 0 0 0-4-4v0a4 4 0 0 0 4 4v0a4 4 0 0 0 4-4v0a4 4 0 0 0-4-4 4 4 0 1 0 0 8v0" />
+            <path d="M12 2v20M4 12h16" />
+          </svg>
+          <span class="camera__hint">Ready to capture</span>
+        </div>
+        <div class="processing" id="processing" aria-hidden="true">
+          <div class="processing__bar">
+            <div class="processing__fill" id="processingFill"></div>
+          </div>
+          <span class="processing__label">Processing photo…</span>
+        </div>
+        <div class="permission" id="permission">
+          <div class="permission__content">
+            <svg class="permission__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <p class="permission__text">Camera access required for SnapBox</p>
+            <button class="btn btn--primary" data-action="retry-camera">Allow Camera</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="camera__controls">
+      <button class="btn btn--ghost camera__btn" data-action="gallery" id="galleryBtn">
+        <span class="btn__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2v8a2 2 0 002 2h12a2 2 0 002-2V10l2 2"></path><path d="M5 10V5a2 2 0 012-2h10a2 2 0 012 2v5"></path></svg>
+        </span>
+        Gallery
+        <span class="btn__badge" id="galleryBadge">0</span>
+      </button>
+
+      <button class="btn btn--capture" id="captureBtn" data-action="capture">
+        <span class="btn__inner"></span>
+      </button>
+
+      <button class="btn btn--ghost camera__btn" data-action="back-drop" id="discardBtn">
+        Discard
+      </button>
+    </div>
+  </section>
+
+  <!-- Gallery -->
+  <section class="gallery" id="gallery">
+    <div class="gallery__header">
+      <button class="btn btn--ghost gallery__back" data-action="back-camera">
+        <span class="btn__icon btn__icon--left">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
+        </span>
+        Back
+      </button>
+      <h2 class="gallery__title">Your Photos</h2>
+      <div style="width:48px;"></div>
+    </div>
+    <div class="gallery__grid" id="galleryGrid"></div>
+    <div class="gallery__empty" id="galleryEmpty">
+      <svg class="gallery__empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="2" y="3" width="20" height="18" rx="2.75" ry="2.75"></rect>
+        <circle cx="8.5" cy="7.5" r="1.5"></circle>
+        <path d="M21 15l-5-5-5 5"></path>
+      </svg>
+      <p>No photos yet. Capture your first memory!</p>
+    </div>
+  </section>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

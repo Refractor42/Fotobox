@@ -1,0 +1,12 @@
+{
+  "name": "snapbox-dev-server",
+  "version": "1.0.0",
+  "description": "HTTPS dev server for SnapBox (enables camera access on any device via IP)",
+  "scripts": {
+    "start": "node dev-https-server.js",
+    "dev": "node dev-https-server.js"
+  },
+  "dependencies": {
+    "selfsigned": "^5.5.0"
+  }
+}
