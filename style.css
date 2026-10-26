@@ -2,6 +2,7 @@
    DESIGN TOKENS
    ============================================================ */
 :root {
+  color-scheme: dark; /* native Dropdowns/Scrollbars dunkel rendern */
   --c-bg:        #0d0d0d;
   --c-surface:   rgba(255, 255, 255, 0.045);
   --c-surface-2: rgba(255, 255, 255, 0.075);
@@ -207,19 +208,32 @@ section.active { display: block; opacity: 1; }
   font-weight: 400;
 }
 
+/* pulsierender Ring als Affordance — nur Box-Shadow, damit die GSAP-
+   Entrance (transform) der .splash__cta nicht kollidiert */
+.splash__cta { animation: ctaPulse 2.4s var(--ease-out) infinite; }
+@keyframes ctaPulse {
+  0%        { box-shadow: 0 0 0 0 rgba(255 215 0 / 0.4); }
+  70%, 100% { box-shadow: 0 0 0 18px rgba(255 215 0 / 0); }
+}
+
 
 /* ============================================================
    CAMERA
    ============================================================ */
-.camera { position: relative; padding-top: 3.5rem; }
+.camera { position: relative; }
+/* Kamera-Ansicht unten ohne Innenabstand, damit alles in die Fensterhöhe passt */
+#camera { padding-bottom: 0; }
 .camera__stage {
   position: relative;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
   margin: 0 auto 1.75rem;
   background: #000;
   border-radius: var(--radius);
   overflow: hidden;
   aspect-ratio: 3 / 4;
+  /* Höhe folgt dem Fenster, mindestens 320px; die Breite ergibt sich aus dem Seitenverhältnis */
+  height: clamp(320px, calc(100dvh - 22rem), 720px);
   box-shadow: 0 24px 64px rgba(0 0 0 / 0.55), inset 0 0 0 1px rgba(255 255 255 / 0.06);
 }
 
@@ -245,16 +259,6 @@ section.active { display: block; opacity: 1; }
 }
 .camera__video.has-source {
   opacity: 1;
-}
-
-/* filter canvas paints the mirrored frame plus overlays on top of the video */
-.filter-canvas {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
 }
 
 /* layer ordering */
@@ -394,6 +398,179 @@ section.active { display: block; opacity: 1; }
   letter-spacing: -0.005em;
 }
 
+/* Sound an/aus — schwebend über dem Livebild */
+.camera__sound {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 6;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(10 10 10 / 0.5);
+  border: 1px solid rgba(255 255 255 / 0.15);
+  color: var(--c-text-2);
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: color var(--transition), background var(--transition), border-color var(--transition);
+}
+.camera__sound:hover { color: var(--c-text); background: rgba(10 10 10 / 0.7); }
+.camera__sound svg { width: 1.15rem; height: 1.15rem; }
+.camera__sound:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
+
+/* Review-Phase: Behalten / Neu aufnehmen direkt nach der Aufnahme */
+.review {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 6;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  background: rgba(10 10 10 / 0.72);
+  border: 1px solid rgba(255 255 255 / 0.12);
+  border-radius: var(--radius);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+.review__title { font-size: 0.95rem; text-align: center; }
+.review__hint { font-size: 0.75rem; color: var(--c-text-2); text-align: center; margin-top: -0.35rem; }
+/* QR-Link als sekundärer Button, gleiche Form wie die übrigen Aktionen */
+.review__qr {
+  align-self: stretch;
+  padding: 0.45rem 1rem;
+  font-size: 0.85rem;
+}
+.review__stickers {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(255 255 255 / 0.05);
+  border-radius: var(--radius-sm);
+}
+.sticker-pick {
+  width: 52px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid rgba(255 255 255 / 0.1);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  padding: 2px;
+  transition: border-color var(--transition), background var(--transition), transform 0.15s ease;
+}
+.sticker-pick:hover { border-color: rgba(255 215 0 / 0.5); background: rgba(255 215 0 / 0.08); }
+.sticker-pick:active { transform: scale(0.92); }
+.sticker-pick svg { width: 100%; height: 100%; max-height: 34px; }
+.sticker-pick:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
+.review__actions { display: flex; gap: 0.6rem; }
+.review__btn { flex: 1; }
+@media (max-width: 360px) {
+  .review__actions { flex-direction: column; }
+}
+
+/* Countdown-Dauer (Selbstauslöser) — sichtbare Auswahl statt versteckter Einstellung */
+.timer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: -0.75rem auto 0.9rem;
+}
+/* Gruppe: Beschriftung über den Chips, im normalen Fluss (kein Überlappen) */
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 auto 0.9rem;
+}
+.filter-group > .timer { margin: 0; }
+.timer__caption {
+  margin: 0;
+  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--c-text-2);
+}
+/* zweite Leiste (Filter) sitzt dichter unter der ersten */
+.timer--filters { margin-top: -0.6rem; }
+.timer__chip {
+  border: 1px solid rgba(255 255 255 / 0.12);
+  background: transparent;
+  color: var(--c-text-2);
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+  letter-spacing: -0.01em;
+  transition: color var(--transition), background var(--transition), border-color var(--transition);
+}
+.timer__chip:hover { color: var(--c-text); background: var(--c-surface); }
+.timer__chip:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
+.timer__chip.is-selected {
+  background: rgba(255 215 0 / 0.14);
+  border-color: rgba(255 215 0 / 0.45);
+  color: var(--c-accent);
+}
+.timer.is-locked { opacity: 0.35; pointer-events: none; }
+
+/* während der Aufnahmesequenz gesperrte Steuerbuttons */
+.camera__controls .btn.is-locked {
+  opacity: 0.35 !important;
+  pointer-events: none !important;
+}
+
+/* Sticker-Overlays auf dem Review-Foto (Direkte Manipulation) */
+.sticker {
+  position: absolute;
+  z-index: 8;
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.sticker:active { cursor: grabbing; }
+.sticker img { display: block; width: 100%; height: 100%; pointer-events: none; }
+.sticker.is-selected { outline: 2px dashed rgba(255 215 0 / 0.9); outline-offset: 4px; border-radius: 6px; }
+.sticker__ctrl {
+  position: absolute;
+  top: -34px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  z-index: 9;
+}
+.sticker__ctrl button {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid rgba(255 255 255 / 0.25);
+  background: rgba(10 10 10 / 0.85);
+  color: var(--c-text);
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+.sticker__ctrl button:hover { background: rgba(255 215 0 / 0.25); }
+
 /* processing overlay */
 .processing {
   position: absolute;
@@ -448,8 +625,11 @@ section.active { display: block; opacity: 1; }
 
 .camera__controls > .btn--ghost {
   min-width: 0;
+  height: 44px;
+  padding-block: 0;
   padding-inline: 1rem;
   justify-self: start;
+  align-self: center;
 }
 
 /* The photo counter is pinned to the pill's corner instead of taking its own
@@ -466,15 +646,17 @@ section.active { display: block; opacity: 1; }
   box-shadow: 0 0 0 3px var(--c-bg);
 }
 
-.camera__controls > .btn--ghost:last-child {
-  justify-self: end;
+/* the side buttons share one height and sit on the shutter's centre line */
+.camera__controls > .btn--ghost,
+.camera__controls > .btn--capture {
+  align-self: center;
 }
 
 
 /* ============================================================
    GALLERY
    ============================================================ */
-.gallery { position: relative; padding-top: 3.5rem; }
+.gallery { position: relative; }
 .gallery__header {
   display: flex;
   align-items: center;
@@ -484,6 +666,12 @@ section.active { display: block; opacity: 1; }
 .gallery__title {
   font-size: 1.25rem;
   font-weight: 600;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .gallery__back {
   padding: 0.5rem 1.1rem;
@@ -545,6 +733,27 @@ section.active { display: block; opacity: 1; }
 }
 .gallery__card:hover::after { opacity: 1; }
 
+/* delete button on a gallery card */
+.gallery__delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 1;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0 0 0 / 0.6);
+  color: var(--c-text);
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.gallery__delete:hover { background: rgba(220 38 38 / 0.9); }
+
 /* btn badge (photo count) */
 .btn__badge {
   display: inline-flex;
@@ -563,23 +772,6 @@ section.active { display: block; opacity: 1; }
   top: -2px;
 }
 
-/* discard button — visually muted when inactive */
-#discardBtn {
-  opacity: 0.3;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-#discardBtn.active {
-  opacity: 1;
-  cursor: pointer;
-  pointer-events: auto;
-  animation: pulse 2s ease-in-out infinite;
-}
-@keyframes pulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255 215 0 / 0.3); }
-  50% { box-shadow: 0 0 0 8px rgba(255 215 0 / 0); }
-}
-
 /* gallery badge pulse when new photo added */
 .btn__badge.has-new {
   animation: badgePop 0.6s ease;
@@ -591,154 +783,292 @@ section.active { display: block; opacity: 1; }
 }
 
 /* ============================================================
-   FACE FILTER BAR
+   FEEDBACK: toasts (status messages, undo)
    ============================================================ */
-.filters {
-  display: flex;
-  gap: 0.5rem;
-  margin: -0.75rem 0 -0.25rem;
-  padding: 0.125rem 0.125rem 0.375rem;
-  overflow-x: auto;
-  scrollbar-width: none;
-  -webkit-overflow-scrolling: touch;
-}
-.filters::-webkit-scrollbar { display: none; }
+[hidden] { display: none !important; }
 
-.filter-chip {
-  flex: 0 0 auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.55rem 0.9rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-  white-space: nowrap;
-  color: var(--c-text-2);
-  background: var(--c-surface);
-  border: 1px solid rgba(255 255 255 / 0.1);
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: background var(--transition), color var(--transition),
-              border-color var(--transition), transform 0.2s ease;
-}
-.filter-chip:hover {
-  color: var(--c-text);
-  border-color: rgba(255 255 255 / 0.2);
-  transform: translateY(-1px);
-}
-.filter-chip:focus-visible {
-  outline: none;
-  box-shadow: 0 0 0 3px rgba(255 215 0 / 0.4);
-}
-.filter-chip.is-active {
-  color: var(--c-bg);
-  background: var(--c-accent);
-  border-color: var(--c-accent);
-  box-shadow: 0 6px 18px rgba(255 215 0 / 0.28);
-}
-.filter-chip__emoji {
-  font-size: 1rem;
-  line-height: 1;
-}
-
-/* ============================================================
-   DAILY STREAK PILL
-   ============================================================ */
-.streak {
-  position: fixed;
-  top: 1rem;
-  /* hug the right edge of the centered app column on wide screens */
-  right: max(1rem, calc(50vw - 210px + 1rem));
-  z-index: 40;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.45rem 0.85rem;
-  font-size: 0.95rem;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--c-text);
-  background: var(--c-surface);
-  border: 1px solid rgba(255 255 255 / 0.1);
-  border-radius: 9999px;
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  pointer-events: none;
-  user-select: none;
-  opacity: 0;
-  transform: translateY(-8px) scale(0.92);
-  transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out),
-              border-color 0.35s ease, box-shadow 0.35s ease;
-}
-.streak.visible { opacity: 1; transform: none; }
-
-.streak__fire {
-  font-size: 1rem;
-  line-height: 1;
-  /* dim the emoji until today's photo is in */
-  filter: grayscale(65%) opacity(0.7);
-  transition: filter 0.35s ease;
-}
-.streak__count {
-  min-width: 1ch;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-}
-
-/* photo already taken today — the fire glows */
-.streak--active {
-  border-color: rgba(255 150 50 / 0.45);
-  box-shadow: 0 0 18px rgba(255 130 40 / 0.22), inset 0 0 12px rgba(255 150 50 / 0.12);
-}
-.streak--active .streak__fire {
-  filter: none;
-  animation: streakGlow 2.4s ease-in-out infinite;
-}
-@keyframes streakGlow {
-  0%, 100% { text-shadow: 0 0 6px rgba(255 160 40 / 0.55); transform: scale(1); }
-  50%      { text-shadow: 0 0 14px rgba(255 180 60 / 0.95); transform: scale(1.08); }
-}
-
-/* no photo yet today — the pill pulses as a nudge */
-.streak--due .streak__fire { filter: none; opacity: 0.9; }
-.streak--due { animation: streakPulse 2s ease-in-out infinite; }
-@keyframes streakPulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255 170 60 / 0.45); }
-  50%      { box-shadow: 0 0 0 9px rgba(255 170 60 / 0); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .streak--active .streak__fire,
-  .streak--due { animation: none; }
-}
-
-/* ============================================================
-   TOAST
-   ============================================================ */
-.toast {
+.toasts {
   position: fixed;
   left: 50%;
-  bottom: calc(1.75rem + env(safe-area-inset-bottom, 0px));
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
   z-index: 10000;
-  max-width: calc(100vw - 2.5rem);
-  padding: 0.7rem 1.15rem;
-  font-size: 0.9rem;
-  font-weight: 500;
-  color: var(--c-text);
-  background: rgba(20 20 20 / 0.92);
-  border: 1px solid rgba(255 150 50 / 0.35);
-  border-radius: 9999px;
-  box-shadow: 0 12px 32px rgba(0 0 0 / 0.45);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   pointer-events: none;
-  text-align: center;
-  opacity: 0;
-  transform: translate(-50%, 12px);
-  transition: opacity 0.28s var(--ease-out), transform 0.28s var(--ease-out);
+  width: calc(100% - 3rem);
+  max-width: 380px;
 }
-.toast.is-visible { opacity: 1; transform: translate(-50%, 0); }
+.toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: rgba(20 20 20 / 0.92);
+  border: 1px solid rgba(255 255 255 / 0.12);
+  border-radius: 9999px;
+  padding: 0.6rem 0.6rem 0.6rem 1.1rem;
+  color: var(--c-text);
+  font-size: 0.9rem;
+  letter-spacing: -0.005em;
+  box-shadow: 0 12px 32px rgba(0 0 0 / 0.5);
+  backdrop-filter: blur(16px) saturate(160%);
+  -webkit-backdrop-filter: blur(16px) saturate(160%);
+}
+.toast--error { border-color: rgba(248 113 113 / 0.5); }
+.toast__msg { flex: 1; min-width: 0; }
+.toast__action {
+  border: none;
+  background: none;
+  color: var(--c-accent);
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  padding: 0.35rem 0.7rem;
+  border-radius: 9999px;
+  letter-spacing: -0.01em;
+  flex-shrink: 0;
+}
+.toast__action:hover { background: rgba(255 215 0 / 0.12); }
+
+/* ============================================================
+   CONFIRM MODAL (endgültig löschen)
+   ============================================================ */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0 0 0 / 0.7);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 1.5rem;
+}
+.modal__card {
+  width: 100%;
+  max-width: 340px;
+  background: #161616;
+  border: 1px solid rgba(255 255 255 / 0.1);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+  box-shadow: 0 24px 64px rgba(0 0 0 / 0.55);
+}
+.modal__title { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.5rem; }
+.modal__text { font-size: 0.9rem; color: var(--c-text-2); line-height: 1.5; margin-bottom: 1.25rem; }
+.modal__actions { display: flex; justify-content: flex-end; gap: 0.5rem; }
+
+.btn--danger { background: #dc2626; color: #fff; border: 1px solid #dc2626; }
+.btn--danger:hover {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(220 38 38 / 0.3);
+}
+
+/* ============================================================
+   QR-DIALOG: Foto aufs Handy
+   — weiße Karte für scannbaren Kontrast (WCAG), klare
+     Hierarchie: Titel → QR (dominant) → Anleitung → Gültigkeit
+   ============================================================ */
+.qr-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0 0 0 / 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 1.5rem;
+}
+.qr-modal__card {
+  position: relative;
+  width: 100%;
+  max-width: 320px;
+  background: #161616;
+  border: 1px solid rgba(255 255 255 / 0.1);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem 1.25rem 1.25rem;
+  box-shadow: 0 24px 64px rgba(0 0 0 / 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+}
+.qr-modal__title { font-size: 1.1rem; font-weight: 600; }
+.qr-modal__close {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid rgba(255 255 255 / 0.15);
+  background: transparent;
+  color: var(--c-text-2);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.qr-modal__close:hover { color: var(--c-text); background: var(--c-surface-2); }
+.qr-modal__close:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
+
+/* QR auf Weiß — Scanner brauchen hellen Hintergrund mit dunklen Modulen */
+.qr-modal__frame {
+  width: 100%;
+  background: #ffffff;
+  border-radius: var(--radius);
+  padding: 12px;
+  min-height: 240px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.qr-modal__frame svg,
+.qr-modal__frame img { width: 100%; height: auto; display: block; }
+.qr-modal__loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  color: #555;
+  font-size: 0.85rem;
+}
+.qr-modal__spinner {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 3px solid #ddd;
+  border-top-color: #888;
+  animation: qrSpin 0.8s linear infinite;
+}
+@keyframes qrSpin { to { transform: rotate(360deg); } }
+
+.qr-modal__hint {
+  font-size: 0.9rem;
+  color: var(--c-text-2); /* ≈ 7:1 auf #161616 — WCAG AA/AAA für Text */
+  line-height: 1.5;
+  text-align: center;
+}
+.qr-modal__ttl { font-size: 0.75rem; color: var(--c-text-3); text-align: center; }
+.qr-modal__fallback {
+  font-size: 0.7rem;
+  color: #333;
+  word-break: break-all;
+  text-align: center;
+  max-height: 90px;
+  overflow: auto;
+}
+.qr-modal__retry {
+  border: 1px solid rgba(255 255 255 / 0.2);
+  background: transparent;
+  color: var(--c-text-2);
+  border-radius: 9999px;
+  padding: 0.4rem 1.1rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.qr-modal__retry:hover { color: var(--c-text); background: var(--c-surface-2); }
+.qr-modal__retry:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
+
+/* ============================================================
+   PAPIERKORB (trash view)
+   ============================================================ */
+.gallery__trash-toggle { padding: 0.5rem 0.9rem; font-size: 0.875rem; }
+.gallery__trash-toggle .btn__icon svg { width: 1.1rem; height: 1.1rem; }
+.gallery__trash-toggle.active { color: var(--c-accent); border-color: rgba(255 215 0 / 0.4); }
+/* Mülleimer-Zähler: absichtlich ruhiger als der gelbe Galerie-Badge —
+   der Papierkorb ist Nebensache und leer = unsichtbar */
+.btn__badge--muted {
+  background: rgba(255 255 255 / 0.18);
+  color: var(--c-text);
+  top: 0;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 4px;
+  font-size: 0.68rem;
+  box-shadow: 0 0 0 3px var(--c-bg);
+}
+
+.trash { margin-top: 0.25rem; }
+/* etwas breitere Karten, damit beide Buttons nebeneinander Platz hätten —
+   gestapelt brauchen sie aber ohnehin nur die Kartenbreite */
+#trashGrid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.trash__bar { margin-bottom: 1.25rem; }
+.trash__hint {
+  font-size: 0.85rem;
+  color: var(--c-text-2);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  line-height: 1.5;
+}
+.trash__retention {
+  background: var(--c-surface-2);
+  color: var(--c-text);
+  border: 1px solid rgba(255 255 255 / 0.15);
+  border-radius: 9999px;
+  padding: 0.25rem 0.7rem;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+.trash__retention:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
+/* Die native Optionsliste hat sonst weißen Hintergrund (Windows/Chrome)
+   und erbt die weiße Schrift — Optionen deshalb explizit dunkel stylen. */
+.trash__retention option { background: #161616; color: var(--c-text); }
+
+.trash__card {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--c-surface);
+  box-shadow: 0 10px 30px rgba(0 0 0 / 0.35);
+}
+.trash__card img {
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  display: block;
+  filter: grayscale(0.5);
+  opacity: 0.85;
+}
+.trash__meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.55rem 0.65rem;
+}
+.trash__days { font-size: 0.75rem; color: var(--c-text-2); white-space: nowrap; }
+.trash__actions { display: flex; flex-direction: column; gap: 0.4rem; }
+.trash__btn {
+  width: 100%;
+  border: 1px solid rgba(255 255 255 / 0.12);
+  background: transparent;
+  color: var(--c-text-2);
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.5rem;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition), border-color var(--transition);
+}
+.trash__btn:hover { color: var(--c-text); background: var(--c-surface-2); }
+.trash__btn--restore { color: var(--c-accent); border-color: rgba(255 215 0 / 0.35); }
+.trash__btn--restore:hover { background: rgba(255 215 0 / 0.12); }
+.trash__btn--purge:hover {
+  color: #f87171;
+  border-color: rgba(248 113 113 / 0.4);
+  background: rgba(248 113 113 / 0.08);
+}
 
 /* ============================================================
    responsive
@@ -767,3 +1097,86 @@ section.active { display: block; opacity: 1; }
   .camera__controls > .btn--ghost .btn__icon svg { width: 1rem; height: 1rem; }
 }
 
+
+/* ============================================================
+   FACE FILTER CANVAS + BAR (MediaPipe-Gesichtsfilter)
+   ============================================================ */
+.filter-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.filters {
+  display: flex;
+  gap: 0.5rem;
+  margin: -0.75rem 0 -0.25rem;
+  padding: 0.125rem 0.125rem 0.375rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.filters::-webkit-scrollbar { display: none; }
+
+
+/* ============================================================
+   DAILY STREAK PILL
+   ============================================================ */
+.streak {
+  display: none;
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(0 0 0 / 0.45);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--c-text-2);
+  border: 1px solid rgba(255 255 255 / 0.12);
+  border-radius: 9999px;
+  user-select: none;
+}
+.streak.visible { display: inline-flex; }
+
+.streak__fire {
+  font-size: 1rem;
+  line-height: 1;
+  filter: grayscale(65%) opacity(0.7);
+  transition: filter 0.35s ease;
+}
+.streak__count {
+  min-width: 1ch;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.streak--active {
+  border-color: rgba(255 150 50 / 0.45);
+  box-shadow: 0 0 18px rgba(255 130 40 / 0.22), inset 0 0 12px rgba(255 150 50 / 0.12);
+}
+.streak--active .streak__fire {
+  filter: none;
+  animation: streakGlow 2.4s ease-in-out infinite;
+}
+@keyframes streakGlow {
+  0%, 100% { text-shadow: 0 0 6px rgba(255 160 40 / 0.55); transform: scale(1); }
+  50%      { text-shadow: 0 0 14px rgba(255 180 60 / 0.95); transform: scale(1.08); }
+}
+
+.streak--due .streak__fire { filter: none; opacity: 0.9; }
+.streak--due { animation: streakPulse 2s ease-in-out infinite; }
+@keyframes streakPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255 170 60 / 0.45); }
+  50%      { box-shadow: 0 0 0 9px rgba(255 170 60 / 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .streak--active .streak__fire,
+  .streak--due { animation: none; }
+}

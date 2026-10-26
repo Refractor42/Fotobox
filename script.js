@@ -22,13 +22,11 @@ const $galleryEmpty  = document.getElementById('galleryEmpty');
 const $video         = document.getElementById('cameraVideo');
 const $permission    = document.getElementById('permission');
 const $galleryBadge  = document.getElementById('galleryBadge');
-const $discardBtn    = document.getElementById('discardBtn');
 const $galleryBtn    = document.getElementById('galleryBtn');
-const $filterCanvas  = document.getElementById('filterCanvas');
-const $filterBar     = document.getElementById('filterBar');
 const $streakPill    = document.getElementById('streakPill');
 const $streakCount   = document.getElementById('streakCount');
-const $toast         = document.getElementById('toast');
+let currentStreak = 0;
+let lastPhotoTimestamp = null;
 
 const photos = [];
 
@@ -39,51 +37,17 @@ let photoCount = 0;
 let videoPlaying = false;
 let viewfinderVisible = false;
 let isCapturing = false;
-let currentStreak = 0;
-let lastPhotoTimestamp = null;
 
 // ============================================================
 //  CAMERA ACCESS
 // ============================================================
 let stream = null;
 
-// getUserMedia failures all look the same in the UI, so map the ones users can
-// actually act on to a concrete instruction.
-const CAMERA_ERROR_MESSAGES = {
-  NotAllowedError: 'Camera access is blocked for this site. Open the site controls next to the address bar, allow Camera, then try again.',
-  PermissionDeniedError: 'Camera access is blocked for this site. Open the site controls next to the address bar, allow Camera, then try again.',
-  NotFoundError: 'No camera was found on this device.',
-  DevicesNotFoundError: 'No camera was found on this device.',
-  NotReadableError: 'The camera is already in use by another app. Close it and try again.',
-  TrackStartError: 'The camera is already in use by another app. Close it and try again.',
-  OverconstrainedError: 'This camera does not support the requested video mode.',
-  SecurityError: 'Camera access needs a secure page. Open SnapBox over HTTPS and try again.'
-};
-
-function cameraErrorMessage(err) {
-  return (err && CAMERA_ERROR_MESSAGES[err.name]) || 'Camera access required for SnapBox';
-}
-
-// Browsers with strict autoplay policies (Brave blocks it by default) can hand
-// us a live stream that never starts playing, which looks like a dead camera.
-// Retry on the next tap instead of leaving the placeholder up forever.
-async function playVideo() {
-  try {
-    await $video.play();
-  } catch (err) {
-    console.warn('Camera preview could not start playing, waiting for a tap:', err);
-    document.addEventListener('pointerdown', function resume() {
-      document.removeEventListener('pointerdown', resume);
-      $video.play().catch(() => {});
-    }, { once: true });
-  }
-}
-
 async function initCamera() {
   $permission.classList.remove('visible');
-  if (filterEngine) filterEngine.start();
 
   // already have a stream (returning from gallery or re-entering)
+  if (filterEngine) filterEngine.start();
   if (stream) {
     videoPlaying = true;
     $video.classList.add('has-source');
@@ -91,15 +55,10 @@ async function initCamera() {
       $video.srcObject = stream;
     }
     $video.style.transform = 'scaleX(-1)';
-    playVideo(); // resume playback
+    $video.play().catch((e) => console.warn('video.play() failed:', e)); // resume playback
     gsap.set($placeholder, { opacity: 0 });
     showViewfinder();
     return true;
-  }
-
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    showPermissionPrompt('Camera access is unavailable on this page. Open SnapBox over HTTPS (or on localhost).');
-    return false;
   }
 
   try {
@@ -109,9 +68,6 @@ async function initCamera() {
     });
     $video.srcObject = stream;
     $video.classList.add('has-source');
-    // A camera-only stream is still autoplay media, so it must be muted for
-    // browsers that block autoplay.
-    $video.muted = true;
 
     // once video can play, hide placeholder and show viewfinder
     $video.onplaying = () => {
@@ -123,18 +79,15 @@ async function initCamera() {
     // mirror the video for a natural selfie feel
     $video.style.transform = 'scaleX(-1)';
 
-    playVideo();
     return true;
   } catch (err) {
-    console.warn('Camera access failed:', err.name, err.message);
-    showPermissionPrompt(cameraErrorMessage(err));
+    console.warn('Camera access denied:', err.message);
+    showPermissionPrompt();
     return false;
   }
 }
 
-function showPermissionPrompt(message) {
-  const text = $permission.querySelector('.permission__text');
-  if (text) text.textContent = message || 'Camera access required for SnapBox';
+function showPermissionPrompt() {
   $permission.classList.add('visible');
   gsap.from('.permission__content > *', {
     y: 20, opacity: 0, stagger: 0.1,
@@ -150,50 +103,46 @@ function stopCamera() {
 }
 
 // ============================================================
-//  FACE FILTERS
+//  DAILY STREAK
 // ============================================================
-// The engine itself lives in filters.js: it draws the mirrored preview frame
-// and can render the same scene at full sensor resolution for a photo.
-let filterEngine = null;
-try {
-  if (window.SnapBoxFilters && $filterCanvas) {
-    filterEngine = window.SnapBoxFilters.create({ video: $video, canvas: $filterCanvas });
-  }
-} catch (err) {
-  console.warn('Face filters could not start, camera will run without them:', err);
+// Global streak: the server reads/writes the single Supabase row.
+const STREAK_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+function isPhotoTakenRecently(isoTimestamp) {
+  if (!isoTimestamp) return false;
+  const then = new Date(isoTimestamp).getTime();
+  if (Number.isNaN(then)) return false;
+  return Date.now() - then < STREAK_WINDOW_MS;
 }
 
-function initFilterBar() {
-  if (!filterEngine || !$filterBar || !window.SnapBoxFilters) return;
+function renderStreak() {
+  const takenRecently = isPhotoTakenRecently(lastPhotoTimestamp);
+  $streakCount.textContent = String(currentStreak);
+  $streakPill.classList.add('visible');
+  $streakPill.classList.toggle('streak--active', takenRecently);
+  $streakPill.classList.toggle('streak--due', !takenRecently);
+  $streakPill.setAttribute(
+    'aria-label',
+    'Daily streak: ' + currentStreak + (currentStreak === 1 ? ' day, ' : ' days, ')
+      + (takenRecently ? 'photo taken in the last 24 hours' : 'no photo in the last 24 hours')
+  );
+}
 
-  window.SnapBoxFilters.FILTERS.forEach((filter) => {
-    const chip = document.createElement('button');
-    chip.type = 'button';
-    chip.className = 'filter-chip';
-    chip.dataset.filter = filter.id;
-    chip.setAttribute('aria-pressed', String(filter.id === filterEngine.getFilter()));
-    if (filter.id === filterEngine.getFilter()) chip.classList.add('is-active');
+function applyStreak(streak) {
+  if (!streak) return;
+  currentStreak = Number(streak.current_streak) || 0;
+  lastPhotoTimestamp = streak.last_photo_timestamp || null;
+  renderStreak();
+}
 
-    const emoji = document.createElement('span');
-    emoji.className = 'filter-chip__emoji';
-    emoji.setAttribute('aria-hidden', 'true');
-    emoji.textContent = filter.emoji;
-
-    const label = document.createElement('span');
-    label.textContent = filter.label;
-
-    chip.append(emoji, label);
-    chip.addEventListener('click', () => {
-      const active = filterEngine.setFilter(filter.id);
-      $filterBar.querySelectorAll('.filter-chip').forEach((el) => {
-        const isActive = el.dataset.filter === active;
-        el.classList.toggle('is-active', isActive);
-        el.setAttribute('aria-pressed', String(isActive));
-      });
-    });
-
-    $filterBar.appendChild(chip);
-  });
+async function loadStreak() {
+  try {
+    const res = await fetch('/api/streak', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    applyStreak(await res.json());
+  } catch (err) {
+    console.warn('Streak could not be loaded:', err);
+  }
 }
 
 // ============================================================
@@ -208,18 +157,28 @@ function captureFromVideo() {
     canvas.height = h;
     const ctx = canvas.getContext('2d');
 
-    // The filter engine draws the mirrored frame plus the active overlay, so
-    // saved photos match the preview.
-    if (filterEngine && filterEngine.drawCapture(ctx, w, h)) {
-      resolve(canvas.toDataURL('image/jpeg', 0.92));
-      return;
-    }
-
-    // Without the engine, fall back to the plain mirrored frame.
+    // mirror to match the displayed (flipped) video + gewählter Filter,
+    // damit das Foto exakt der Vorschau entspricht (WYSIWYG)
     ctx.save();
+    const filterCss = FILTERS[currentFilter].css;
+    if (filterCss !== 'none') ctx.filter = filterCss;
     ctx.scale(-1, 1);
     ctx.drawImage($video, -w, 0, w, h);
     ctx.restore();
+
+    // Face filter: render the whole scene at sensor resolution instead.
+    if (filterEngine && filterEngine.getFilter() !== 'none') {
+      const faceCanvas = document.createElement('canvas');
+      faceCanvas.width = w;
+      faceCanvas.height = h;
+      const faceCtx = faceCanvas.getContext('2d');
+      const colorCss = FILTERS[currentFilter].css;
+      if (colorCss !== 'none') faceCtx.filter = colorCss;
+      if (filterEngine.drawCapture(faceCtx, w, h)) {
+        resolve(faceCanvas.toDataURL('image/jpeg', 0.92));
+        return;
+      }
+    }
 
     resolve(canvas.toDataURL('image/jpeg', 0.92));
   });
@@ -245,8 +204,12 @@ function animateCameraIn() {
     .from($camera.querySelector('.camera__stage'), {
       y: 60, opacity: 0, duration: 0.9, ease: 'power3.out'
     }, 0)
-    .from('.camera__controls > *', {
-      y: 40, opacity: 0, stagger: 0.12, duration: 0.7, ease: 'power2.out'
+    // Animate the bar as ONE element: staggering the buttons individually
+    // leaves a separate translateY on each button, and if the tween is
+    // interrupted (hidden tab, permission dialog) they freeze at different
+    // offsets — i.e. buttons that are no longer on the same line.
+    .from('.camera__controls', {
+      y: 40, opacity: 0, duration: 0.7, ease: 'power2.out', clearProps: 'all'
     }, 0.3)
     .from($placeholder, { opacity: 0, duration: 0.5 }, 0.7);
 
@@ -277,6 +240,470 @@ function hideViewfinder() {
 // ============================================================
 //  CAPTURE SEQUENCE
 // ============================================================
+const $review = document.getElementById('review');
+const $reviewKeep = document.getElementById('reviewKeep');
+const $reviewRetake = document.getElementById('reviewRetake');
+const $timerChips = document.getElementById('timerChips');
+
+// Countdown-Dauer (Selbstauslöser) — sichtbar gewählt, pro Gerät gemerkt.
+// Default 5s: Standard bei echten Fotoboxen und genug Zeit, um sich zu
+// positionieren; 3s bleibt als Schnell-Option wählbar.
+let countdownSeconds = Number(localStorage.getItem('countdownSeconds'));
+if (![3, 5, 10].includes(countdownSeconds)) countdownSeconds = 5;
+
+function applyTimerSelection() {
+  $timerChips.querySelectorAll('.timer__chip').forEach((chip) => {
+    const active = Number(chip.dataset.seconds) === countdownSeconds;
+    chip.classList.toggle('is-selected', active);
+    chip.setAttribute('aria-pressed', String(active));
+  });
+}
+applyTimerSelection();
+
+$timerChips.addEventListener('click', (e) => {
+  const chip = e.target.closest('.timer__chip');
+  if (!chip) return;
+  countdownSeconds = Number(chip.dataset.seconds);
+  localStorage.setItem('countdownSeconds', String(countdownSeconds));
+  applyTimerSelection();
+});
+
+// Während der Aufnahmesequenz (Countdown → Verarbeitung) sind Gallery, Timer
+// gesperrt: Fehlklicks können die Sequenz nicht mehr abreißen
+// (Fehlervermeidung) — Kontrolle kommt danach über Behalten/Neu aufnehmen.
+function setControlsLocked(locked) {
+  $galleryBtn.classList.toggle('is-locked', locked);
+  $timerChips.classList.toggle('is-locked', locked);
+  document.getElementById('filterChips').classList.toggle('is-locked', locked);
+}
+
+function showReview() {
+  $review.hidden = false;
+  gsap.from($review, { y: 24, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
+  $reviewKeep.focus();
+}
+
+function hideReview() {
+  $review.hidden = true;
+}
+
+// Wirft das aktuell angezeigte Foto weg (in den Papierkorb, mit Undo-Toast)
+// und setzt die Kameraansicht zurück — vom Review-„Neu aufnehmen" genutzt.
+function discardCurrentPhoto() {
+  if (!hasPhoto) return;
+  if (lastPhoto) {
+    deletePhoto(lastPhoto.card, lastPhoto.id);
+    lastPhoto = null;
+  }
+  const capturedImg = $camera.querySelector('.viewfinder img.stage-photo');
+  if (capturedImg) {
+    gsap.to(capturedImg, {
+      scale: 0.7, opacity: 0, duration: 0.35, ease: 'power2.in', rotation: -6,
+      onComplete: resetCameraView
+    });
+  } else {
+    resetCameraView();
+  }
+}
+
+$reviewKeep.addEventListener('click', () => {
+  hideReview();
+  setControlsLocked(false);
+  // Mit Stickern: foto neu komponieren und serverseitig überschreiben,
+  // sonst zurück ins Livebild, bereit für den nächsten Schuss.
+  if (activeStickers.length) {
+    composeEditedPhoto();
+  } else {
+    resetCameraView();
+  }
+});
+
+$reviewRetake.addEventListener('click', () => {
+  hideReview();
+  setControlsLocked(false);
+  clearStickers();
+  discardCurrentPhoto();
+});
+
+// ============================================================
+//  QR-DIALOG: Foto aufs Handy (signierter Download-Link)
+// ============================================================
+const $qrModal = document.getElementById('qrModal');
+const $qrFrame = document.getElementById('qrFrame');
+const $qrClose = document.getElementById('qrClose');
+const $qrTtl = document.getElementById('qrTtl');
+let lastQrPhotoId = null;
+let lastQrFocusTarget = null;
+
+function resetQrFrame() {
+  $qrFrame.innerHTML = `
+    <div class="qr-modal__loading" id="qrLoading">
+      <span class="qr-modal__spinner" aria-hidden="true"></span>
+      <p>Link wird erstellt…</p>
+    </div>`;
+  $qrTtl.textContent = '';
+}
+
+function closeQrDialog() {
+  $qrModal.hidden = true;
+  lastQrPhotoId = null;
+  if (lastQrFocusTarget && lastQrFocusTarget.focus) lastQrFocusTarget.focus();
+  lastQrFocusTarget = null;
+}
+
+$qrClose.addEventListener('click', closeQrDialog);
+$qrModal.addEventListener('click', (e) => { if (e.target === $qrModal) closeQrDialog(); });
+
+function showErrorInQrFrame() {
+  $qrFrame.innerHTML = '';
+  const retry = document.createElement('button');
+  retry.className = 'qr-modal__retry';
+  retry.type = 'button';
+  retry.textContent = 'Erneut versuchen';
+  retry.addEventListener('click', () => showQrDialog(lastQrPhotoId));
+  const wrap = document.createElement('div');
+  wrap.className = 'qr-modal__loading';
+  wrap.appendChild(retry);
+  $qrFrame.appendChild(wrap);
+}
+
+function renderQrInto(frame, url) {
+  frame.innerHTML = '';
+  if (typeof qrcode === 'function') {
+    const qr = qrcode(0, 'M');
+    qr.addData(url, 'Byte');
+    qr.make();
+    const holder = document.createElement('div');
+    holder.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+    const svg = holder.querySelector('svg');
+    if (svg) {
+      svg.setAttribute('role', 'img');
+      svg.setAttribute('aria-label', 'QR-Code zum Herunterladen des Fotos');
+      frame.appendChild(svg);
+      return;
+    }
+  }
+  // Fallback, falls die QR-Library nicht geladen werden konnte:
+  // Link lesbar zeigen + kopierbar machen
+  const box = document.createElement('div');
+  box.className = 'qr-modal__loading';
+  const link = document.createElement('p');
+  link.className = 'qr-modal__fallback';
+  link.textContent = url;
+  const copy = document.createElement('button');
+  copy.className = 'qr-modal__retry';
+  copy.type = 'button';
+  copy.textContent = 'Link kopieren';
+  copy.addEventListener('click', () => {
+    navigator.clipboard.writeText(url)
+      .then(() => showToast('Link kopiert.'))
+      .catch(() => showToast('Link konnte nicht kopiert werden.', { error: true }));
+  });
+  box.appendChild(link);
+  box.appendChild(copy);
+  frame.appendChild(box);
+}
+
+async function showQrDialog(photoId) {
+  if (!photoId) {
+    showToast('Foto ist noch nicht gespeichert.', { error: true });
+    return;
+  }
+  lastQrPhotoId = photoId;
+  lastQrFocusTarget = document.activeElement;
+  $qrModal.hidden = false;
+  resetQrFrame();
+  gsap.from($qrModal.querySelector('.qr-modal__card'), {
+    y: 24, opacity: 0, scale: 0.96, duration: 0.3, ease: 'power2.out', clearProps: 'all'
+  });
+  $qrClose.focus();
+  try {
+    const res = await fetch('/api/photos?qr=1&id=' + encodeURIComponent(photoId), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if ($qrModal.hidden || lastQrPhotoId !== photoId) return; // inzwischen geschlossen
+    renderQrInto($qrFrame, data.url);
+    $qrTtl.textContent = 'Link ist 24 Stunden gültig.';
+  } catch (err) {
+    console.warn('QR link could not be created:', err);
+    if (!$qrModal.hidden) showErrorInQrFrame();
+  }
+}
+
+// Einstiegspunkt Review-Phase
+document.getElementById('reviewQr').addEventListener('click', () => {
+  if (!lastPhoto || !lastPhoto.id) {
+    showToast('Foto ist noch nicht gespeichert.', { error: true });
+    return;
+  }
+  showQrDialog(lastPhoto.id);
+});
+
+// ============================================================
+//  FILTER — Live-Vorschau aufs Video, beim Capture mit eingebrannt
+// ============================================================
+const FILTERS = {
+  standard: { css: 'none' },
+  sw:       { css: 'grayscale(1) contrast(1.1)' },
+  vintage:  { css: 'sepia(0.55) contrast(0.95) saturate(1.2) brightness(0.97)' },
+  knackig:  { css: 'saturate(1.35) contrast(1.15)' }
+};
+const $filterChips = document.querySelectorAll('#filterChips .timer__chip');
+const $filterCanvas = document.getElementById('filterCanvas');
+const $filterBar = document.getElementById('filterBar');
+
+// ============================================================
+//  FACE FILTERS (filters.js)
+// ============================================================
+let filterEngine = null;
+try {
+  if (window.SnapBoxFilters && $filterCanvas) {
+    filterEngine = window.SnapBoxFilters.create({ video: $video, canvas: $filterCanvas });
+  }
+} catch (err) {
+  console.warn('Face filters could not start, camera will run without them:', err);
+}
+
+function initFilterBar() {
+  if (!filterEngine || !$filterBar) return;
+  window.SnapBoxFilters.FILTERS.forEach((filter) => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'timer__chip';
+    chip.dataset.filter = filter.id;
+    const active = filter.id === filterEngine.getFilter();
+    chip.setAttribute('aria-pressed', String(active));
+    if (active) chip.classList.add('is-selected');
+
+    chip.textContent = filter.label;
+    chip.addEventListener('click', () => {
+      const selected = filterEngine.setFilter(filter.id);
+      $filterBar.querySelectorAll('.timer__chip').forEach((el) => {
+        const isActive = el.dataset.filter === selected;
+        el.classList.toggle('is-selected', isActive);
+        el.setAttribute('aria-pressed', String(isActive));
+      });
+    });
+    $filterBar.appendChild(chip);
+  });
+}
+initFilterBar();
+let currentFilter = localStorage.getItem('photoFilter');
+if (!FILTERS[currentFilter]) currentFilter = 'standard';
+
+function applyFilterSelection() {
+  $filterChips.forEach((chip) => {
+    const selected = chip.dataset.filter === currentFilter;
+    chip.classList.toggle('is-selected', selected);
+    chip.setAttribute('aria-pressed', String(selected));
+  });
+  const css = FILTERS[currentFilter].css === 'none' ? '' : FILTERS[currentFilter].css;
+  $video.style.filter = css;
+  // Das Face-Canvas liegt über dem Video und zeichnet das unveränderte Bild,
+  // daher braucht es denselben Farbfilter, sonst wirkt er nur ohne Gesichtsfilter.
+  $filterCanvas.style.filter = css;
+}
+
+$filterChips.forEach((chip) => chip.addEventListener('click', () => {
+  currentFilter = chip.dataset.filter;
+  localStorage.setItem('photoFilter', currentFilter);
+  applyFilterSelection();
+}));
+applyFilterSelection();
+
+// ============================================================
+//  STICKER — Nachbearbeitung in der Review-Phase (Direkte Manipulation)
+// ============================================================
+const $stickerPalette = document.getElementById('stickerPalette');
+let activeStickers = [];   // { el, x, y, w } — x/y/w in % der Bühne
+let selectedSticker = null;
+
+function stickerSvgUrl(kind) {
+  const svg = $stickerPalette.querySelector('[data-sticker="' + kind + '"] svg').cloneNode(true);
+  svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+  // width/height für verlässliche naturalWidth beim Canvas-Rendering
+  const vb = svg.getAttribute('viewBox').split(/\s+/);
+  svg.setAttribute('width', vb[2]);
+  svg.setAttribute('height', vb[3]);
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg.outerHTML);
+}
+
+function addSticker(kind) {
+  const el = document.createElement('div');
+  el.className = 'sticker';
+  const img = document.createElement('img');
+  img.src = stickerSvgUrl(kind);
+  img.draggable = false;
+  img.alt = '';
+  el.appendChild(img);
+
+  const st = { el, x: 50, y: 35, w: 26 };
+  positionSticker(st);
+  $camera.querySelector('.viewfinder').appendChild(el);
+  activeStickers.push(st);
+
+  el.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    selectSticker(st);
+    const rect = $camera.querySelector('.viewfinder').getBoundingClientRect();
+    const move = (ev) => {
+      st.x = ((ev.clientX - rect.left) / rect.width) * 100;
+      st.y = ((ev.clientY - rect.top) / rect.height) * 100;
+      st.x = Math.min(100, Math.max(0, st.x));
+      st.y = Math.min(100, Math.max(0, st.y));
+      positionSticker(st);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+  });
+
+  selectSticker(st);
+}
+
+function positionSticker(st) {
+  st.el.style.width = st.w + '%';
+  st.el.style.left = st.x + '%';
+  st.el.style.top = st.y + '%';
+  st.el.style.transform = 'translate(-50%, -50%)';
+}
+
+function selectSticker(st) {
+  if (selectedSticker === st) return;
+  deselectSticker();
+  selectedSticker = st;
+  st.el.classList.add('is-selected');
+  const ctrl = document.createElement('div');
+  ctrl.className = 'sticker__ctrl';
+  const mk = (label, title, fn) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.textContent = label;
+    b.title = title;
+    b.setAttribute('aria-label', title);
+    b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+    return b;
+  };
+  ctrl.appendChild(mk('−', 'Sticker verkleinern', () => scaleSticker(st, 0.85)));
+  ctrl.appendChild(mk('+', 'Sticker vergrößern', () => scaleSticker(st, 1.18)));
+  ctrl.appendChild(mk('×', 'Sticker entfernen', () => removeSticker(st)));
+  st.el.appendChild(ctrl);
+}
+
+function deselectSticker() {
+  if (!selectedSticker) return;
+  selectedSticker.el.classList.remove('is-selected');
+  const ctrl = selectedSticker.el.querySelector('.sticker__ctrl');
+  if (ctrl) ctrl.remove();
+  selectedSticker = null;
+}
+
+function scaleSticker(st, factor) {
+  st.w = Math.min(90, Math.max(8, st.w * factor));
+  positionSticker(st);
+}
+
+function removeSticker(st) {
+  if (selectedSticker === st) deselectSticker();
+  st.el.remove();
+  activeStickers = activeStickers.filter((s) => s !== st);
+}
+
+function clearStickers() {
+  deselectSticker();
+  [...activeStickers].forEach((st) => st.el.remove());
+  activeStickers = [];
+}
+
+$stickerPalette.addEventListener('click', (e) => {
+  const btn = e.target.closest('.sticker-pick');
+  if (btn) addSticker(btn.dataset.sticker);
+});
+
+// Klick neben den Sticker hebt die Auswahl auf
+$camera.querySelector('.viewfinder').addEventListener('pointerdown', (e) => {
+  if (!e.target.closest('.sticker')) deselectSticker();
+});
+
+// Behalten mit Stickern: Foto + Sticker auf ein Canvas komponieren,
+// serverseitig am selben Storage-Key überschreiben (kein Papierkorb-Müll).
+function loadImg(src) {
+  return new Promise((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = reject;
+    i.src = src;
+  });
+}
+
+async function renderPhotoWithStickers(photoEl) {
+  const base = await loadImg(photoEl.src);
+  const canvas = document.createElement('canvas');
+  canvas.width = base.naturalWidth;
+  canvas.height = base.naturalHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(base, 0, 0);
+  for (const st of [...activeStickers]) {
+    try {
+      const si = await loadImg(st.el.querySelector('img').src);
+      const w = (st.w / 100) * canvas.width;
+      const h = w * (si.naturalHeight / si.naturalWidth);
+      const x = (st.x / 100) * canvas.width - w / 2;
+      const y = (st.y / 100) * canvas.height - h / 2;
+      ctx.drawImage(si, x, y, w, h);
+    } catch (err) {
+      console.warn('Sticker konnte nicht gerendert werden:', err);
+    }
+  }
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+async function composeEditedPhoto() {
+  const photoEl = $camera.querySelector('.viewfinder img.stage-photo');
+  if (!photoEl) { clearStickers(); resetCameraView(); return; }
+  // Original-Speicherung muss durch sein, damit wir ihren Key überschreiben können
+  if (lastPhoto && lastPhoto.savePromise) {
+    try { await lastPhoto.savePromise; } catch (e) { /* Fehler wurde schon gemeldet */ }
+  }
+  let edited;
+  try {
+    edited = await renderPhotoWithStickers(photoEl);
+  } catch (err) {
+    console.warn('Foto konnte nicht komponiert werden:', err);
+    showToast('Sticker konnten nicht gespeichert werden.', { error: true });
+    clearStickers();
+    resetCameraView();
+    return;
+  }
+  clearStickers();
+  if (!lastPhoto || !lastPhoto.id) {
+    showToast('Sticker konnten nicht gespeichert werden — Foto bleibt unverändert.', { error: true });
+    resetCameraView();
+    return;
+  }
+  try {
+    const res = await fetch('/api/photos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ image: edited, id: lastPhoto.id })
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    if (lastPhoto.card && lastPhoto.card.isConnected) {
+      const cardImg = lastPhoto.card.querySelector('img');
+      if (cardImg) cardImg.src = edited;
+    }
+    showToast('Foto mit Stickern gespeichert.');
+  } catch (err) {
+    console.warn('Edited photo could not be saved:', err);
+    showToast('Bearbeitetes Foto konnte nicht gespeichert werden — Original bleibt erhalten.', { error: true });
+  }
+  resetCameraView();
+}
+
 async function runCaptureSequence() {
   if (currentState !== 'camera') return;
   if (isCapturing) return;
@@ -286,6 +713,7 @@ async function runCaptureSequence() {
   }
   isCapturing = true;
   $captureBtn.disabled = true;
+  setControlsLocked(true);
 
   // unlock / resume audio while we still have the user gesture
   unlockAudio();
@@ -314,18 +742,21 @@ async function runCaptureSequence() {
     // 5. reveal photo in stage
     await showCaptureResult(photoUrl);
 
-    // 6. add to gallery
+    // 6. add to gallery + ask for the keep/retake decision
     addToGallery(photoUrl);
+    showReview();
   } finally {
     isCapturing = false;
     $captureBtn.disabled = false;
     currentState = 'camera';
+    // während des Reviews bleiben die übrigen Buttons gesperrt
+    if ($review.hidden) setControlsLocked(false);
   }
 }
 
 function runCountdown() {
   return new Promise((resolve) => {
-    let count = 3;
+    let count = countdownSeconds;
     const STEP_MS = 900;
 
     gsap.killTweensOf($countdown);
@@ -377,6 +808,7 @@ async function showCaptureResult(photoUrl) {
   gsap.to($placeholder, { opacity: 0, duration: 0.001 });
 
   const img = document.createElement('img');
+  img.className = 'stage-photo';
   img.src = photoUrl;
   img.style.cssText = `
     position: absolute; inset: 0; width: 100%; height: 100%;
@@ -403,15 +835,15 @@ async function showCaptureResult(photoUrl) {
     object-fit: cover; opacity: 1; border-radius: 0;
     filter: grayscale(0%) contrast(1);
   `;
-  // enable discard button — a photo is now shown in the stage
+  // a photo is now shown in the stage
   hasPhoto = true;
-  $discardBtn.classList.add('active');
   return new Promise((r) => setTimeout(r, 300));
 }
 
 function resetCameraView() {
-  const existingImg = $camera.querySelector('.viewfinder img');
+  const existingImg = $camera.querySelector('.viewfinder img.stage-photo');
   if (existingImg) existingImg.remove();
+  clearStickers();
 
   gsap.set($processing, { opacity: 0 });
   gsap.set($flash, { opacity: 0 });
@@ -419,9 +851,8 @@ function resetCameraView() {
   gsap.set($countdown, { scale: 1, opacity: 0 });
   $countdown.style.opacity = '0';
 
-  // disable discard — no photo shown anymore
+  // no photo shown anymore
   hasPhoto = false;
-  $discardBtn.classList.remove('active');
 
   // if video is active, hide placeholder; otherwise show it
   if (stream) {
@@ -438,62 +869,14 @@ function resetCameraView() {
 
 
 // ============================================================
-//  DAILY STREAK
-// ============================================================
-// The streak is global: the server reads and writes the single Supabase row
-// id = 1, so every device shows the same counter. Nothing is kept in browser
-// storage — the database is the only source of truth.
-const STREAK_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-function isPhotoTakenRecently(isoTimestamp) {
-  if (!isoTimestamp) return false;
-  const then = new Date(isoTimestamp).getTime();
-  if (Number.isNaN(then)) return false;
-  return Date.now() - then < STREAK_WINDOW_MS;
-}
-
-function renderStreak() {
-  const takenRecently = isPhotoTakenRecently(lastPhotoTimestamp);
-  $streakCount.textContent = String(currentStreak);
-  $streakPill.classList.add('visible');
-  $streakPill.classList.toggle('streak--active', takenRecently);
-  $streakPill.classList.toggle('streak--due', !takenRecently);
-  $streakPill.setAttribute(
-    'aria-label',
-    'Daily streak: ' + currentStreak + (currentStreak === 1 ? ' day, ' : ' days, ')
-      + (takenRecently ? 'photo taken in the last 24 hours' : 'no photo in the last 24 hours')
-  );
-}
-
-function applyStreak(streak) {
-  if (!streak) return;
-  currentStreak = Number(streak.current_streak) || 0;
-  lastPhotoTimestamp = streak.last_photo_timestamp || null;
-  renderStreak();
-}
-
-async function loadStreak() {
-  try {
-    const res = await fetch('/api/streak', { cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    applyStreak(await res.json());
-  } catch (err) {
-    console.warn('Streak could not be loaded:', err);
-  }
-}
-
-let toastTimer = null;
-function showToast(message) {
-  $toast.textContent = message;
-  $toast.classList.add('is-visible');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => $toast.classList.remove('is-visible'), 2400);
-}
-
-// ============================================================
 //  GALLERY MANAGEMENT
 // ============================================================
 let lightbox = null;
+let lastPhoto = null; // { card, id } of the most recent capture, used by Discard
+
+// Schnelles Doppelklicken darf keine zweite, fehlschlagende Anfrage auslösen:
+// Solange eine Operation für ein Objekt läuft, werden weitere ignoriert.
+const pendingOps = new Set();
 // Saves a photo in the database through the server. Failure is logged only,
 // so the photo still shows in the current session.
 function savePhotoToServer(photoUrl) {
@@ -504,10 +887,96 @@ function savePhotoToServer(photoUrl) {
   }).then((res) => {
     if (!res.ok) throw new Error('HTTP ' + res.status);
     return res.json();
-  }).catch((err) => {
-    console.warn('Photo could not be saved to database:', err);
-    return null;
+  }).then((data) => {
+      applyStreak(data.streak);
+      return data.id;
+    })
+    .catch((err) => {
+      console.warn('Photo could not be saved to database:', err);
+      showToast('Foto konnte nicht gespeichert werden — Verbindung prüfen.', { error: true });
+      return null;
+    });
+}
+
+// Moves a photo to the trash (Papierkorb) on the server, removes its card and
+// offers an undo toast. Without a server id the photo was never saved, so only
+// the card is removed.
+async function deletePhoto(card, photoId) {
+  if (!photoId) {
+    removeCard(card);
+    return;
+  }
+  const key = 'trash:' + photoId;
+  if (pendingOps.has(key)) return;
+  pendingOps.add(key);
+  const image = card.querySelector('img') ? card.querySelector('img').src : null;
+  try {
+    const res = await fetch('/api/photos?id=' + encodeURIComponent(photoId) + '&days=' + getRetentionDays(), {
+      method: 'DELETE'
+    });
+    // 404 = bereits verschoben (Doppelklick-Race) — gilt ebenfalls als Erfolg
+    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
+    const data = res.status === 404 ? {} : await res.json();
+    removeCard(card);
+    refreshTrashCount();
+    if (data.trashId) {
+      showToast('Foto in den Papierkorb verschoben.', {
+        actionLabel: 'Rückgängig',
+        onAction: () => restoreFromTrash(data.trashId, image)
+      });
+    } else {
+      showToast('Foto in den Papierkorb verschoben.');
+    }
+  } catch (err) {
+    console.warn('Photo could not be deleted:', err);
+    showToast('Foto konnte nicht gelöscht werden — Verbindung prüfen.', { error: true });
+  } finally {
+    pendingOps.delete(key);
+  }
+}
+
+// Undo path: moves the object back on the server and re-adds the card locally.
+async function restoreFromTrash(trashId, image) {
+  const key = 'restore:' + trashId;
+  if (pendingOps.has(key)) return;
+  pendingOps.add(key);
+  try {
+    const res = await fetch('/api/trash?id=' + encodeURIComponent(trashId), { method: 'POST' });
+    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
+    const data = res.status === 404 ? {} : await res.json().catch(() => ({}));
+    if (image && data.id) addToGallery(image, false, data.id);
+    else loadPhotosFromServer(); // 404-Fall: Zustand vom Server nachladen
+    refreshTrashCount();
+    showToast('Foto wiederhergestellt.');
+  } catch (err) {
+    console.warn('Photo could not be restored:', err);
+    showToast('Wiederherstellen fehlgeschlagen — das Foto bleibt im Papierkorb.', { error: true });
+  } finally {
+    pendingOps.delete(key);
+  }
+}
+
+function removeCard(card) {
+  if (!card.isConnected) return;
+  if (lastPhoto && lastPhoto.card === card) lastPhoto = null;
+  card.remove();
+  photoCount = Math.max(0, photoCount - 1);
+  $galleryBadge.textContent = String(photoCount);
+  if (!$galleryGrid.querySelector('.gallery__card')) $galleryEmpty.style.display = '';
+}
+
+// Adds a delete button to a gallery card.
+function attachDelete(card, photoId) {
+  const btn = document.createElement('button');
+  btn.className = 'gallery__delete';
+  btn.type = 'button';
+  btn.setAttribute('aria-label', 'Delete photo');
+  btn.textContent = '×';
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    deletePhoto(card, photoId);
   });
+  card.appendChild(btn);
 }
 
 // Loads all stored photos from the database when the page starts.
@@ -517,16 +986,26 @@ function loadPhotosFromServer() {
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return res.json();
     })
-    .then((items) => items.forEach((item) => addToGallery(item.image, false)))
-    .catch((err) => console.warn('Photos could not be loaded from database:', err));
+    .then((items) => items.forEach((item) => addToGallery(item.image, false, item.id)))
+    .catch((err) => {
+      console.warn('Photos could not be loaded from database:', err);
+      showToast('Gespeicherte Fotos konnten nicht geladen werden.', { error: true });
+    });
 }
 
-function addToGallery(photoUrl, save = true) {
+function addToGallery(photoUrl, save = true, photoId = null) {
+  let savePromise = null;
   if (save) {
-    savePhotoToServer(photoUrl).then((saved) => {
-      if (!saved) return;
-      applyStreak(saved.streak);
-      showToast('Streak updated! 🔥');
+    savePromise = savePhotoToServer(photoUrl).then((id) => {
+      if (!id) return;
+      card.dataset.id = id;
+      if (card.isConnected) {
+        attachDelete(card, id);
+        showToast('Foto gespeichert.');
+      } else {
+        deletePhoto(card, id); // discarded before the save finished
+      }
+      if (lastPhoto && lastPhoto.card === card) lastPhoto.id = id;
     });
   }
 
@@ -538,6 +1017,10 @@ function addToGallery(photoUrl, save = true) {
   img.alt = 'Captured photo';
   img.loading = 'lazy';
   card.appendChild(img);
+  if (photoId) {
+    card.dataset.id = photoId;
+    attachDelete(card, photoId);
+  }
 
   $galleryGrid.appendChild(card);
   $galleryEmpty.style.display = 'none';
@@ -549,8 +1032,11 @@ function addToGallery(photoUrl, save = true) {
   });
 
   // lightbox on click
-  card.addEventListener('click', () => openLightbox(photoUrl));
+  // Beim Klick die AKTUELLE Bildquelle lesen — nach dem Sticker-Überschreiben
+  // wäre die ursprüngliche photoUrl aus dem Closure veraltet.
+  card.addEventListener('click', () => openLightbox(card.querySelector('img').src, card.dataset.id || null));
   photos.push(photoUrl);
+  if (save) lastPhoto = { card, id: null, savePromise };
 
   // update badge
   photoCount++;
@@ -564,7 +1050,7 @@ function addToGallery(photoUrl, save = true) {
   });
 }
 
-function openLightbox(photoUrl) {
+function openLightbox(photoUrl, photoId = null) {
   if (lightbox) lightbox.remove();
 
   lightbox = document.createElement('div');
@@ -574,6 +1060,26 @@ function openLightbox(photoUrl) {
   img.src = photoUrl;
   img.alt = 'Photo preview';
   lightbox.appendChild(img);
+
+  // QR-Übergabe: Foto per signiertem Link aufs Handy laden
+  if (photoId) {
+    const bar = document.createElement('div');
+    bar.className = 'lb__bar';
+    const qrBtn = document.createElement('button');
+    qrBtn.className = 'btn btn--ghost lb__qr';
+    qrBtn.type = 'button';
+    qrBtn.innerHTML = `
+      <span class="btn__icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><path d="M14 14h3v3h-3zM21 14v.01M14 21v.01M17.5 17.5L21 21"></path></svg>
+      </span>
+      Aufs Handy`;
+    qrBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      showQrDialog(photoId);
+    });
+    bar.appendChild(qrBtn);
+    lightbox.appendChild(bar);
+  }
 
   lightbox.addEventListener('click', () => {
     const tl = timeline({
@@ -615,6 +1121,263 @@ function goTo(sectionName) {
       initCamera();
       resetCameraView();
     });
+  }
+}
+
+// ============================================================
+//  FEEDBACK: toasts (Systemstatus-Meldungen)
+// ============================================================
+const $toasts = document.getElementById('toasts');
+
+// Zeigt eine kurze Statusmeldung. Optionen:
+// { actionLabel, onAction, error, duration } — mit Aktion (z. B. Rückgängig)
+// bleibt der Toast länger stehen.
+function showToast(message, options = {}) {
+  const {
+    actionLabel = null,
+    onAction = null,
+    error = false,
+    duration = actionLabel ? 6000 : 3000
+  } = options;
+
+  const toast = document.createElement('div');
+  toast.className = 'toast' + (error ? ' toast--error' : '');
+
+  const msg = document.createElement('span');
+  msg.className = 'toast__msg';
+  msg.textContent = message;
+  toast.appendChild(msg);
+
+  let done = false;
+  const hide = () => {
+    if (done) return;
+    done = true;
+    gsap.to(toast, { opacity: 0, y: 10, duration: 0.25, ease: 'power2.in', onComplete: () => toast.remove() });
+  };
+
+  if (actionLabel) {
+    const action = document.createElement('button');
+    action.className = 'toast__action';
+    action.type = 'button';
+    action.textContent = actionLabel;
+    action.addEventListener('click', () => { hide(); if (onAction) onAction(); });
+    toast.appendChild(action);
+  }
+
+  $toasts.appendChild(toast);
+  gsap.from(toast, { y: 16, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
+  setTimeout(hide, duration);
+  return hide;
+}
+
+// ============================================================
+//  CONFIRM MODAL (nur für endgültiges, unwiederbringliches Löschen)
+// ============================================================
+const $confirmModal = document.getElementById('confirmModal');
+const $confirmOk = document.getElementById('confirmOk');
+const $confirmCancel = document.getElementById('confirmCancel');
+let confirmResolve = null;
+
+// Löst mit true (bestätigt) oder false (abgebrochen).
+function askConfirm() {
+  return new Promise((resolve) => {
+    confirmResolve = resolve;
+    $confirmModal.hidden = false;
+    gsap.from($confirmModal.querySelector('.modal__card'), {
+      y: 24, opacity: 0, scale: 0.96, duration: 0.3, ease: 'power2.out', clearProps: 'all'
+    });
+    $confirmCancel.focus();
+  });
+}
+
+function closeConfirm(result) {
+  if (!confirmResolve) return;
+  $confirmModal.hidden = true;
+  const resolve = confirmResolve;
+  confirmResolve = null;
+  resolve(result);
+}
+
+$confirmOk.addEventListener('click', () => closeConfirm(true));
+$confirmCancel.addEventListener('click', () => closeConfirm(false));
+$confirmModal.addEventListener('click', (e) => { if (e.target === $confirmModal) closeConfirm(false); });
+
+// ============================================================
+//  PAPIERKORB (trash view)
+// ============================================================
+const $trashToggle = document.getElementById('trashToggle');
+const $trashBadge = document.getElementById('trashBadge');
+const $trashView = document.getElementById('trashView');
+const $trashGrid = document.getElementById('trashGrid');
+const $trashEmpty = document.getElementById('trashEmpty');
+const $trashRetention = document.getElementById('trashRetention');
+const RETENTION_KEY = 'trashRetentionDays';
+
+let trashOpen = false;
+let trashItems = []; // { id, image, expiresAt }
+let trashVersion = 0; // lokale Änderungen invalidieren noch laufende loadTrash-Antworten
+
+function getRetentionDays() {
+  const v = Number(localStorage.getItem(RETENTION_KEY));
+  return [7, 14, 30].includes(v) ? v : 7;
+}
+
+// Mülleimer-Zähler am Galerie-Header — erst ab 1 sichtbar (0 = Rauschen).
+// Zählt serverseitig ohne die Bilder selbst zu laden.
+function refreshTrashCount() {
+  fetch('/api/trash/count', { cache: 'no-store' })
+    .then((res) => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then((data) => {
+      $trashBadge.hidden = data.count < 1;
+      $trashBadge.textContent = String(data.count);
+    })
+    .catch(() => { /* Zähler ist optional — still ignorieren */ });
+}
+
+$trashRetention.value = String(getRetentionDays());
+$trashRetention.addEventListener('change', () => {
+  localStorage.setItem(RETENTION_KEY, $trashRetention.value);
+  showToast('Papierkorb wird nach ' + $trashRetention.value + ' Tagen geleert.');
+});
+
+function toggleTrash(force = !trashOpen) {
+  trashOpen = force;
+  $trashToggle.classList.toggle('active', trashOpen);
+  $trashView.hidden = !trashOpen;
+  $galleryGrid.style.display = trashOpen ? 'none' : '';
+  $galleryEmpty.style.display = trashOpen
+    ? 'none'
+    : ($galleryGrid.querySelector('.gallery__card') ? 'none' : '');
+  if (trashOpen) loadTrash();
+}
+
+function loadTrash() {
+  const version = trashVersion;
+  fetch('/api/trash', { cache: 'no-store' })
+    .then((res) => {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    })
+    .then((items) => {
+      // Antwort veraltet? Zwischenzeitlich wurde lokal gelöscht/wiederhergestellt —
+      // sonst würde sie den aktuelleren Zustand überschreiben.
+      if (version !== trashVersion) return;
+      trashItems = items;
+      renderTrash();
+    })
+    .catch((err) => {
+      console.warn('Trash could not be loaded:', err);
+      showToast('Papierkorb konnte nicht geladen werden.', { error: true });
+    });
+}
+
+function renderTrash() {
+  $trashGrid.innerHTML = '';
+  trashItems.forEach((item) => $trashGrid.appendChild(buildTrashCard(item)));
+  $trashEmpty.style.display = trashItems.length ? 'none' : '';
+}
+
+function trashDaysLeftLabel(expiresAt) {
+  if (!expiresAt) return '';
+  const daysLeft = Math.max(0, Math.ceil((expiresAt * 1000 - Date.now()) / 86400000));
+  return 'noch ' + daysLeft + (daysLeft === 1 ? ' Tag' : ' Tage');
+}
+
+function buildTrashCard(item) {
+  const card = document.createElement('div');
+  card.className = 'trash__card';
+
+  const img = document.createElement('img');
+  img.src = item.image;
+  img.alt = 'Gelöschtes Foto';
+  img.loading = 'lazy';
+  card.appendChild(img);
+
+  const meta = document.createElement('div');
+  meta.className = 'trash__meta';
+
+  const days = document.createElement('span');
+  days.className = 'trash__days';
+  days.textContent = trashDaysLeftLabel(item.expiresAt);
+  meta.appendChild(days);
+
+  const actions = document.createElement('div');
+  actions.className = 'trash__actions';
+
+  const restoreBtn = document.createElement('button');
+  restoreBtn.className = 'trash__btn trash__btn--restore';
+  restoreBtn.type = 'button';
+  restoreBtn.textContent = 'Wiederherstellen';
+  restoreBtn.addEventListener('click', () => restoreTrashedPhoto(item));
+  actions.appendChild(restoreBtn);
+
+  const purgeBtn = document.createElement('button');
+  purgeBtn.className = 'trash__btn trash__btn--purge';
+  purgeBtn.type = 'button';
+  purgeBtn.textContent = 'Endgültig löschen';
+  // Nur die wirklich zerstörerische Aktion fragt nach — das Trash-Löschen
+  // selbst bleibt ohne Dialog und über den Toast rückgängig machbar.
+  purgeBtn.addEventListener('click', async () => {
+    if (await askConfirm()) purgeTrashedPhoto(item);
+  });
+  actions.appendChild(purgeBtn);
+
+  meta.appendChild(actions);
+  card.appendChild(meta);
+  return card;
+}
+
+async function restoreTrashedPhoto(item) {
+  const key = 'restore:' + item.id;
+  if (pendingOps.has(key)) return;
+  pendingOps.add(key);
+  // Karte sofort entfernen (optimistisch) — verhindert auch Doppelklick-Racen
+  trashVersion++;
+  trashItems = trashItems.filter((t) => t.id !== item.id);
+  renderTrash();
+  try {
+    const res = await fetch('/api/trash?id=' + encodeURIComponent(item.id), { method: 'POST' });
+    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
+    const data = res.status === 404 ? {} : await res.json().catch(() => ({}));
+    if (data.id) addToGallery(item.image, false, data.id);
+    else loadPhotosFromServer(); // 404-Fall: Zustand vom Server nachladen
+    refreshTrashCount();
+    showToast('Foto wiederhergestellt.');
+  } catch (err) {
+    trashVersion++;
+    trashItems.push(item); // optimistic removal zurückrollen
+    renderTrash();
+    console.warn('Photo could not be restored:', err);
+    showToast('Foto konnte nicht wiederhergestellt werden.', { error: true });
+  } finally {
+    pendingOps.delete(key);
+  }
+}
+
+async function purgeTrashedPhoto(item) {
+  const key = 'purge:' + item.id;
+  if (pendingOps.has(key)) return;
+  pendingOps.add(key);
+  trashVersion++;
+  trashItems = trashItems.filter((t) => t.id !== item.id);
+  renderTrash();
+  try {
+    const res = await fetch('/api/trash?id=' + encodeURIComponent(item.id), { method: 'DELETE' });
+    // 404 = bereits endgültig gelöscht — gilt ebenfalls als Erfolg
+    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
+    refreshTrashCount();
+    showToast('Foto endgültig gelöscht.');
+  } catch (err) {
+    trashVersion++;
+    trashItems.push(item); // optimistic removal zurückrollen
+    renderTrash();
+    console.warn('Photo could not be purged:', err);
+    showToast('Foto konnte nicht endgültig gelöscht werden.', { error: true });
+  } finally {
+    pendingOps.delete(key);
   }
 }
 
@@ -841,7 +1604,28 @@ function playSynthShutter(ctx) {
 
 // Plays the recorded shutter. Returns true when the real MP3 was used, and
 // falls back to the synthesized shutter so a shot is never silent.
+// ============================================================
+//  SOUND: An/Aus-Schalter
+// ============================================================
+const $soundToggle = document.getElementById('soundToggle');
+let soundEnabled = localStorage.getItem('soundEnabled') !== '0';
+
+function applySoundState() {
+  $soundToggle.setAttribute('aria-pressed', String(soundEnabled));
+  $soundToggle.setAttribute('aria-label', soundEnabled ? 'Ton ausschalten' : 'Ton einschalten');
+  $soundToggle.querySelectorAll('.sound-on').forEach((el) => { el.style.display = soundEnabled ? '' : 'none'; });
+  $soundToggle.querySelectorAll('.sound-off').forEach((el) => { el.style.display = soundEnabled ? 'none' : ''; });
+}
+applySoundState();
+
+$soundToggle.addEventListener('click', () => {
+  soundEnabled = !soundEnabled;
+  localStorage.setItem('soundEnabled', soundEnabled ? '1' : '0');
+  applySoundState();
+});
+
 function playShutterSound(ctx = getAudioContext()) {
+  if (!soundEnabled) return false;
   if (!ctx) return false;
 
   if (shutterBuffer) {
@@ -866,6 +1650,7 @@ function playShutterSound(ctx = getAudioContext()) {
 }
 
 function playCountdownTick(isFinal) {
+  if (!soundEnabled) return;
   const ctx = getAudioContext();
   if (!ctx) return;
   try {
@@ -915,33 +1700,34 @@ document.querySelectorAll('[data-action]').forEach((el) => {
         runCaptureSequence();
         break;
       case 'gallery':
-        if (currentState === 'camera') {
-          const img = $camera.querySelector('.viewfinder img');
+        if (currentState === 'camera' && !isCapturing) {
+          const img = $camera.querySelector('.viewfinder img.stage-photo');
           if (img) img.remove();
+          clearStickers();
           gsap.to($camera, {
             opacity: 0, duration: 0.3, ease: 'power2.in',
-            onComplete: () => { $camera.style.display = 'none'; goTo('gallery'); }
+            onComplete: () => {
+              $camera.style.display = 'none';
+              goTo('gallery');
+              refreshTrashCount();
+            }
           });
         }
         break;
       case 'back-camera':
+        // Back kehrt genau EINE Ebene zurück: Papierkorb -> Fotoliste -> Kamera.
+        // Ein Sprung über zwei Ebenen verstößt gegen das gelernte Back-Modell.
+        if (trashOpen) {
+          toggleTrash(false);
+          break;
+        }
         gsap.to($gallery, {
           opacity: 0, duration: 0.3, ease: 'power2.in',
           onComplete: () => { $gallery.style.display = 'none'; goTo('camera'); }
         });
         break;
-      case 'back-drop':
-        if (!hasPhoto) return;
-        const capturedImg = $camera.querySelector('.viewfinder img');
-        if (capturedImg) {
-          gsap.to(capturedImg, {
-            scale: 0.7, opacity: 0, duration: 0.35,
-            ease: 'power2.in', rotation: -6,
-            onComplete: resetCameraView
-          });
-        } else {
-          resetCameraView();
-        }
+      case 'toggle-trash':
+        if (currentState === 'gallery') toggleTrash();
         break;
       case 'retry-camera':
         initCamera();
@@ -959,7 +1745,6 @@ window.addEventListener('load', () => {
   animateSplashIn();
   loadPhotosFromServer();
   loadStreak();
-  initFilterBar();
 
   // Fetch the shutter recording up front; it is decoded on the first gesture.
   preloadShutterSound();
@@ -971,6 +1756,9 @@ window.addEventListener('load', () => {
       runCaptureSequence();
     }
     if (e.key === 'Escape') {
+      if (!$qrModal.hidden) { closeQrDialog(); return; }
+      if (!$confirmModal.hidden) { closeConfirm(false); return; }
+      if (trashOpen) { toggleTrash(false); return; }
       if (lightbox) { lightbox.remove(); lightbox = null; }
       if (currentState === 'gallery') {
         gsap.to($gallery, {
@@ -995,6 +1783,18 @@ style.textContent = `
     max-width: 90vw; max-height: 90vh;
     border-radius: var(--radius-sm);
     box-shadow: 0 0 60px rgba(0, 0, 0, 0.8);
+  }
+  .lb__bar {
+    position: absolute;
+    bottom: 28px;
+    left: 0; right: 0;
+    display: flex;
+    justify-content: center;
+  }
+  .lb__qr {
+    background: rgba(10 10 10 / 0.72);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
 `;
 document.head.appendChild(style);

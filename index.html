@@ -7,12 +7,6 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Daily streak -->
-  <div class="streak" id="streakPill" role="status" aria-live="polite" aria-label="Daily streak">
-    <span class="streak__fire" aria-hidden="true">🔥</span>
-    <span class="streak__count" id="streakCount">0</span>
-  </div>
-
   <!-- Landing / Splash -->
   <section class="splash" id="splash">
     <div class="splash__bg">
@@ -37,8 +31,22 @@
           <div class="viewfinder__corner viewfinder__corner--bl"></div>
           <div class="viewfinder__corner viewfinder__corner--br"></div>
         </div>
+        <!-- Daily streak -->
+        <div class="streak" id="streakPill" role="status" aria-live="polite" aria-label="Daily streak">
+          <span class="streak__fire" aria-hidden="true">🔥</span>
+          <span class="streak__count" id="streakCount">0</span>
+        </div>
         <div class="countdown" id="countdown">3</div>
         <div class="flash" id="flash"></div>
+        <button class="camera__sound" id="soundToggle" type="button" aria-label="Ton ausschalten" aria-pressed="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+            <path class="sound-on" d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+            <path class="sound-on" d="M18.5 5.5a9 9 0 0 1 0 13"></path>
+            <line class="sound-off" x1="16" y1="9" x2="22" y2="15"></line>
+            <line class="sound-off" x1="22" y1="9" x2="16" y2="15"></line>
+          </svg>
+        </button>
         <div class="camera__placeholder">
           <svg class="camera__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M12 16v-4a4 4 0 0 0-4-4v0a4 4 0 0 0 4 4v0a4 4 0 0 0 4-4v0a4 4 0 0 0-4-4 4 4 0 1 0 0 8v0" />
@@ -51,6 +59,40 @@
             <div class="processing__fill" id="processingFill"></div>
           </div>
           <span class="processing__label">Processing photo…</span>
+        </div>
+        <!-- Review direkt nach der Aufnahme: Behalten oder Neu aufnehmen -->
+        <div class="review" id="review" hidden>
+          <p class="review__title">Foto geschossen!</p>
+          <div class="review__stickers" id="stickerPalette" role="group" aria-label="Sticker hinzufügen">
+            <button class="sticker-pick" data-sticker="ohren" type="button" aria-label="Katzenohren hinzufügen">
+              <svg viewBox="0 0 64 40"><path d="M8 34 L6 8 L26 20 Z" fill="#f5b942"/><path d="M56 34 L58 8 L38 20 Z" fill="#f5b942"/><path d="M12 30 L11 16 L21 23 Z" fill="#ffd9a0"/><path d="M52 30 L53 16 L43 23 Z" fill="#ffd9a0"/></svg>
+            </button>
+            <button class="sticker-pick" data-sticker="krone" type="button" aria-label="Krone hinzufügen">
+              <svg viewBox="0 0 64 40"><path d="M6 30 L10 10 L22 22 L32 6 L42 22 L54 10 L58 30 Z" fill="#ffd700" stroke="#c9a200" stroke-width="2"/><circle cx="32" cy="14" r="3" fill="#ff5b7f"/></svg>
+            </button>
+            <button class="sticker-pick" data-sticker="brille" type="button" aria-label="Sonnenbrille hinzufügen">
+              <svg viewBox="0 0 64 24"><rect x="4" y="4" width="24" height="16" rx="4" fill="#111"/><rect x="36" y="4" width="24" height="16" rx="4" fill="#111"/><path d="M28 10 Q32 6 36 10" stroke="#111" stroke-width="3" fill="none"/><path d="M4 8 L0 6 M60 8 L64 6" stroke="#111" stroke-width="3"/></svg>
+            </button>
+            <button class="sticker-pick" data-sticker="hut" type="button" aria-label="Partyhut hinzufügen">
+              <svg viewBox="0 0 40 56"><path d="M20 2 L34 40 L6 40 Z" fill="#7c5cff"/><path d="M4 40 Q20 32 36 40 L36 46 Q20 38 4 46 Z" fill="#ff5b7f"/><circle cx="20" cy="4" r="4" fill="#ffd700"/></svg>
+            </button>
+          </div>
+          <p class="review__hint">Sticker antippen und aufs Foto ziehen</p>
+          <button class="btn btn--ghost review__qr" id="reviewQr" type="button">Aufs Handy laden (QR)</button>
+          <div class="review__actions">
+            <button class="btn btn--ghost review__btn" id="reviewRetake" type="button">
+              <span class="btn__icon btn__icon--left">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"></path><path d="M3.5 15a9 9 0 1 0 2-9.4L1 10"></path></svg>
+              </span>
+              Neu aufnehmen
+            </button>
+            <button class="btn btn--primary review__btn" id="reviewKeep" type="button">
+              Fertig
+              <span class="btn__icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"></path></svg>
+              </span>
+            </button>
+          </div>
         </div>
         <div class="permission" id="permission">
           <div class="permission__content">
@@ -66,7 +108,29 @@
       </div>
     </div>
 
-    <div class="filters" id="filterBar" role="group" aria-label="Face filters"></div>
+    <!-- Countdown-Dauer (Selbstauslöser) -->
+    <div class="timer" id="timerChips" role="group" aria-label="Countdown-Dauer">
+      <button class="timer__chip" data-seconds="3" type="button" aria-pressed="false">3s</button>
+      <button class="timer__chip" data-seconds="5" type="button" aria-pressed="false">5s</button>
+      <button class="timer__chip" data-seconds="10" type="button" aria-pressed="false">10s</button>
+    </div>
+
+    <!-- Filter — Live-Vorschau, wird beim Foto mit eingebrannt -->
+    <div class="filter-group">
+      <p class="timer__caption" aria-hidden="true">Farbe</p>
+      <div class="timer timer--filters" id="filterChips" role="group" aria-label="Farbfilter">
+        <button class="timer__chip" data-filter="standard" type="button" aria-pressed="false">Standard</button>
+        <button class="timer__chip" data-filter="sw" type="button" aria-pressed="false">Schwarzweiß</button>
+        <button class="timer__chip" data-filter="vintage" type="button" aria-pressed="false">Vintage</button>
+        <button class="timer__chip" data-filter="knackig" type="button" aria-pressed="false">Knackig</button>
+      </div>
+    </div>
+
+    <!-- Gesichtsfilter (MediaPipe) — Live-Vorschau -->
+    <div class="filter-group">
+      <p class="timer__caption" aria-hidden="true">Gesicht</p>
+      <div class="timer timer--filters" id="filterBar" role="group" aria-label="Gesichtsfilter"></div>
+    </div>
 
     <div class="camera__controls">
       <button class="btn btn--ghost camera__btn" data-action="gallery" id="galleryBtn">
@@ -79,10 +143,6 @@
 
       <button class="btn btn--capture" id="captureBtn" data-action="capture">
         <span class="btn__inner"></span>
-      </button>
-
-      <button class="btn btn--ghost camera__btn" data-action="back-drop" id="discardBtn">
-        Discard
       </button>
     </div>
   </section>
@@ -97,7 +157,13 @@
         Back
       </button>
       <h2 class="gallery__title">Your Photos</h2>
-      <div style="width:48px;"></div>
+      <button class="btn btn--ghost gallery__trash-toggle" data-action="toggle-trash" id="trashToggle">
+        <span class="btn__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"></path></svg>
+        </span>
+        Papierkorb
+        <span class="btn__badge btn__badge--muted" id="trashBadge" hidden>0</span>
+      </button>
     </div>
     <div class="gallery__grid" id="galleryGrid"></div>
     <div class="gallery__empty" id="galleryEmpty">
@@ -108,11 +174,61 @@
       </svg>
       <p>No photos yet. Capture your first memory!</p>
     </div>
+
+    <!-- Papierkorb (trash view) -->
+    <div class="trash" id="trashView" hidden>
+      <div class="trash__bar">
+        <p class="trash__hint">Gelöschte Fotos werden nach
+          <select class="trash__retention" id="trashRetention" aria-label="Aufbewahrungsdauer">
+            <option value="7">7 Tagen</option>
+            <option value="14">14 Tagen</option>
+            <option value="30">30 Tagen</option>
+          </select>
+          endgültig gelöscht.</p>
+      </div>
+      <div class="gallery__grid" id="trashGrid"></div>
+      <div class="gallery__empty" id="trashEmpty">
+        <svg class="gallery__empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"></path>
+        </svg>
+        <p>Der Papierkorb ist leer.</p>
+      </div>
+    </div>
   </section>
 
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <!-- Toasts (feedback) -->
+  <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+
+  <!-- Confirm modal (endgültig löschen) -->
+  <div class="modal" id="confirmModal" hidden>
+    <div class="modal__card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <h3 class="modal__title" id="confirmTitle">Endgültig löschen?</h3>
+      <p class="modal__text" id="confirmText">Das Foto wird für immer gelöscht und kann nicht wiederhergestellt werden.</p>
+      <div class="modal__actions">
+        <button class="btn btn--ghost" id="confirmCancel" type="button">Abbrechen</button>
+        <button class="btn btn--danger" id="confirmOk" type="button">Endgültig löschen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR-Dialog: Foto aufs Handy (signierter Download-Link als QR) -->
+  <div class="qr-modal" id="qrModal" hidden>
+    <div class="qr-modal__card" role="dialog" aria-modal="true" aria-labelledby="qrTitle">
+      <button class="qr-modal__close" id="qrClose" type="button" aria-label="QR-Dialog schließen">×</button>
+      <h3 class="qr-modal__title" id="qrTitle">Foto aufs Handy</h3>
+      <div class="qr-modal__frame" id="qrFrame" aria-live="polite">
+        <div class="qr-modal__loading" id="qrLoading">
+          <span class="qr-modal__spinner" aria-hidden="true"></span>
+          <p>Link wird erstellt…</p>
+        </div>
+      </div>
+      <p class="qr-modal__hint">QR-Code mit der Handy-Kamera scannen — das Foto öffnet sich im Browser.</p>
+      <p class="qr-modal__ttl" id="qrTtl"></p>
+    </div>
+  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
   <script src="filters.js"></script>
   <script src="script.js"></script>
 </body>
