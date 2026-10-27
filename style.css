@@ -424,62 +424,24 @@ section.active { display: block; opacity: 1; }
 .camera__sound svg { width: 1.15rem; height: 1.15rem; }
 .camera__sound:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
 
-/* Review-Phase: Farbe, Sticker und Speichern direkt am Foto */
+/* Post-shot editor — sits below the photo so the image stays untouched */
 .review {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 10px;
-  z-index: 6;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.7rem;
-  background: rgba(10 10 10 / 0.82);
-  border: 1px solid rgba(255 255 255 / 0.12);
-  border-radius: var(--radius);
-  backdrop-filter: blur(18px) saturate(160%);
-  -webkit-backdrop-filter: blur(18px) saturate(160%);
-  max-height: calc(100% - 20px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-width: thin;
-}
-.review::-webkit-scrollbar { width: 4px; }
-.review::-webkit-scrollbar-thumb { background: rgba(255 255 255 / 0.2); border-radius: 9999px; }
-.review__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
   gap: 0.5rem;
+  margin: 0 0 1.5rem;
 }
-.review__title { font-size: 0.9rem; font-weight: 600; letter-spacing: -0.01em; }
-.review__qr {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  flex-shrink: 0;
-  padding: 0.3rem 0.7rem;
-  border: 1px solid rgba(255 255 255 / 0.14);
-  border-radius: 9999px;
-  background: transparent;
-  color: var(--c-text-2);
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 500;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color var(--transition), background var(--transition), border-color var(--transition);
+.review__tray {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.65rem 0.7rem;
+  background: rgba(255 255 255 / 0.045);
+  border: 1px solid rgba(255 255 255 / 0.09);
+  border-radius: var(--radius);
 }
-.review__qr:hover {
-  color: var(--c-text);
-  background: var(--c-surface);
-  border-color: rgba(255 255 255 / 0.22);
-}
-.review__qr:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
-.review__qr svg { width: 0.85rem; height: 0.85rem; flex-shrink: 0; }
-.review__group { display: flex; flex-direction: column; gap: 0.35rem; }
-.review__label {
+.review__tray-title {
+  margin: 0;
   font-size: 0.62rem;
   font-weight: 600;
   letter-spacing: 0.07em;
@@ -488,14 +450,55 @@ section.active { display: block; opacity: 1; }
 }
 .review__chips { display: flex; flex-wrap: wrap; gap: 0.35rem; }
 .review__chips .timer__chip { padding: 0.3rem 0.7rem; font-size: 0.75rem; }
-.review__stickers {
+.review__stickers { display: flex; gap: 0.4rem; }
+.review__hint { margin: 0; font-size: 0.68rem; color: var(--c-text-3); line-height: 1.4; }
+
+.review__bar {
   display: flex;
+  align-items: center;
   gap: 0.4rem;
-  padding: 0.35rem;
-  background: rgba(255 255 255 / 0.05);
-  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.4rem;
+  background: rgba(255 255 255 / 0.045);
+  border: 1px solid rgba(255 255 255 / 0.09);
+  border-radius: var(--radius);
+  backdrop-filter: blur(18px) saturate(160%);
+  -webkit-backdrop-filter: blur(18px) saturate(160%);
 }
-.review__hint { font-size: 0.7rem; color: var(--c-text-3); line-height: 1.4; }
+.review__tools { display: flex; flex: 1 1 auto; min-width: 0; gap: 0.1rem; }
+.review__tool {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.4rem 0.15rem;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--c-text-2);
+  font: inherit;
+  font-size: 0.65rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color var(--transition), background var(--transition);
+}
+.review__tool svg { width: 1.3rem; height: 1.3rem; flex-shrink: 0; }
+.review__tool:hover { color: var(--c-text); background: var(--c-surface); }
+.review__tool[aria-expanded="true"] {
+  color: var(--c-accent);
+  background: rgba(255 215 0 / 0.1);
+}
+.review__tool:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
+.review__save { flex: 0 0 auto; padding: 0.65rem 1.35rem; font-size: 0.9rem; }
+@media (max-width: 340px) {
+  .review__tool span { display: none; }
+  .review__tool { padding: 0.6rem 0.15rem; }
+  .review__save { padding-inline: 1rem; }
+}
 .sticker-pick {
   flex: 0 0 auto;
   width: 46px;
@@ -514,19 +517,6 @@ section.active { display: block; opacity: 1; }
 .sticker-pick:active { transform: scale(0.92); }
 .sticker-pick svg { width: 100%; height: 100%; max-height: 30px; }
 .sticker-pick:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
-.review__actions {
-  position: sticky;
-  bottom: 0;
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 0.1rem;
-  padding-top: 0.5rem;
-  background: linear-gradient(180deg, rgba(10 10 10 / 0.88), rgba(10 10 10 / 0.98) 35%);
-}
-.review__btn { flex: 1 1 0; min-width: 0; padding: 0.6rem 0.8rem; font-size: 0.85rem; }
-@media (max-width: 360px) {
-  .review__actions { flex-direction: column; }
-}
 
 /* Countdown-Dauer (Selbstauslöser) — sichtbare Auswahl statt versteckter Einstellung */
 .timer {
@@ -590,11 +580,11 @@ section.active { display: block; opacity: 1; }
 #camera.is-reviewing .filter-group {
   display: none;
 }
+#camera.is-reviewing .camera__stage { margin-bottom: 0.9rem; }
 
 /* Sticker-Overlays auf dem Review-Foto (Direkte Manipulation) */
 .sticker {
   position: absolute;
-  /* unter dem Review-Panel, damit Sticker dessen Buttons nie verdecken */
   z-index: 5;
   touch-action: none;
   cursor: grab;

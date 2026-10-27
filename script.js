@@ -243,6 +243,10 @@ function hideViewfinder() {
 const $review = document.getElementById('review');
 const $reviewKeep = document.getElementById('reviewKeep');
 const $reviewRetake = document.getElementById('reviewRetake');
+const $filterTray = document.getElementById('filterTray');
+const $stickerTray = document.getElementById('stickerTray');
+const $stickerToggle = document.getElementById('stickerToggle');
+const $filterToggle = document.getElementById('filterToggle');
 const $timerChips = document.getElementById('timerChips');
 
 // Countdown-Dauer (Selbstauslöser) — sichtbar gewählt, pro Gerät gemerkt.
@@ -276,11 +280,12 @@ function setControlsLocked(locked) {
   $timerChips.classList.toggle('is-locked', locked);
 }
 
-// Das Review-Panel bleibt während der Bearbeitung sichtbar: „Speichern“ ist
+// Das Review-Panel bleibt während der Bearbeitung sichtbar: „Save“ ist
 // damit auch nach dem Platzieren eines Stickers immer direkt erreichbar.
 function showReview() {
   $review.hidden = false;
   $camera.classList.add('is-reviewing');
+  closeReviewTools();
   // Ausgangszustand: ungefiltertes Foto, Auswahl auf „Standard“.
   applyFilterSelection();
   gsap.from($review, { y: 24, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
@@ -290,7 +295,39 @@ function showReview() {
 function hideReview() {
   $review.hidden = true;
   $camera.classList.remove('is-reviewing');
+  closeReviewTools();
 }
+
+// Werkzeugleiste im Instagram-Stil: immer nur ein Tray offen, und das Tray
+// liegt unter dem Foto statt darüber.
+let openReviewTool = null;
+
+function setReviewTool(tool) {
+  openReviewTool = openReviewTool === tool ? null : tool;
+  const stickersOpen = openReviewTool === 'stickers';
+  const filtersOpen = openReviewTool === 'filters';
+  $stickerTray.hidden = !stickersOpen;
+  $filterTray.hidden = !filtersOpen;
+  $stickerToggle.setAttribute('aria-expanded', String(stickersOpen));
+  $filterToggle.setAttribute('aria-expanded', String(filtersOpen));
+  const tray = stickersOpen ? $stickerTray : filtersOpen ? $filterTray : null;
+  if (tray) {
+    gsap.fromTo(tray, { y: 8, opacity: 0 }, {
+      y: 0, opacity: 1, duration: 0.2, ease: 'power2.out', clearProps: 'all'
+    });
+  }
+}
+
+function closeReviewTools() {
+  openReviewTool = null;
+  $stickerTray.hidden = true;
+  $filterTray.hidden = true;
+  $stickerToggle.setAttribute('aria-expanded', 'false');
+  $filterToggle.setAttribute('aria-expanded', 'false');
+}
+
+$stickerToggle.addEventListener('click', () => setReviewTool('stickers'));
+$filterToggle.addEventListener('click', () => setReviewTool('filters'));
 
 // Wirft das aktuell angezeigte Foto weg (in den Papierkorb, mit Undo-Toast)
 // und setzt die Kameraansicht zurück — vom Review-„Neu aufnehmen" genutzt.
@@ -434,15 +471,6 @@ async function showQrDialog(photoId) {
     if (!$qrModal.hidden) showErrorInQrFrame();
   }
 }
-
-// Einstiegspunkt Review-Phase
-document.getElementById('reviewQr').addEventListener('click', () => {
-  if (!lastPhoto || !lastPhoto.id) {
-    showToast('Foto ist noch nicht gespeichert.', { error: true });
-    return;
-  }
-  showQrDialog(lastPhoto.id);
-});
 
 // ============================================================
 //  FILTER — Live-Vorschau aufs Video, beim Capture mit eingebrannt
@@ -631,6 +659,8 @@ $stickerPalette.addEventListener('click', (e) => {
   const btn = e.target.closest('.sticker-pick');
   if (!btn) return;
   addSticker(btn.dataset.sticker);
+  // Tray schließen, damit das Foto frei bleibt; Save ist immer sichtbar.
+  closeReviewTools();
 });
 
 // Klick neben den Sticker hebt die Auswahl auf
