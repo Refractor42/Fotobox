@@ -535,6 +535,29 @@ section.active { display: block; opacity: 1; }
   margin: 0 auto 0.9rem;
 }
 .filter-group > .timer { margin: 0; }
+/* Face filters stay on one swipeable row instead of wrapping into a block */
+#filterBar {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  width: 100%;
+  overflow-x: auto;
+  padding: 0 0.125rem 0.25rem;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+#filterBar::-webkit-scrollbar { display: none; }
+#filterBar .timer__chip { flex: 0 0 auto; }
+/* On desktop, show a slim scrollbar so it is obvious there are more filters */
+@media (hover: hover) and (pointer: fine) {
+  #filterBar {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255 255 255 / 0.22) transparent;
+    padding-bottom: 0.4rem;
+  }
+  #filterBar::-webkit-scrollbar { display: block; height: 4px; }
+  #filterBar::-webkit-scrollbar-track { background: transparent; }
+  #filterBar::-webkit-scrollbar-thumb { background: rgba(255 255 255 / 0.22); border-radius: 999px; }
+}
 .timer__caption {
   margin: 0;
   text-align: center;

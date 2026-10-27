@@ -473,7 +473,7 @@ async function showQrDialog(photoId) {
 }
 
 // ============================================================
-//  FILTER — Live-Vorschau aufs Video, beim Capture mit eingebrannt
+//  FARBFILTER — werden im Review auf das fertige Foto angewendet
 // ============================================================
 const FILTERS = {
   standard: { css: 'none' },
@@ -508,7 +508,8 @@ function initFilterBar() {
     chip.setAttribute('aria-pressed', String(active));
     if (active) chip.classList.add('is-selected');
 
-    chip.textContent = filter.label;
+    chip.textContent = filter.emoji + ' ' + filter.label;
+    chip.setAttribute('aria-label', filter.label);
     chip.addEventListener('click', () => {
       const selected = filterEngine.setFilter(filter.id);
       $filterBar.querySelectorAll('.timer__chip').forEach((el) => {
@@ -519,6 +520,14 @@ function initFilterBar() {
     });
     $filterBar.appendChild(chip);
   });
+
+  // Vertical wheel scrolls the filter row horizontally on desktop.
+  $filterBar.addEventListener('wheel', (e) => {
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    if ($filterBar.scrollWidth <= $filterBar.clientWidth + 1) return;
+    $filterBar.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
 }
 initFilterBar();
 // Farbfilter werden erst nach der Aufnahme im Review gewählt und auf das

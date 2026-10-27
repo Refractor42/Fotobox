@@ -19,8 +19,14 @@
 
   const FILTERS = [
     { id: 'none', label: 'None', emoji: '🚫' },
+    { id: 'smile', label: 'Mega Smile', emoji: '😄' },
+    { id: 'big', label: 'Big Eyes + Mouth', emoji: '👀' },
+    { id: 'balloon', label: 'Balloon Head', emoji: '🎈' },
+    { id: 'squish', label: 'Squish', emoji: '🥞' },
+    { id: 'melt', label: 'Meltdown', emoji: '🫠' },
+    { id: 'jelly', label: 'Jelly', emoji: '🪼' },
+    { id: 'clown', label: 'Clown', emoji: '🤡' },
     { id: 'dog', label: 'Snap Dog', emoji: '🐶' },
-    { id: 'big', label: 'Big Eyes', emoji: '👀' },
     { id: 'classic', label: 'Shades', emoji: '🕶️' }
   ];
 
@@ -33,11 +39,18 @@
     nose: 1,
     lipTop: 13,
     lipBottom: 14,
+    mouthL: 61,
+    mouthR: 291,
+    cheekA: 205,
+    cheekB: 425,
+    chin: 152,
     eyeA1: 33,
     eyeA2: 133,
     eyeB1: 362,
     eyeB2: 263
   };
+
+  const ZERO_EXPR = { smile: 0, jawOpen: 0 };
 
   function create(options) {
     const video = options && options.video;
@@ -48,6 +61,13 @@
 
     const ctx = canvas.getContext('2d');
     if (!ctx) throw new Error('SnapBoxFilters could not get a 2D canvas context');
+
+    // Reused scratch surface for soft, feathered warps. Fixed size avoids
+    // allocating (and clearing) a new canvas for every patch on every frame.
+    const warpCanvas = document.createElement('canvas');
+    warpCanvas.width = 1024;
+    warpCanvas.height = 1024;
+    const warpCtx = warpCanvas.getContext('2d');
     let activeFilter = 'none';
     let landmarker = null;
     let trackerState = 'idle'; // idle | loading | ready | unavailable
@@ -57,6 +77,8 @@
     let lastFaceAt = 0;
     let trackedFace = null;
     let face = null;
+    let trackedExpression = { ...ZERO_EXPR };
+    let expression = { ...ZERO_EXPR };
     let drawWarningShown = false;
 
     // ---------- geometry ----------
@@ -102,6 +124,16 @@
       }
       const fallbackPoint = (x, y) => ({ x: left + (right - left) * x, y: top + (bottom - top) * y });
       const pick = (i, x, y) => (points[i] ? { x: points[i].x, y: points[i].y } : fallbackPoint(x, y));
+      const lipTop = pick(LM.lipTop, 0.5, 0.64);
+      const lipBottom = pick(LM.lipBottom, 0.5, 0.68);
+      const mouth = midpoint(lipTop, lipBottom);
+      const mouthL = pick(LM.mouthL, 0.4, 0.66);
+      const mouthR = pick(LM.mouthR, 0.6, 0.66);
+      // With a smile the corners sit above the mouth centre. This geometric
+      // estimate keeps Mega Smile alive if blendshapes are unavailable.
+      const faceH = Math.max(0.001, bottom - top);
+      const lift = (mouth.y - (mouthL.y + mouthR.y) / 2) / faceH;
+      const smileGeom = Math.max(0, Math.min(1, (lift - 0.004) * 22));
 
       return {
         left,
@@ -111,9 +143,13 @@
         eyeA: points[LM.eyeA1] && points[LM.eyeA2] ? midpoint(points[LM.eyeA1], points[LM.eyeA2]) : fallbackPoint(0.32, 0.4),
         eyeB: points[LM.eyeB1] && points[LM.eyeB2] ? midpoint(points[LM.eyeB1], points[LM.eyeB2]) : fallbackPoint(0.68, 0.4),
         nose: pick(LM.nose, 0.5, 0.52),
-        mouth: points[LM.lipTop] && points[LM.lipBottom]
-          ? midpoint(points[LM.lipTop], points[LM.lipBottom])
-          : fallbackPoint(0.5, 0.66)
+        mouth,
+        mouthL,
+        mouthR,
+        cheekA: pick(LM.cheekA, 0.3, 0.55),
+        cheekB: pick(LM.cheekB, 0.7, 0.55),
+        chin: pick(LM.chin, 0.5, 0.98),
+        smileGeom
       };
     }
 
@@ -137,7 +173,13 @@
         eyeA: toSource(rect, surfaceW, surfaceH, centerX - 0.085, centerY - 0.065),
         eyeB: toSource(rect, surfaceW, surfaceH, centerX + 0.085, centerY - 0.065),
         nose: toSource(rect, surfaceW, surfaceH, centerX, centerY + 0.04),
-        mouth: toSource(rect, surfaceW, surfaceH, centerX, centerY + 0.12)
+        mouth: toSource(rect, surfaceW, surfaceH, centerX, centerY + 0.12),
+        mouthL: toSource(rect, surfaceW, surfaceH, centerX - 0.09, centerY + 0.12),
+        mouthR: toSource(rect, surfaceW, surfaceH, centerX + 0.09, centerY + 0.12),
+        cheekA: toSource(rect, surfaceW, surfaceH, centerX - 0.13, centerY + 0.05),
+        cheekB: toSource(rect, surfaceW, surfaceH, centerX + 0.13, centerY + 0.05),
+        chin: toSource(rect, surfaceW, surfaceH, centerX, centerY + 0.23),
+        smileGeom: 0
       };
     }
 
@@ -152,16 +194,54 @@
         eyeA: point(prev.eyeA, next.eyeA),
         eyeB: point(prev.eyeB, next.eyeB),
         nose: point(prev.nose, next.nose),
-        mouth: point(prev.mouth, next.mouth)
+        mouth: point(prev.mouth, next.mouth),
+        mouthL: point(prev.mouthL, next.mouthL),
+        mouthR: point(prev.mouthR, next.mouthR),
+        cheekA: point(prev.cheekA, next.cheekA),
+        cheekB: point(prev.cheekB, next.cheekB),
+        chin: point(prev.chin, next.chin),
+        smileGeom: next.smileGeom || 0
       };
     }
 
-    // Points are interpolated every frame, so easing between detections keeps
-    // the overlay glued to the face instead of stepping.
+    function readExpression(categories, box) {
+      const scores = Object.create(null);
+      (categories || []).forEach((entry) => {
+        if (entry && entry.categoryName) scores[entry.categoryName] = entry.score || 0;
+      });
+      const hasBlendshapes = !!(categories && categories.length);
+      let smile = 0;
+      let jawOpen = 0;
+      if (hasBlendshapes) {
+        const smileL = scores.mouthSmileLeft || 0;
+        const smileR = scores.mouthSmileRight || 0;
+        const cheekL = scores.cheekSquintLeft || 0;
+        const cheekR = scores.cheekSquintRight || 0;
+        smile = Math.min(1, (smileL + smileR) / 2 + (cheekL + cheekR) * 0.12);
+        jawOpen = Math.min(1, scores.jawOpen || 0);
+      }
+      // Landmark geometry is the fallback when blendshapes are missing, and
+      // also catches smiles that the blendshape model underestimates.
+      const geom = box && box.smileGeom ? box.smileGeom : 0;
+      smile = Math.max(smile, geom * (hasBlendshapes ? 0.65 : 0.9));
+      return { smile: Math.min(1, smile), jawOpen };
+    }
+
+    function smoothExpression(prev, next) {
+      const lerp = (a, b) => a + (b - a) * SMOOTHING;
+      return {
+        smile: lerp(prev.smile, next.smile),
+        jawOpen: lerp(prev.jawOpen, next.jawOpen)
+      };
+    }
+
+    // Points and expression weights are interpolated every frame, so easing
+    // between detections keeps the overlay glued to the face instead of stepping.
     function resolveFace(rect, surfaceW, surfaceH, now) {
       const hasRecentFace = trackedFace && now - lastFaceAt < FACE_GRACE_MS;
       const target = hasRecentFace ? trackedFace : fallbackFrame(rect, surfaceW, surfaceH);
       face = face ? smooth(face, target) : target;
+      expression = smoothExpression(expression, hasRecentFace ? trackedExpression : ZERO_EXPR);
       return face;
     }
 
@@ -174,16 +254,47 @@
       target.restore();
     }
 
-    function magnify(target, rect, center, radiusX, radiusY, zoom) {
-      target.save();
-      target.beginPath();
-      target.ellipse(center.x, center.y, radiusX, radiusY, 0, 0, Math.PI * 2);
-      target.clip();
-      target.translate(center.x, center.y);
-      target.scale(zoom, zoom);
-      target.translate(-center.x, -center.y);
-      drawMirroredVideo(target, rect);
-      target.restore();
+    // Warps a soft-edged elliptical patch of the frame around `center`. The
+    // feathered rim is what keeps the exaggerated faces from showing a seam.
+    function softWarp(target, rect, center, radiusX, radiusY, scaleX, scaleY) {
+      const rx = Math.max(2, radiusX);
+      const ry = Math.max(2, radiusY);
+      if (Math.abs(scaleX - 1) < 0.01 && Math.abs(scaleY - 1) < 0.01) return;
+      const pw = rx * 2;
+      const ph = ry * 2;
+      const w = Math.min(1024, Math.ceil(pw));
+      const h = Math.min(1024, Math.ceil(ph));
+      if (!warpCtx || !w || !h) return;
+      const px = center.x - rx;
+      const py = center.y - ry;
+
+      warpCtx.save();
+      warpCtx.beginPath();
+      warpCtx.rect(0, 0, w, h);
+      warpCtx.clip();
+      warpCtx.clearRect(0, 0, w, h);
+      // Scale about the patch centre, then draw the mirrored feed into it.
+      warpCtx.translate(w / 2, h / 2);
+      warpCtx.scale(scaleX, scaleY);
+      warpCtx.translate(-w / 2, -h / 2);
+      warpCtx.translate(-px, -py);
+      drawMirroredVideo(warpCtx, rect);
+      warpCtx.restore();
+
+      // Fade the rim so the warp melts into the untouched frame.
+      warpCtx.save();
+      warpCtx.globalCompositeOperation = 'destination-in';
+      warpCtx.translate(w / 2, h / 2);
+      warpCtx.scale(1, h / w);
+      const feather = warpCtx.createRadialGradient(0, 0, w * 0.34, 0, 0, w * 0.5);
+      feather.addColorStop(0, 'rgba(0,0,0,1)');
+      feather.addColorStop(0.5, 'rgba(0,0,0,1)');
+      feather.addColorStop(1, 'rgba(0,0,0,0)');
+      warpCtx.fillStyle = feather;
+      warpCtx.fillRect(-w / 2, -w / 2, w, w);
+      warpCtx.restore();
+
+      target.drawImage(warpCanvas, 0, 0, w, h, px, py, pw, ph);
     }
 
     function roundedRect(target, x, y, w, h, r) {
@@ -254,26 +365,112 @@
       drawNose(target, nose.x, nose.y, Math.max(18, faceW * 0.26), Math.max(12, faceW * 0.17));
     }
 
-    function drawBigEyes(target, rect, box) {
-      const faceW = Math.abs(box.right - box.left) * rect.w;
-      const faceH = Math.abs(box.bottom - box.top) * rect.h;
-      const eyeRx = Math.max(11, faceW * 0.17);
-      const eyeRy = Math.max(9, faceH * 0.11);
+    function drawBigEyes(target, rect, box, faceW, faceH) {
+      const eyeRx = Math.max(12, faceW * 0.17);
+      const eyeRy = Math.max(10, faceH * 0.12);
 
+      // 2.2x keeps both features clearly past the "twice as big" mark.
       for (const key of ['eyeA', 'eyeB']) {
         const eye = toScreen(rect, box[key]);
-        magnify(target, rect, eye, eyeRx, eyeRy, 1.7);
-        target.save();
-        target.strokeStyle = 'rgba(0, 0, 0, 0.28)';
-        target.lineWidth = 1.5;
-        target.beginPath();
-        target.ellipse(eye.x, eye.y, eyeRx, eyeRy, 0, 0, Math.PI * 2);
-        target.stroke();
-        target.restore();
+        softWarp(target, rect, eye, eyeRx, eyeRy, 2.2, 2.2);
       }
 
       const mouth = toScreen(rect, box.mouth);
-      magnify(target, rect, mouth, Math.max(14, faceW * 0.22), Math.max(10, faceH * 0.12), 1.55);
+      softWarp(
+        target, rect, mouth,
+        Math.max(18, faceW * 0.46), Math.max(10, faceH * 0.13),
+        2.2, 2.2
+      );
+    }
+
+    function drawMegaSmile(target, rect, box, expr, faceW, faceH) {
+      const smile = Math.max(0, Math.min(1, (expr.smile - 0.12) / 0.68));
+      // Neutral faces get a tiny lift; a real smile stretches the mouth region
+      // up to ~3.6x wide and ~2.2x tall — a whole-face grin. The patch stays
+      // between the nose and chin so eyes and nose are never replaced.
+      const strength = 0.05 + 0.95 * smile;
+      const mouth = toScreen(rect, box.mouth);
+      softWarp(
+        target, rect, mouth,
+        faceW * 0.95, faceH * 0.12,
+        1 + 2.6 * strength,
+        1 + 1.2 * strength + 0.35 * Math.min(1, expr.jawOpen || 0)
+      );
+    }
+
+    function drawBalloon(target, rect, box, faceW, faceH) {
+      const center = toScreen(rect, {
+        x: (box.left + box.right) / 2,
+        y: (box.top + box.bottom) / 2
+      });
+      softWarp(target, rect, center, faceW * 0.75, faceH * 0.8, 1.35, 1.55);
+    }
+
+    function drawSquish(target, rect, box, faceW, faceH) {
+      const center = toScreen(rect, {
+        x: (box.left + box.right) / 2,
+        y: (box.top + box.bottom) / 2
+      });
+      softWarp(target, rect, center, faceW * 0.7, faceH * 0.65, 1.55, 0.62);
+    }
+
+    function drawMelt(target, rect, box, faceW, faceH) {
+      const center = toScreen(rect, {
+        x: (box.left + box.right) / 2,
+        y: box.top + (box.bottom - box.top) * 0.72
+      });
+      softWarp(target, rect, center, faceW * 0.58, faceH * 0.48, 0.95, 1.65);
+    }
+
+    function drawJelly(target, rect, box, faceW, faceH, now) {
+      const t = now / 1000;
+      const center = toScreen(rect, {
+        x: (box.left + box.right) / 2,
+        y: (box.top + box.bottom) / 2
+      });
+      const sx = 1 + Math.sin(t * 3.1) * 0.16;
+      const sy = 1 + Math.sin(t * 2.3 + 1.2) * 0.16;
+      softWarp(target, rect, center, faceW * 0.72, faceH * 0.68, sx, sy);
+    }
+
+    function drawClown(target, rect, box, expr, faceW, faceH) {
+      drawMegaSmile(target, rect, box, expr, faceW, faceH);
+
+      const nose = toScreen(rect, box.nose);
+      const noseR = Math.max(10, faceW * 0.11);
+      const noseGradient = target.createRadialGradient(
+        nose.x - noseR * 0.3, nose.y - noseR * 0.35, noseR * 0.15,
+        nose.x, nose.y, noseR
+      );
+      noseGradient.addColorStop(0, '#ff8a8a');
+      noseGradient.addColorStop(0.5, '#ff1f1f');
+      noseGradient.addColorStop(1, '#a30000');
+      target.save();
+      target.beginPath();
+      target.arc(nose.x, nose.y, noseR, 0, Math.PI * 2);
+      target.fillStyle = noseGradient;
+      target.fill();
+      target.lineWidth = Math.max(1, noseR * 0.08);
+      target.strokeStyle = 'rgba(110, 0, 0, 0.45)';
+      target.stroke();
+      target.restore();
+
+      for (const key of ['cheekA', 'cheekB']) {
+        const cheek = toScreen(rect, box[key]);
+        const cheekR = Math.max(10, faceW * 0.12);
+        const blush = target.createRadialGradient(
+          cheek.x, cheek.y, cheekR * 0.1,
+          cheek.x, cheek.y, cheekR
+        );
+        blush.addColorStop(0, 'rgba(255, 70, 110, 0.42)');
+        blush.addColorStop(1, 'rgba(255, 70, 110, 0)');
+        target.save();
+        target.fillStyle = blush;
+        target.beginPath();
+        target.arc(cheek.x, cheek.y, cheekR, 0, Math.PI * 2);
+        target.fill();
+        target.restore();
+      }
     }
 
     function drawMustache(target, x, y, w, h, angle) {
@@ -340,9 +537,19 @@
       drawMustache(target, nose.x, nose.y + faceW * 0.11, Math.max(30, faceW * 0.52), Math.max(10, faceW * 0.13), angle);
     }
 
-    function drawFilter(target, rect, box, id) {
+    function drawFilter(target, rect, box, id, expr, now) {
+      if (id === 'none') return undefined;
+      const faceW = Math.max(1, Math.abs(box.right - box.left) * rect.w);
+      const faceH = Math.max(1, Math.abs(box.bottom - box.top) * rect.h);
+      const faceExpr = expr || ZERO_EXPR;
+      if (id === 'smile') return drawMegaSmile(target, rect, box, faceExpr, faceW, faceH);
+      if (id === 'big') return drawBigEyes(target, rect, box, faceW, faceH);
+      if (id === 'balloon') return drawBalloon(target, rect, box, faceW, faceH);
+      if (id === 'squish') return drawSquish(target, rect, box, faceW, faceH);
+      if (id === 'melt') return drawMelt(target, rect, box, faceW, faceH);
+      if (id === 'jelly') return drawJelly(target, rect, box, faceW, faceH, now);
+      if (id === 'clown') return drawClown(target, rect, box, faceExpr, faceW, faceH);
       if (id === 'dog') return drawDog(target, rect, box);
-      if (id === 'big') return drawBigEyes(target, rect, box);
       if (id === 'classic') return drawClassic(target, rect, box);
       return undefined;
     }
@@ -357,7 +564,8 @@
         const build = (delegate) => vision.FaceLandmarker.createFromOptions(fileset, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate },
           runningMode: 'VIDEO',
-          numFaces: 1
+          numFaces: 1,
+          outputFaceBlendshapes: true
         });
         try {
           landmarker = await build('GPU');
@@ -382,6 +590,10 @@
         const points = result && result.faceLandmarks && result.faceLandmarks[0];
         if (points && points.length) {
           trackedFace = frameFromLandmarks(points);
+          const blendshapes = result.faceBlendshapes && result.faceBlendshapes[0]
+            ? result.faceBlendshapes[0].categories
+            : null;
+          trackedExpression = readExpression(blendshapes, trackedFace);
           lastFaceAt = now;
         }
       } catch (err) {
@@ -417,7 +629,7 @@
       }
 
       drawMirroredVideo(target, rect);
-      if (box) drawFilter(target, rect, box, activeFilter);
+      if (box) drawFilter(target, rect, box, activeFilter, expression, now);
     }
 
     function draw() {
@@ -462,7 +674,7 @@
         // relative fallback into the sensor-sized frame.
         const trackedRecently = trackedFace && now - lastFaceAt < FACE_GRACE_MS * 2;
         const box = trackedRecently && face ? face : fallbackFrame(rect, width, height);
-        drawFilter(target, rect, box, activeFilter);
+        drawFilter(target, rect, box, activeFilter, trackedRecently ? expression : ZERO_EXPR, now);
       }
 
       target.restore();
