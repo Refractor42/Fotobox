@@ -277,15 +277,28 @@ function setControlsLocked(locked) {
   document.getElementById('filterChips').classList.toggle('is-locked', locked);
 }
 
+const $reviewMenuBtn = document.getElementById('reviewMenuBtn');
+
+// Das Review-Menü verdeckt das geschossene Bild. Beim Auswählen eines
+// Stickers klappt es daher komplett zu; der schwebende Menü-Button holt es zurück.
+function collapseReviewMenu() {
+  $review.hidden = true;
+  $reviewMenuBtn.hidden = false;
+}
+
 function showReview() {
   $review.hidden = false;
+  $reviewMenuBtn.hidden = true;
   gsap.from($review, { y: 24, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
   $reviewKeep.focus();
 }
 
 function hideReview() {
   $review.hidden = true;
+  $reviewMenuBtn.hidden = true;
 }
+
+$reviewMenuBtn.addEventListener('click', showReview);
 
 // Wirft das aktuell angezeigte Foto weg (in den Papierkorb, mit Undo-Toast)
 // und setzt die Kameraansicht zurück — vom Review-„Neu aufnehmen" genutzt.
@@ -546,6 +559,7 @@ function addSticker(kind) {
     e.preventDefault();
     e.stopPropagation();
     selectSticker(st);
+    collapseReviewMenu();
     const rect = $camera.querySelector('.viewfinder').getBoundingClientRect();
     const move = (ev) => {
       st.x = ((ev.clientX - rect.left) / rect.width) * 100;
@@ -621,7 +635,10 @@ function clearStickers() {
 
 $stickerPalette.addEventListener('click', (e) => {
   const btn = e.target.closest('.sticker-pick');
-  if (btn) addSticker(btn.dataset.sticker);
+  if (!btn) return;
+  addSticker(btn.dataset.sticker);
+  // Menü ausblenden, damit man das Foto mit dem neuen Sticker frei sieht
+  collapseReviewMenu();
 });
 
 // Klick neben den Sticker hebt die Auswahl auf
