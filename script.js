@@ -274,31 +274,23 @@ $timerChips.addEventListener('click', (e) => {
 function setControlsLocked(locked) {
   $galleryBtn.classList.toggle('is-locked', locked);
   $timerChips.classList.toggle('is-locked', locked);
-  document.getElementById('filterChips').classList.toggle('is-locked', locked);
 }
 
-const $reviewMenuBtn = document.getElementById('reviewMenuBtn');
-
-// Das Review-Menü verdeckt das geschossene Bild. Beim Auswählen eines
-// Stickers klappt es daher komplett zu; der schwebende Menü-Button holt es zurück.
-function collapseReviewMenu() {
-  $review.hidden = true;
-  $reviewMenuBtn.hidden = false;
-}
-
+// Das Review-Panel bleibt während der Bearbeitung sichtbar: „Speichern“ ist
+// damit auch nach dem Platzieren eines Stickers immer direkt erreichbar.
 function showReview() {
   $review.hidden = false;
-  $reviewMenuBtn.hidden = true;
+  $camera.classList.add('is-reviewing');
+  // Ausgangszustand: ungefiltertes Foto, Auswahl auf „Standard“.
+  applyFilterSelection();
   gsap.from($review, { y: 24, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
   $reviewKeep.focus();
 }
 
 function hideReview() {
   $review.hidden = true;
-  $reviewMenuBtn.hidden = true;
+  $camera.classList.remove('is-reviewing');
 }
-
-$reviewMenuBtn.addEventListener('click', showReview);
 
 // Wirft das aktuell angezeigte Foto weg (in den Papierkorb, mit Undo-Toast)
 // und setzt die Kameraansicht zurück — vom Review-„Neu aufnehmen" genutzt.
@@ -322,10 +314,10 @@ function discardCurrentPhoto() {
 $reviewKeep.addEventListener('click', () => {
   hideReview();
   setControlsLocked(false);
-  // Mit Stickern: foto neu komponieren und serverseitig überschreiben,
-  // sonst zurück ins Livebild, bereit für den nächsten Schuss.
-  if (activeStickers.length) {
-    composeEditedPhoto();
+  // Farbe oder Sticker gewählt: Foto neu komponieren und serverseitig
+  // überschreiben, sonst zurück ins Livebild, bereit für den nächsten Schuss.
+  if (activeStickers.length || currentFilter !== 'standard') {
+    saveEditedPhoto();
   } else {
     resetCameraView();
   }
@@ -501,8 +493,16 @@ function initFilterBar() {
   });
 }
 initFilterBar();
-let currentFilter = localStorage.getItem('photoFilter');
-if (!FILTERS[currentFilter]) currentFilter = 'standard';
+// Farbfilter werden erst nach der Aufnahme im Review gewählt und auf das
+// geschossene Foto angewendet — die Live-Vorschau bleibt ungefiltert.
+let currentFilter = 'standard';
+
+function applyStageFilter() {
+  const stage = $camera.querySelector('.viewfinder img.stage-photo');
+  if (!stage) return;
+  const css = FILTERS[currentFilter].css;
+  stage.style.filter = css === 'none' ? 'none' : css;
+}
 
 function applyFilterSelection() {
   $filterChips.forEach((chip) => {
@@ -510,16 +510,11 @@ function applyFilterSelection() {
     chip.classList.toggle('is-selected', selected);
     chip.setAttribute('aria-pressed', String(selected));
   });
-  const css = FILTERS[currentFilter].css === 'none' ? '' : FILTERS[currentFilter].css;
-  $video.style.filter = css;
-  // Das Face-Canvas liegt über dem Video und zeichnet das unveränderte Bild,
-  // daher braucht es denselben Farbfilter, sonst wirkt er nur ohne Gesichtsfilter.
-  $filterCanvas.style.filter = css;
+  applyStageFilter();
 }
 
 $filterChips.forEach((chip) => chip.addEventListener('click', () => {
   currentFilter = chip.dataset.filter;
-  localStorage.setItem('photoFilter', currentFilter);
   applyFilterSelection();
 }));
 applyFilterSelection();
@@ -559,7 +554,6 @@ function addSticker(kind) {
     e.preventDefault();
     e.stopPropagation();
     selectSticker(st);
-    collapseReviewMenu();
     const rect = $camera.querySelector('.viewfinder').getBoundingClientRect();
     const move = (ev) => {
       st.x = ((ev.clientX - rect.left) / rect.width) * 100;
@@ -637,8 +631,6 @@ $stickerPalette.addEventListener('click', (e) => {
   const btn = e.target.closest('.sticker-pick');
   if (!btn) return;
   addSticker(btn.dataset.sticker);
-  // Menü ausblenden, damit man das Foto mit dem neuen Sticker frei sieht
-  collapseReviewMenu();
 });
 
 // Klick neben den Sticker hebt die Auswahl auf
@@ -646,8 +638,9 @@ $camera.querySelector('.viewfinder').addEventListener('pointerdown', (e) => {
   if (!e.target.closest('.sticker')) deselectSticker();
 });
 
-// Behalten mit Stickern: Foto + Sticker auf ein Canvas komponieren,
-// serverseitig am selben Storage-Key überschreiben (kein Papierkorb-Müll).
+// Speichern aus dem Review: Foto + gewählte Farbe + Sticker auf ein Canvas
+// komponieren und serverseitig am selben Storage-Key überschreiben
+// (kein Papierkorb-Müll).
 function loadImg(src) {
   return new Promise((resolve, reject) => {
     const i = new Image();
@@ -657,13 +650,17 @@ function loadImg(src) {
   });
 }
 
-async function renderPhotoWithStickers(photoEl) {
+async function renderEditedPhoto(photoEl) {
   const base = await loadImg(photoEl.src);
   const canvas = document.createElement('canvas');
   canvas.width = base.naturalWidth;
   canvas.height = base.naturalHeight;
   const ctx = canvas.getContext('2d');
+  // Farbfilter einbrennen, Sticker danach ungefiltert zeichnen.
+  const filterCss = FILTERS[currentFilter].css;
+  if (filterCss !== 'none') ctx.filter = filterCss;
   ctx.drawImage(base, 0, 0);
+  ctx.filter = 'none';
   for (const st of [...activeStickers]) {
     try {
       const si = await loadImg(st.el.querySelector('img').src);
@@ -679,7 +676,7 @@ async function renderPhotoWithStickers(photoEl) {
   return canvas.toDataURL('image/jpeg', 0.92);
 }
 
-async function composeEditedPhoto() {
+async function saveEditedPhoto() {
   const photoEl = $camera.querySelector('.viewfinder img.stage-photo');
   if (!photoEl) { clearStickers(); resetCameraView(); return; }
   // Original-Speicherung muss durch sein, damit wir ihren Key überschreiben können
@@ -688,17 +685,17 @@ async function composeEditedPhoto() {
   }
   let edited;
   try {
-    edited = await renderPhotoWithStickers(photoEl);
+    edited = await renderEditedPhoto(photoEl);
   } catch (err) {
     console.warn('Foto konnte nicht komponiert werden:', err);
-    showToast('Sticker konnten nicht gespeichert werden.', { error: true });
+    showToast('Änderungen konnten nicht gespeichert werden.', { error: true });
     clearStickers();
     resetCameraView();
     return;
   }
   clearStickers();
   if (!lastPhoto || !lastPhoto.id) {
-    showToast('Sticker konnten nicht gespeichert werden — Foto bleibt unverändert.', { error: true });
+    showToast('Änderungen konnten nicht gespeichert werden — Foto bleibt unverändert.', { error: true });
     resetCameraView();
     return;
   }
@@ -713,7 +710,7 @@ async function composeEditedPhoto() {
       const cardImg = lastPhoto.card.querySelector('img');
       if (cardImg) cardImg.src = edited;
     }
-    showToast('Foto mit Stickern gespeichert.');
+    showToast('Foto gespeichert.');
   } catch (err) {
     console.warn('Edited photo could not be saved:', err);
     showToast('Bearbeitetes Foto konnte nicht gespeichert werden — Original bleibt erhalten.', { error: true });
@@ -750,7 +747,10 @@ async function runCaptureSequence() {
       opacity: 0, duration: 0.35, ease: 'power2.out', delay: 0.02
     });
 
-    // 4. process photo
+    // 4. process photo — die Live-Vorschau ist immer ungefiltert; Farbe wird
+    // erst im Review auf das fertige Foto angewendet.
+    currentFilter = 'standard';
+    applyFilterSelection();
     showProcessing();
     await new Promise((r) => setTimeout(r, 200));
     $video.pause();
@@ -861,6 +861,8 @@ function resetCameraView() {
   const existingImg = $camera.querySelector('.viewfinder img.stage-photo');
   if (existingImg) existingImg.remove();
   clearStickers();
+  currentFilter = 'standard';
+  applyFilterSelection();
 
   gsap.set($processing, { opacity: 0 });
   gsap.set($flash, { opacity: 0 });
