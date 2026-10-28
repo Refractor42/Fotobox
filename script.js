@@ -53,7 +53,7 @@ try {
 const I18N = {
   de: {
     splashSubtitle: 'Knipsen. Animieren. Erinnern.',
-    splashCta: 'Photobox starten',
+    splashCta: 'Fotobox starten',
     processing: 'Foto wird verarbeitet…',
     permissionText: 'Kamerazugriff für SnapBox erforderlich',
     permissionBtn: 'Kamera erlauben',
