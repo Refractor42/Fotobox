@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SnapBox — Admin Panel</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --c-bg: #0b0c10;
+      --c-surface: #15171e;
+      --c-surface-hover: #1c1f28;
+      --c-border: rgba(255, 255, 255, 0.08);
+      --c-border-active: #facc15;
+      --c-accent: #facc15;
+      --c-accent-glow: rgba(250, 204, 21, 0.35);
+      --c-text: #ffffff;
+      --c-text-muted: #94a3b8;
+      --c-text-dim: #64748b;
+      --c-success: #22c55e;
+      --c-danger: #ef4444;
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      background: var(--c-bg);
+      color: var(--c-text);
+      font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      line-height: 1.5;
+    }
+
+    /* Top Navigation Header */
+    .admin-header {
+      width: 100%;
+      background: rgba(21, 23, 30, 0.85);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--c-border);
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+
+    .admin-header__inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 1rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .brand__logo {
+      font-size: 1.35rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      background: linear-gradient(135deg, #facc15 20%, #38bdf8 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand__badge {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      background: rgba(250, 204, 21, 0.15);
+      color: var(--c-accent);
+      border: 1px solid rgba(250, 204, 21, 0.3);
+      padding: 0.2rem 0.55rem;
+      border-radius: 9999px;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .server-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--c-text-muted);
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--c-border);
+      padding: 0.35rem 0.75rem;
+      border-radius: 9999px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c-success);
+      box-shadow: 0 0 8px var(--c-success);
+      animation: pulse 2s infinite ease-in-out;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.85); }
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 9999px;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid transparent;
+      transition: all 0.2s ease;
+    }
+
+    .btn--primary {
+      background: var(--c-accent);
+      color: #0b0c10;
+      font-weight: 600;
+    }
+
+    .btn--primary:hover {
+      background: #eab308;
+      box-shadow: 0 4px 16px var(--c-accent-glow);
+      transform: translateY(-1px);
+    }
+
+    .btn--ghost {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--c-text);
+      border-color: var(--c-border);
+    }
+
+    .btn--ghost:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-1px);
+    }
+
+    /* Main Container */
+    .admin-main {
+      width: 100%;
+      max-width: 1080px;
+      padding: 2.5rem 1.5rem 4rem;
+      display: flex;
+      flex-direction: column;
+      gap: 2.5rem;
+    }
+
+    .hero-title {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      margin-bottom: 0.35rem;
+    }
+
+    .hero-subtitle {
+      font-size: 1rem;
+      color: var(--c-text-muted);
+      max-width: 650px;
+    }
+
+    /* Section Card */
+    .section-card {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-lg);
+      padding: 2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.35);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .section-header__title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.25rem;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .section-header__desc {
+      font-size: 0.9rem;
+      color: var(--c-text-muted);
+    }
+
+    /* Orientation Grid */
+    .orientation-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .format-card {
+      position: relative;
+      background: rgba(255, 255, 255, 0.02);
+      border: 2px solid var(--c-border);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+      outline: none;
+    }
+
+    .format-card:hover {
+      background: var(--c-surface-hover);
+      border-color: rgba(250, 204, 21, 0.4);
+      transform: translateY(-2px);
+    }
+
+    .format-card:focus-visible {
+      border-color: var(--c-accent);
+      box-shadow: 0 0 0 3px var(--c-accent-glow);
+    }
+
+    .format-card.is-active {
+      border-color: var(--c-accent);
+      background: rgba(250, 204, 21, 0.04);
+      box-shadow: 0 0 24px var(--c-accent-glow), inset 0 0 0 1px var(--c-accent);
+    }
+
+    .format-card__badge {
+      position: absolute;
+      top: 1.25rem;
+      right: 1.25rem;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.25rem 0.65rem;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--c-text-muted);
+      border: 1px solid var(--c-border);
+      transition: all 0.2s ease;
+    }
+
+    .format-card.is-active .format-card__badge {
+      background: var(--c-accent);
+      color: #0b0c10;
+      border-color: var(--c-accent);
+      box-shadow: 0 2px 8px var(--c-accent-glow);
+    }
+
+    /* Preview Visuals inside Card */
+    .preview-box {
+      width: 100%;
+      height: 190px;
+      background: #07080a;
+      border-radius: var(--radius-sm);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Miniature Portrait Mockup */
+    .mini-portrait {
+      width: 110px;
+      height: 165px;
+      background: #111318;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      padding: 6px;
+      gap: 6px;
+      position: relative;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    .mini-portrait__stage {
+      flex: 1;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    .mini-portrait__stage::after {
+      content: "3:4";
+      font-size: 9px;
+      color: rgba(255, 255, 255, 0.35);
+      font-weight: 700;
+    }
+
+    .mini-portrait__dock {
+      height: 12px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 4px;
+      width: 75%;
+      align-self: center;
+    }
+
+    .mini-portrait__shutter {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: var(--c-accent);
+      align-self: center;
+      border: 2px solid rgba(255, 255, 255, 0.4);
+      box-shadow: 0 0 8px var(--c-accent-glow);
+    }
+
+    /* Miniature Landscape Mockup */
+    .mini-landscape {
+      width: 230px;
+      height: 145px;
+      background: #111318;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 14px;
+      display: flex;
+      padding: 6px;
+      position: relative;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+
+    .mini-landscape__screen {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border-radius: 8px;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mini-landscape__screen::before {
+      content: "16:9 Querformat";
+      font-size: 10px;
+      color: rgba(255, 255, 255, 0.3);
+      font-weight: 700;
+    }
+
+    .mini-landscape__gallery {
+      position: absolute;
+      top: 6px;
+      left: 6px;
+      width: 44px;
+      height: 14px;
+      background: rgba(30, 32, 40, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+      padding: 0 3px;
+      font-size: 7px;
+      color: #fff;
+    }
+
+    .mini-landscape__gallery::after {
+      content: "0";
+      position: absolute;
+      top: -3px;
+      right: -3px;
+      width: 8px;
+      height: 8px;
+      background: #facc15;
+      color: #000;
+      font-size: 6px;
+      font-weight: bold;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mini-landscape__shutter {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 32px;
+      height: 32px;
+      background: #facc15;
+      border-radius: 50%;
+      box-shadow: 0 0 12px rgba(250, 204, 21, 0.8);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .mini-landscape__shutter::after {
+      content: "";
+      width: 10px;
+      height: 7px;
+      background: #000;
+      border-radius: 2px;
+    }
+
+    .mini-landscape__dock {
+      position: absolute;
+      bottom: 6px;
+      left: 45%;
+      transform: translateX(-50%);
+      width: 120px;
+      height: 16px;
+      background: rgba(20, 22, 28, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      padding: 0 4px;
+    }
+
+    .mini-landscape__pill {
+      height: 8px;
+      width: 18px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 3px;
+    }
+
+    .mini-landscape__pill.active {
+      border: 1px solid #facc15;
+      background: rgba(250, 204, 21, 0.2);
+    }
+
+    .format-card__info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+    }
+
+    .format-card__title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .format-card__desc {
+      font-size: 0.85rem;
+      color: var(--c-text-muted);
+      line-height: 1.45;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .stat-card {
+      background: var(--c-surface);
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .stat-card__label {
+      font-size: 0.8rem;
+      color: var(--c-text-dim);
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+    }
+
+    .stat-card__val {
+      font-size: 1.75rem;
+      font-weight: 800;
+      color: var(--c-text);
+      display: flex;
+      align-items: baseline;
+      gap: 0.5rem;
+    }
+
+    .stat-card__sub {
+      font-size: 0.8rem;
+      color: var(--c-text-muted);
+    }
+
+    /* Quick Links Box */
+    .links-box {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    /* Toast feedback notification */
+    .toast-container {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      pointer-events: none;
+    }
+
+    .admin-toast {
+      background: #1e293b;
+      color: #fff;
+      border: 1px solid var(--c-accent);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px var(--c-accent-glow);
+      padding: 0.85rem 1.35rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.65rem;
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .admin-toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 640px) {
+      .admin-header__inner { flex-direction: column; align-items: stretch; }
+      .header-actions { justify-content: space-between; }
+      .orientation-grid { grid-template-columns: 1fr; }
+      .section-card { padding: 1.25rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Header -->
+  <header class="admin-header">
+    <div class="admin-header__inner">
+      <a href="/admin" class="brand">
+        <span class="brand__logo">SnapBox</span>
+        <span class="brand__badge">Admin</span>
+      </a>
+
+      <div class="header-actions">
+        <div class="server-status" id="serverStatusBadge">
+          <span class="status-dot"></span>
+          <span id="serverStatusText">Online</span>
+        </div>
+        <a href="/" class="btn btn--primary" id="openPhotoboxBtn" target="_blank" rel="noopener">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+            <path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
+          </svg>
+          Fotobox öffnen
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="admin-main">
+    <div>
+      <h1 class="hero-title">Fotobox Steuerung</h1>
+      <p class="hero-subtitle">Verwalte die Bildschirm-Ausrichtung und Einstellungen für verbundene Terminals und Bildschirme in Echtzeit.</p>
+    </div>
+
+    <!-- Section: Orientation -->
+    <section class="section-card">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            Bildschirm-Ausrichtung (Format)
+          </h2>
+          <p class="section-header__desc">Klicke auf das gewünschte Format. Das Layout aktualisiert sich sofort auf allen aktiven Fotobox-Bildschirmen.</p>
+        </div>
+      </div>
+
+      <!-- Orientation Cards -->
+      <div class="orientation-grid" role="radiogroup" aria-label="Fotobox Ausrichtung">
+        
+        <!-- Portrait Card -->
+        <div class="format-card" id="cardPortrait" role="radio" aria-checked="false" tabindex="0">
+          <span class="format-card__badge" id="badgePortrait">Wählen</span>
+          <div class="preview-box">
+            <div class="mini-portrait">
+              <div class="mini-portrait__stage"></div>
+              <div class="mini-portrait__dock"></div>
+              <div class="mini-portrait__shutter"></div>
+            </div>
+          </div>
+          <div class="format-card__info">
+            <h3 class="format-card__title">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="5" y="2" width="14" height="20" rx="3"></rect>
+                <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"></line>
+              </svg>
+              Hochformat (Portrait)
+            </h3>
+            <p class="format-card__desc">Klassisches 3:4 Layout mit Auslöser unten im Bild. Ideal für Smartphones, iPads im Hochkant-Modus und vertikale Säulen-Kioske.</p>
+          </div>
+        </div>
+
+        <!-- Landscape Card -->
+        <div class="format-card" id="cardLandscape" role="radio" aria-checked="false" tabindex="0">
+          <span class="format-card__badge" id="badgeLandscape">Wählen</span>
+          <div class="preview-box">
+            <div class="mini-landscape">
+              <div class="mini-landscape__screen">
+                <div class="mini-landscape__gallery">Galerie</div>
+                <div class="mini-landscape__shutter"></div>
+                <div class="mini-landscape__dock">
+                  <span class="mini-landscape__pill"></span>
+                  <span class="mini-landscape__pill active"></span>
+                  <span class="mini-landscape__pill"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="format-card__info">
+            <h3 class="format-card__title">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="5" width="20" height="14" rx="3"></rect>
+                <circle cx="19" cy="12" r="1.5" fill="currentColor"></circle>
+              </svg>
+              Querformat (Landscape)
+            </h3>
+            <p class="format-card__desc">Modernes 16:9 Breitbild-Layout mit seitlichem gelben Auslöser und schwebender Steuerleiste für Timer, Gesichtsfilter & Sprache.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+        <!-- Section: Default Language -->
+    <section class="section-card">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="2" y1="12" x2="22" y2="12"></line>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+            </svg>
+            Standard-Sprache (Default Language)
+          </h2>
+          <p class="section-header__desc">Wähle die Sprache, mit der die Fotobox startet und zu der sie nach jedem gespeicherten Foto automatisch zurückkehrt.</p>
+        </div>
+      </div>
+
+      <div class="orientation-grid" role="radiogroup" aria-label="Standard-Sprache">
+        <!-- German Card -->
+        <div class="format-card" id="cardLangDe" role="radio" aria-checked="false" tabindex="0">
+          <span class="format-card__badge" id="badgeLangDe">Wählen</span>
+          <div class="preview-box">
+            <svg viewBox="0 0 60 40" width="110" height="74" style="border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
+              <rect width="60" height="40" rx="4" fill="#000"/>
+              <rect y="13.33" width="60" height="13.34" fill="#D00"/>
+              <rect y="26.67" width="60" height="13.33" rx="4" fill="#FFCE00"/>
+            </svg>
+          </div>
+          <div class="format-card__info">
+            <h3 class="format-card__title">Deutsch (DE)</h3>
+            <p class="format-card__desc">Deutsche Benutzeroberfläche („Knipsen. Animieren. Erinnern.“, „Auslöser“, „Gesichtsfilter“).</p>
+          </div>
+        </div>
+
+        <!-- English Card -->
+        <div class="format-card" id="cardLangEn" role="radio" aria-checked="false" tabindex="0">
+          <span class="format-card__badge" id="badgeLangEn">Wählen</span>
+          <div class="preview-box">
+            <svg viewBox="0 0 60 40" width="110" height="74" style="border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.6);">
+              <rect width="60" height="40" rx="4" fill="#012169"/>
+              <path d="M0 0 L60 40 M60 0 L0 40" stroke="#fff" stroke-width="8"/>
+              <path d="M0 0 L60 40 M60 0 L0 40" stroke="#C8102E" stroke-width="4"/>
+              <path d="M30 0 V40 M0 20 H60" stroke="#fff" stroke-width="13"/>
+              <path d="M30 0 V40 M0 20 H60" stroke="#C8102E" stroke-width="7"/>
+            </svg>
+          </div>
+          <div class="format-card__info">
+            <h3 class="format-card__title">English (EN)</h3>
+            <p class="format-card__desc">English user interface ("Capture. Animate. Remember.", "Capture", "Face filters").</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: System & Quick Info -->
+    <section class="section-card">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="16" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12.01" y2="8"></line>
+            </svg>
+            System & Verbindungen
+          </h2>
+          <p class="section-header__desc">Netzwerk-URLs zum Aufrufen der Fotobox auf Tablets oder Gästegeräten.</p>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-card__label">Aktiver Modus</span>
+          <div class="stat-card__val" id="statOrientationDisplay">—</div>
+          <span class="stat-card__sub" id="statOrientationSub">Wird geladen…</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-card__label">Gespeicherte Fotos</span>
+          <div class="stat-card__val" id="statPhotoCount">—</div>
+          <span class="stat-card__sub">In Supabase Storage</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-card__label">Fotos im Papierkorb</span>
+          <div class="stat-card__val" id="statTrashCount">—</div>
+          <span class="stat-card__sub">Automatische Bereinigung</span>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-card__label">Tages-Streak</span>
+          <div class="stat-card__val" id="statStreak">—</div>
+          <span class="stat-card__sub">Knips-Serie der Box</span>
+        </div>
+      </div>
+
+      <div class="links-box">
+        <button class="btn btn--ghost" id="copyUrlBtn" type="button">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+          </svg>
+          <span id="copyUrlText">Netzwerk-Link kopieren</span>
+        </button>
+
+        <a href="/" class="btn btn--ghost">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+          Zur Fotobox wechseln
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <!-- Notification Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script>
+    (function () {
+      'use strict';
+
+      let currentOrientation = 'portrait';
+      let broadcastChannel = null;
+
+      try {
+        if ('BroadcastChannel' in window) {
+          broadcastChannel = new BroadcastChannel('snapbox_channel');
+        }
+      } catch (e) {}
+
+      const $cardPortrait  = document.getElementById('cardPortrait');
+      const $cardLandscape = document.getElementById('cardLandscape');
+      const $badgePortrait = document.getElementById('badgePortrait');
+      const $badgeLandscape = document.getElementById('badgeLandscape');
+      const $statOrientationDisplay = document.getElementById('statOrientationDisplay');
+      const $statOrientationSub = document.getElementById('statOrientationSub');
+      const $statPhotoCount = document.getElementById('statPhotoCount');
+      const $statTrashCount = document.getElementById('statTrashCount');
+      const $statStreak = document.getElementById('statStreak');
+      const $copyUrlBtn = document.getElementById('copyUrlBtn');
+      const $copyUrlText = document.getElementById('copyUrlText');
+      const $toastContainer = document.getElementById('toastContainer');
+
+      let networkUrl = window.location.origin;
+
+      function showToast(message) {
+        const toast = document.createElement('div');
+        toast.className = 'admin-toast';
+        toast.innerHTML = `
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#facc15" stroke-width="2">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+            <polyline points="22 4 12 14.01 9 11.01"></polyline>
+          </svg>
+          <span>${message}</span>
+        `;
+        $toastContainer.appendChild(toast);
+        requestAnimationFrame(() => toast.classList.add('show'));
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 350);
+        }, 3200);
+      }
+
+      function updateUI(orientation) {
+        currentOrientation = orientation;
+        const isLandscape = orientation === 'landscape';
+
+        $cardPortrait.classList.toggle('is-active', !isLandscape);
+        $cardPortrait.setAttribute('aria-checked', String(!isLandscape));
+        $badgePortrait.textContent = !isLandscape ? 'Aktiv ✓' : 'Wählen';
+
+        $cardLandscape.classList.toggle('is-active', isLandscape);
+        $cardLandscape.setAttribute('aria-checked', String(isLandscape));
+        $badgeLandscape.textContent = isLandscape ? 'Aktiv ✓' : 'Wählen';
+
+        $statOrientationDisplay.textContent = isLandscape ? 'Querformat' : 'Hochformat';
+        $statOrientationSub.textContent = isLandscape ? '16:9 Breitbild (Tablet/Widescreen)' : '3:4 Hochkant (Smartphone/Säule)';
+      }
+
+      async function setOrientation(orientation) {
+        if (orientation === currentOrientation) return;
+        updateUI(orientation);
+
+        // 1. Speichern in localStorage für sofortigen Tab-Sync
+        try {
+          localStorage.setItem('snapbox_orientation', orientation);
+        } catch (e) {}
+
+        // 2. BroadcastChannel für offene Tabs
+        if (broadcastChannel) {
+          try {
+            broadcastChannel.postMessage({ type: 'orientation_change', orientation });
+          } catch (e) {}
+        }
+
+        // 3. Im Backend speichern (/api/settings)
+        try {
+          const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ orientation })
+          });
+          if (res.ok) {
+            showToast(orientation === 'landscape' ? 'Querformat aktiviert! Bildschirme synchronisiert.' : 'Hochformat aktiviert! Bildschirme synchronisiert.');
+          } else {
+            showToast('Einstellung lokal gespeichert (Server antwortete nicht)');
+          }
+        } catch (err) {
+          showToast('Einstellung lokal gespeichert');
+        }
+      }
+
+      $cardPortrait.addEventListener('click', () => setOrientation('portrait'));
+      $cardPortrait.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOrientation('portrait'); }
+      });
+
+      $cardLandscape.addEventListener('click', () => setOrientation('landscape'));
+      $cardLandscape.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOrientation('landscape'); }
+      });
+
+      // Lade aktuelle Einstellungen & Statistiken
+      
+      let currentDefaultLang = 'de';
+      const $cardLangDe = document.getElementById('cardLangDe');
+      const $cardLangEn = document.getElementById('cardLangEn');
+      const $badgeLangDe = document.getElementById('badgeLangDe');
+      const $badgeLangEn = document.getElementById('badgeLangEn');
+
+      function updateLangUI(lang) {
+        currentDefaultLang = lang === 'en' ? 'en' : 'de';
+        const isDe = currentDefaultLang === 'de';
+
+        $cardLangDe.classList.toggle('is-active', isDe);
+        $cardLangDe.setAttribute('aria-checked', String(isDe));
+        $badgeLangDe.textContent = isDe ? 'Aktiv ✓' : 'Wählen';
+
+        $cardLangEn.classList.toggle('is-active', !isDe);
+        $cardLangEn.setAttribute('aria-checked', String(!isDe));
+        $badgeLangEn.textContent = !isDe ? 'Aktiv ✓' : 'Wählen';
+      }
+
+      async function setDefaultLanguage(lang) {
+        if (lang === currentDefaultLang) return;
+        updateLangUI(lang);
+
+        try {
+          localStorage.setItem('snapbox_default_language', lang);
+        } catch (e) {}
+
+        if (broadcastChannel) {
+          try {
+            broadcastChannel.postMessage({ type: 'default_language_change', defaultLanguage: lang });
+          } catch (e) {}
+        }
+
+        try {
+          const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ defaultLanguage: lang })
+          });
+          if (res.ok) {
+            showToast(lang === 'en' ? 'Standardsprache auf English gesetzt!' : 'Standardsprache auf Deutsch gesetzt!');
+          } else {
+            showToast('Sprache lokal gespeichert');
+          }
+        } catch (err) {
+          showToast('Sprache lokal gespeichert');
+        }
+      }
+
+      $cardLangDe.addEventListener('click', () => setDefaultLanguage('de'));
+      $cardLangDe.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDefaultLanguage('de'); }
+      });
+
+      $cardLangEn.addEventListener('click', () => setDefaultLanguage('en'));
+      $cardLangEn.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDefaultLanguage('en'); }
+      });
+
+      async function loadSettings() {
+        try {
+          const localStored = localStorage.getItem('snapbox_orientation');
+          if (localStored === 'landscape' || localStored === 'portrait') {
+            updateUI(localStored);
+          }
+        } catch (e) {}
+
+        try {
+          const res = await fetch('/api/settings');
+          if (res.ok) {
+            const data = await res.json();
+            if (data.defaultLanguage) {
+              updateLangUI(data.defaultLanguage);
+              localStorage.setItem('snapbox_default_language', data.defaultLanguage);
+            }
+            if (data.orientation) {
+              updateUI(data.orientation);
+              localStorage.setItem('snapbox_orientation', data.orientation);
+            }
+            if (data.server && data.server.networkUrl) {
+              networkUrl = data.server.networkUrl;
+            }
+          }
+        } catch (err) {
+          console.warn('Could not load settings from server:', err);
+        }
+
+        // Fotos zählen
+        fetch('/api/photos').then((r) => r.json()).then((items) => {
+          if (Array.isArray(items)) {
+            $statPhotoCount.textContent = items.length;
+          }
+        }).catch(() => {
+          $statPhotoCount.textContent = '0';
+        });
+
+        // Papierkorb zählen
+        fetch('/api/trash/count').then((r) => r.json()).then((data) => {
+          if (data && typeof data.count === 'number') {
+            $statTrashCount.textContent = data.count;
+          }
+        }).catch(() => {
+          $statTrashCount.textContent = '0';
+        });
+
+        // Streak abrufen
+        fetch('/api/streak').then((r) => r.json()).then((data) => {
+          if (data && typeof data.current_streak === 'number') {
+            $statStreak.textContent = data.current_streak + ' 🔥';
+          }
+        }).catch(() => {
+          $statStreak.textContent = '0 🔥';
+        });
+      }
+
+      $copyUrlBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(networkUrl);
+          $copyUrlText.textContent = 'Link kopiert!';
+          setTimeout(() => { $copyUrlText.textContent = 'Netzwerk-Link kopieren'; }, 2000);
+        } catch (e) {
+          prompt('Fotobox-Link:', networkUrl);
+        }
+      });
+
+      loadSettings();
+    })();
+  </script>
+</body>
+</html>
