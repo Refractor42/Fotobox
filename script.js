@@ -50,7 +50,6 @@ const I18N = {
   de: {
     splashSubtitle: 'Knipsen. Animieren. Erinnern.',
     splashCta: 'Photobox starten',
-    cameraHint: 'Bereit zum Aufnehmen',
     processing: 'Foto wird verarbeitet…',
     permissionText: 'Kamerazugriff für SnapBox erforderlich',
     permissionBtn: 'Kamera erlauben',
@@ -133,12 +132,18 @@ const I18N = {
     soundOff: 'Ton einschalten',
     streakAriaOne: 'Foto-Streak: 1 Tag, {s}',
     streakAriaMany: 'Foto-Streak: {n} Tage, {s}',
-    streakTaken: 'Foto in den letzten 24 Stunden gemacht',
-    streakNone: 'kein Foto in den letzten 24 Stunden',
+    streakTaken: 'Foto heute gemacht',
+    streakNone: 'heute noch kein Foto',
     faceNone: 'Keine',
-    faceSmile: 'Mega-Lächeln',
     faceBig: 'Große Augen + Mund',
-    faceBalloon: 'Ballonkopf',
+    faceThug: 'Thug Life',
+    faceMlg: 'MLG',
+    faceShades: 'Pixelbrille',
+    faceBoss: 'Gangster-Cap',
+    faceBling: 'Goldkette',
+    faceJoint: 'Joint',
+    faceCheeky: 'Freches Grinsen',
+    faceUnibrow: 'Monobraue',
     faceSquish: 'Platt',
     faceMelt: 'Schmelzen',
     faceJelly: 'Gelee',
@@ -150,7 +155,6 @@ const I18N = {
   en: {
     splashSubtitle: 'Capture. Animate. Remember.',
     splashCta: 'Start Photobox',
-    cameraHint: 'Ready to capture',
     processing: 'Processing photo…',
     permissionText: 'Camera access required for SnapBox',
     permissionBtn: 'Allow Camera',
@@ -233,12 +237,18 @@ const I18N = {
     soundOff: 'Turn sound on',
     streakAriaOne: 'Photo streak: 1 day, {s}',
     streakAriaMany: 'Photo streak: {n} days, {s}',
-    streakTaken: 'photo taken in the last 24 hours',
-    streakNone: 'no photo in the last 24 hours',
+    streakTaken: 'photo taken today',
+    streakNone: 'no photo yet today',
     faceNone: 'None',
-    faceSmile: 'Mega Smile',
     faceBig: 'Big Eyes + Mouth',
-    faceBalloon: 'Balloon Head',
+    faceThug: 'Thug Life',
+    faceMlg: 'MLG',
+    faceShades: 'Pixel Shades',
+    faceBoss: 'Thug Boss',
+    faceBling: 'Bling',
+    faceJoint: 'Joint',
+    faceCheeky: 'Cheeky Grin',
+    faceUnibrow: 'Unibrow',
     faceSquish: 'Squish',
     faceMelt: 'Meltdown',
     faceJelly: 'Jelly',
@@ -358,29 +368,51 @@ function stopCamera() {
 //  DAILY STREAK
 // ============================================================
 // Global streak: the server reads/writes the single Supabase row.
-const STREAK_WINDOW_MS = 24 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
-function isPhotoTakenRecently(isoTimestamp) {
-  if (!isoTimestamp) return false;
-  const then = new Date(isoTimestamp).getTime();
-  if (Number.isNaN(then)) return false;
-  return Date.now() - then < STREAK_WINDOW_MS;
+// Kalendertag in lokaler Zeit. Der Streak zählt Tage, keine rollenden
+// 24h-Fenster — sonst bringt ein Foto am Abend und eines am nächsten
+// Nachmittag keinen Fortschritt, obwohl an beiden Tagen geknipst wurde.
+function localDayIndex(date) {
+  return Math.floor((date.getTime() - date.getTimezoneOffset() * 60000) / DAY_MS);
+}
+
+// Tage seit dem letzten Foto; null, wenn es (noch) keins gibt.
+function daysSinceLastPhoto() {
+  if (!lastPhotoTimestamp) return null;
+  const then = new Date(lastPhotoTimestamp);
+  if (Number.isNaN(then.getTime())) return null;
+  return localDayIndex(new Date()) - localDayIndex(then);
+}
+
+function isPhotoTakenToday() {
+  return daysSinceLastPhoto() === 0;
 }
 
 function renderStreak() {
-  const takenRecently = isPhotoTakenRecently(lastPhotoTimestamp);
-  $streakCount.textContent = String(currentStreak);
+  const takenToday = isPhotoTakenToday();
+  const days = daysSinceLastPhoto();
+  // Ein ganzer Tag ohne Foto beendet den Streak — auch ohne Server-Roundtrip,
+  // weil die Box oft über Mitternacht hinweg durchläuft.
+  const count = days !== null && days > 1 ? 0 : currentStreak;
+  $streakCount.textContent = String(count);
   $streakPill.classList.add('visible');
-  $streakPill.classList.toggle('streak--active', takenRecently);
-  $streakPill.classList.toggle('streak--due', !takenRecently);
+  $streakPill.classList.toggle('streak--active', takenToday && count > 0);
+  $streakPill.classList.toggle('streak--due', !takenToday);
   $streakPill.setAttribute(
     'aria-label',
-    t(currentStreak === 1 ? 'streakAriaOne' : 'streakAriaMany', {
-      n: currentStreak,
-      s: takenRecently ? t('streakTaken') : t('streakNone')
+    t(count === 1 ? 'streakAriaOne' : 'streakAriaMany', {
+      n: count,
+      s: takenToday ? t('streakTaken') : t('streakNone')
     })
   );
 }
+
+// Status regelmäßig neu bewerten, damit Anzeige und „fällig"-Zustand um
+// Mitternacht umspringen, ohne dass die Seite neu geladen werden muss.
+setInterval(() => {
+  if ($streakPill.classList.contains('visible')) renderStreak();
+}, 60 * 1000);
 
 function applyStreak(streak) {
   if (!streak) return;
@@ -756,7 +788,9 @@ try {
 }
 
 const FACE_LABEL_KEYS = {
-  none: 'faceNone', smile: 'faceSmile', big: 'faceBig', balloon: 'faceBalloon',
+  none: 'faceNone', thug: 'faceThug', mlg: 'faceMlg', big: 'faceBig', cheeky: 'faceCheeky',
+  shades: 'faceShades', boss: 'faceBoss', bling: 'faceBling', joint: 'faceJoint',
+  unibrow: 'faceUnibrow',
   squish: 'faceSquish', melt: 'faceMelt', jelly: 'faceJelly', clown: 'faceClown',
   dog: 'faceDog', classic: 'faceClassic'
 };
@@ -957,6 +991,27 @@ function loadImg(src) {
   });
 }
 
+// Das Foto wird in der Bühne mit object-fit: cover angezeigt — dabei wird
+// links/rechts oder oben/unten ein Teil des Bildes abgeschnitten. Sticker
+// liegen in Prozent der SICHTBAREN Bühnenfläche, das gespeicherte Bild enthält
+// aber das ganze Foto. Diese Zuordnung rechnet Bühnen-Prozente in
+// Bild-Koordinaten um, damit ein Sticker exakt dort und so groß landet, wie
+// er platziert wurde.
+function stageToImageMapping(stageEl, img) {
+  const rect = stageEl.getBoundingClientRect();
+  const iw = img.naturalWidth || rect.width;
+  const ih = img.naturalHeight || rect.height;
+  // cover: das Bild wird so skaliert, dass es die Bühne vollständig füllt
+  const scale = Math.max(rect.width / iw, rect.height / ih);
+  return {
+    rect,
+    scale,
+    // abgeschnittener Teil auf jeder Seite, in Bühnen-Pixeln
+    offsetX: Math.max(0, (iw * scale - rect.width) / 2),
+    offsetY: Math.max(0, (ih * scale - rect.height) / 2)
+  };
+}
+
 async function renderEditedPhoto(photoEl) {
   const base = await loadImg(photoEl.src);
   const canvas = document.createElement('canvas');
@@ -968,13 +1023,16 @@ async function renderEditedPhoto(photoEl) {
   if (filterCss !== 'none') ctx.filter = filterCss;
   ctx.drawImage(base, 0, 0);
   ctx.filter = 'none';
+  const map = stageToImageMapping($camera.querySelector('.viewfinder'), base);
   for (const st of [...activeStickers]) {
     try {
       const si = await loadImg(st.el.querySelector('img').src);
-      const w = (st.w / 100) * canvas.width;
+      // Bühnen-Pixel der Sticker-Mitte, um den abgeschnittenen Rand verschoben,
+      // dann durch den Anzeige-Faktor in Bild-Pixel umgerechnet.
+      const w = ((st.w / 100) * map.rect.width) / map.scale;
       const h = w * (si.naturalHeight / si.naturalWidth);
-      const x = (st.x / 100) * canvas.width - w / 2;
-      const y = (st.y / 100) * canvas.height - h / 2;
+      const x = ((st.x / 100) * map.rect.width + map.offsetX) / map.scale - w / 2;
+      const y = ((st.y / 100) * map.rect.height + map.offsetY) / map.scale - h / 2;
       ctx.drawImage(si, x, y, w, h);
     } catch (err) {
       console.warn('Sticker konnte nicht gerendert werden:', err);

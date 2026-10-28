@@ -67,7 +67,7 @@ const PHOTO_PREFIX = 'photos/';
 const PROFILE_TABLE = 'profiles';
 const GLOBAL_PROFILE_ID = '1';
 const STREAK_FIELDS = 'current_streak,highest_streak,last_photo_timestamp';
-const HOUR_MS = 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Calls the Supabase PostgREST API and throws on a non-2xx response.
 async function restFetch(url, options = {}) {
@@ -107,11 +107,19 @@ async function saveProfile(streak) {
   return Array.isArray(rows) ? rows[0] || null : null;
 }
 
+// Kalendertag in lokaler Serverzeit als fortlaufende Zahl. Der Streak zählt
+// Tage, keine rollenden 24h-Fenster: sonst bringt ein Foto am Abend und eines
+// am nächsten Nachmittag (unter 24h Abstand) keinen Fortschritt, obwohl an
+// jedem Tag geknipst wurde.
+function localDayIndex(date) {
+  return Math.floor((date.getTime() - date.getTimezoneOffset() * 60000) / DAY_MS);
+}
+
 // Streak rules, evaluated when a photo is saved:
-//   no previous photo          -> streak starts at 1
-//   24h <= elapsed <= 48h      -> streak + 1
-//   elapsed < 24h              -> streak unchanged
-//   elapsed > 48h              -> streak resets to 1
+//   no previous photo        -> streak starts at 1
+//   a photo was already taken today -> unchanged
+//   yesterday was the last photo    -> streak + 1
+//   a day was skipped               -> streak restarts at 1
 function computeStreak(previous, now = new Date()) {
   const current = Number(previous && previous.current_streak) || 0;
   const highest = Number(previous && previous.highest_streak) || 0;
@@ -124,13 +132,18 @@ function computeStreak(previous, now = new Date()) {
     return { current_streak: 1, highest_streak: Math.max(1, highest), last_photo_timestamp: timestamp };
   }
 
-  const elapsed = now.getTime() - last.getTime();
+  const days = localDayIndex(now) - localDayIndex(last);
 
-  if (elapsed > 48 * HOUR_MS) {
-    return { current_streak: 1, highest_streak: Math.max(1, highest), last_photo_timestamp: timestamp };
+  // Same day (or a clock skew/reposted photo): keep the streak where it is.
+  if (days <= 0) {
+    return {
+      current_streak: current,
+      highest_streak: Math.max(current, highest),
+      last_photo_timestamp: timestamp
+    };
   }
 
-  if (elapsed >= 24 * HOUR_MS) {
+  if (days === 1) {
     const next = current + 1;
     return {
       current_streak: next,
@@ -139,12 +152,8 @@ function computeStreak(previous, now = new Date()) {
     };
   }
 
-  // Same day: reposting a photo keeps the streak where it is.
-  return {
-    current_streak: current,
-    highest_streak: Math.max(current, highest),
-    last_photo_timestamp: timestamp
-  };
+  // A whole day went by without a photo — the old streak is gone.
+  return { current_streak: 1, highest_streak: Math.max(1, highest), last_photo_timestamp: timestamp };
 }
 
 function pickStreak(row) {
@@ -153,6 +162,18 @@ function pickStreak(row) {
     highest_streak: Number(row && row.highest_streak) || 0,
     last_photo_timestamp: (row && row.last_photo_timestamp) || null
   };
+}
+
+// Ein Streak lebt nur, solange das letzte Foto von heute oder gestern ist. Ist
+// ein ganzer Tag ohne Foto vergangen, gilt er als 0 — auch wenn in der
+// Datenbank noch der alte Wert steht (der wird beim nächsten Foto neu gesetzt).
+function pickCurrentStreak(row, now = new Date()) {
+  const streak = pickStreak(row);
+  const last = streak.last_photo_timestamp ? new Date(streak.last_photo_timestamp) : null;
+  if (last && !Number.isNaN(last.getTime()) && localDayIndex(now) - localDayIndex(last) > 1) {
+    streak.current_streak = 0;
+  }
+  return streak;
 }
 
 async function updateStreak() {
@@ -168,7 +189,7 @@ async function handleStreakApi(req, res) {
   }
   try {
     const profile = await fetchProfile();
-    return sendJson(res, 200, pickStreak(profile));
+    return sendJson(res, 200, pickCurrentStreak(profile));
   } catch (err) {
     console.error('Streak API error:', err.message);
     return sendJson(res, 500, { error: 'Server error' });
@@ -515,7 +536,12 @@ const requestHandler = (req, res) => {
       res.end('Not Found');
       return;
     }
-    res.writeHead(200, { 'Content-Type': MIME[ext] || 'application/octet-stream' });
+    // Dev server: never let the browser run a stale filters.js/asset after an
+    // edit — browsers cache validator-less responses across reloads.
+    res.writeHead(200, {
+      'Content-Type': MIME[ext] || 'application/octet-stream',
+      'Cache-Control': 'no-store'
+    });
     res.end(data);
   });
 };

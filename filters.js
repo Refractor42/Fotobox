@@ -19,9 +19,15 @@
 
   const FILTERS = [
     { id: 'none', label: 'None', emoji: '🚫' },
-    { id: 'smile', label: 'Mega Smile', emoji: '😄' },
+    { id: 'thug', label: 'Thug Life', emoji: '🕶️' },
+    { id: 'mlg', label: 'MLG', emoji: '💯' },
+    { id: 'shades', label: 'Pixel Shades', emoji: '😎' },
+    { id: 'boss', label: 'Thug Boss', emoji: '🧢' },
+    { id: 'bling', label: 'Bling', emoji: '💰' },
+    { id: 'joint', label: 'Joint', emoji: '🚬' },
     { id: 'big', label: 'Big Eyes + Mouth', emoji: '👀' },
-    { id: 'balloon', label: 'Balloon Head', emoji: '🎈' },
+    { id: 'cheeky', label: 'Cheeky Grin', emoji: '😏' },
+    { id: 'unibrow', label: 'Unibrow', emoji: '🤨' },
     { id: 'squish', label: 'Squish', emoji: '🥞' },
     { id: 'melt', label: 'Meltdown', emoji: '🫠' },
     { id: 'jelly', label: 'Jelly', emoji: '🪼' },
@@ -33,6 +39,72 @@
   const DETECT_INTERVAL_MS = 80;  // landmark pass ~12x/s; smoothing keeps up
   const FACE_GRACE_MS = 700;      // keep the last face briefly when detection blinks
   const SMOOTHING = 0.4;          // lower = smoother, higher = snappier
+
+  // Art props, one transparent PNG per prop (cut from the downloaded sheets).
+  // A filter places a prop on the matching landmark instead of pasting a whole
+  // sticker block, so a cap lands on the head and a chain on the neck even
+  // though the sheet drew them in its own layout. The crop inside each file is
+  // derived from its alpha channel at load time, so re-trimming a file is fine.
+  const ART = {
+    shades: { src: 'assets/prop-shades.png' },
+    joint: { src: 'assets/prop-joint.png' },
+    cap: { src: 'assets/prop-cap.png' },
+    chainBoss: { src: 'assets/prop-chain-boss.png' },
+    chainBling: { src: 'assets/prop-chain-bling.png' },
+    blunt: { src: 'assets/prop-blunt.png' }
+  };
+
+  function loadProp(prop) {
+    if (typeof Image === 'undefined' || typeof document === 'undefined') return;
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        if (!w || !h) return;
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0);
+        const px = ctx.getImageData(0, 0, w, h).data;
+        let x0 = w;
+        let y0 = h;
+        let x1 = -1;
+        let y1 = -1;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            if (px[(y * w + x) * 4 + 3] > 16) {
+              if (x < x0) x0 = x;
+              if (x > x1) x1 = x;
+              if (y < y0) y0 = y;
+              if (y > y1) y1 = y;
+            }
+          }
+        }
+        if (x1 < x0 || y1 < y0) return;  // fully transparent file
+        prop.canvas = canvas;
+        prop.x = x0;
+        prop.y = y0;
+        prop.w = x1 - x0 + 1;
+        prop.h = y1 - y0 + 1;
+      } catch (err) {
+        // No canvas access: the filters use their drawn fallbacks.
+      }
+    };
+    img.src = prop.src;
+  }
+  Object.keys(ART).forEach((key) => loadProp(ART[key]));
+
+  // MediaPipe face-oval landmarks: the outer contour of the face, in order.
+  // Used to paint the face exactly on its own silhouette instead of pasting an
+  // ellipse over it.
+  const FACE_OVAL = [
+    10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365,
+    379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234,
+    127, 162, 21, 54, 103, 67, 109
+  ];
 
   // Face Landmarker landmark indices.
   const LM = {
@@ -68,6 +140,15 @@
     warpCanvas.width = 1024;
     warpCanvas.height = 1024;
     const warpCtx = warpCanvas.getContext('2d');
+    // Tiny scratch surface used to read the guest's own skin tone out of the
+    // frame, so the painted face matches the person instead of one fixed tone.
+    const sampleCanvas = document.createElement('canvas');
+    sampleCanvas.width = 6;
+    sampleCanvas.height = 6;
+    const sampleCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
+    const DEFAULT_SKIN = { r: 232, g: 185, b: 143 };
+    let skinTone = null;
+    let skinToneAt = 0;
     let activeFilter = 'none';
     let landmarker = null;
     let trackerState = 'idle'; // idle | loading | ready | unavailable
@@ -110,6 +191,79 @@
       return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
     }
 
+    // Head tilt on screen, normalized to [-90°, 90°]: the mirrored eye pair can
+    // come out in either order, and an unnormalized angle would flip overlays.
+    function headTilt(rect, box) {
+      const a = toScreen(rect, box.eyeA);
+      const b = toScreen(rect, box.eyeB);
+      let angle = Math.atan2(b.y - a.y, b.x - a.x);
+      if (angle > Math.PI / 2) angle -= Math.PI;
+      if (angle < -Math.PI / 2) angle += Math.PI;
+      return angle;
+    }
+
+    function skinColor(tone, factor, lighten) {
+      const channel = (c) => {
+        const v = Math.max(0, Math.min(255, c * factor));
+        return Math.round(v + (255 - v) * (lighten || 0));
+      };
+      return `rgb(${channel(tone.r)}, ${channel(tone.g)}, ${channel(tone.b)})`;
+    }
+
+    // Reads small patches of skin from the raw frame — both cheeks and the
+    // forehead — and averages them. The tracked points are already in source
+    // (unmirrored) space, so they can be used directly on the video. Patches
+    // that are clearly not skin (hair, background, blown highlights) are
+    // skipped. Re-sampled a few times per second.
+    function sampleSkinTone(box, now) {
+      if (skinTone && now - skinToneAt < 400) return skinTone;
+      skinToneAt = now;
+      if (!sampleCtx || !video.videoWidth || !video.videoHeight) return skinTone || DEFAULT_SKIN;
+
+      const faceH = Math.abs(box.bottom - box.top) || 0.3;
+      const forehead = {
+        x: (box.eyeA.x + box.eyeB.x) / 2,
+        y: (box.eyeA.y + box.eyeB.y) / 2 - faceH * 0.22
+      };
+      const spots = [box.cheekA, box.cheekB, forehead];
+      let r = 0;
+      let g = 0;
+      let b = 0;
+      let hits = 0;
+
+      for (const spot of spots) {
+        if (!spot) continue;
+        const sx = Math.max(0, Math.min(video.videoWidth - 6, spot.x * video.videoWidth - 3));
+        const sy = Math.max(0, Math.min(video.videoHeight - 6, spot.y * video.videoHeight - 3));
+        try {
+          sampleCtx.drawImage(video, sx, sy, 6, 6, 0, 0, 6, 6);
+          const data = sampleCtx.getImageData(0, 0, 6, 6).data;
+          let pr = 0;
+          let pg = 0;
+          let pb = 0;
+          for (let i = 0; i < data.length; i += 4) {
+            pr += data[i];
+            pg += data[i + 1];
+            pb += data[i + 2];
+          }
+          const count = data.length / 4;
+          const tone = { r: pr / count, g: pg / count, b: pb / count };
+          const luma = 0.299 * tone.r + 0.587 * tone.g + 0.114 * tone.b;
+          if (luma > 40 && luma < 245) {
+            r += tone.r;
+            g += tone.g;
+            b += tone.b;
+            hits++;
+          }
+        } catch (err) {
+          // Sampling is cosmetic only — a fixed tone is good enough.
+        }
+      }
+
+      if (hits) skinTone = { r: r / hits, g: g / hits, b: b / hits };
+      return skinTone || DEFAULT_SKIN;
+    }
+
     function frameFromLandmarks(points) {
       let left = 1;
       let right = 0;
@@ -130,7 +284,7 @@
       const mouthL = pick(LM.mouthL, 0.4, 0.66);
       const mouthR = pick(LM.mouthR, 0.6, 0.66);
       // With a smile the corners sit above the mouth centre. This geometric
-      // estimate keeps Mega Smile alive if blendshapes are unavailable.
+      // estimate keeps the smile reaction alive if blendshapes are unavailable.
       const faceH = Math.max(0.001, bottom - top);
       const lift = (mouth.y - (mouthL.y + mouthR.y) / 2) / faceH;
       const smileGeom = Math.max(0, Math.min(1, (lift - 0.004) * 22));
@@ -149,6 +303,9 @@
         cheekA: pick(LM.cheekA, 0.3, 0.55),
         cheekB: pick(LM.cheekB, 0.7, 0.55),
         chin: pick(LM.chin, 0.5, 0.98),
+        oval: FACE_OVAL.every((i) => points[i])
+          ? FACE_OVAL.map((i) => ({ x: points[i].x, y: points[i].y }))
+          : null,
         smileGeom
       };
     }
@@ -179,6 +336,14 @@
         cheekA: toSource(rect, surfaceW, surfaceH, centerX - 0.13, centerY + 0.05),
         cheekB: toSource(rect, surfaceW, surfaceH, centerX + 0.13, centerY + 0.05),
         chin: toSource(rect, surfaceW, surfaceH, centerX, centerY + 0.23),
+        oval: Array.from({ length: 28 }, (_, i) => {
+          const a = (i / 28) * Math.PI * 2;
+          return toSource(
+            rect, surfaceW, surfaceH,
+            centerX + Math.cos(a) * halfW,
+            centerY + Math.sin(a) * halfH * 1.02
+          );
+        }),
         smileGeom: 0
       };
     }
@@ -200,6 +365,11 @@
         cheekA: point(prev.cheekA, next.cheekA),
         cheekB: point(prev.cheekB, next.cheekB),
         chin: point(prev.chin, next.chin),
+        // The face outline is smoothed as well, otherwise the painted face mask
+        // would shimmer at detection rate.
+        oval: next.oval && prev.oval && prev.oval.length === next.oval.length
+          ? next.oval.map((p, i) => point(prev.oval[i], p))
+          : (next.oval || prev.oval || null),
         smileGeom: next.smileGeom || 0
       };
     }
@@ -254,12 +424,12 @@
       target.restore();
     }
 
-    // Warps a soft-edged elliptical patch of the frame around `center`. The
-    // feathered rim is what keeps the exaggerated faces from showing a seam.
-    function softWarp(target, rect, center, radiusX, radiusY, scaleX, scaleY) {
+    // Copies a feathered elliptical patch of the frame back onto the target,
+    // transformed by `applyTransform` around the patch centre. The feathered rim
+    // is what keeps warps from showing a hard seam.
+    function warpPatch(target, rect, center, radiusX, radiusY, applyTransform) {
       const rx = Math.max(2, radiusX);
       const ry = Math.max(2, radiusY);
-      if (Math.abs(scaleX - 1) < 0.01 && Math.abs(scaleY - 1) < 0.01) return;
       const pw = rx * 2;
       const ph = ry * 2;
       const w = Math.min(1024, Math.ceil(pw));
@@ -273,9 +443,9 @@
       warpCtx.rect(0, 0, w, h);
       warpCtx.clip();
       warpCtx.clearRect(0, 0, w, h);
-      // Scale about the patch centre, then draw the mirrored feed into it.
+      // Transform about the patch centre, then draw the mirrored feed into it.
       warpCtx.translate(w / 2, h / 2);
-      warpCtx.scale(scaleX, scaleY);
+      applyTransform(warpCtx);
       warpCtx.translate(-w / 2, -h / 2);
       warpCtx.translate(-px, -py);
       drawMirroredVideo(warpCtx, rect);
@@ -295,6 +465,12 @@
       warpCtx.restore();
 
       target.drawImage(warpCanvas, 0, 0, w, h, px, py, pw, ph);
+    }
+
+    // Scales a feathered patch about its centre.
+    function softWarp(target, rect, center, radiusX, radiusY, scaleX, scaleY) {
+      if (Math.abs(scaleX - 1) < 0.01 && Math.abs(scaleY - 1) < 0.01) return;
+      warpPatch(target, rect, center, radiusX, radiusY, (ctx) => ctx.scale(scaleX, scaleY));
     }
 
     function roundedRect(target, x, y, w, h, r) {
@@ -365,45 +541,180 @@
       drawNose(target, nose.x, nose.y, Math.max(18, faceW * 0.26), Math.max(12, faceW * 0.17));
     }
 
-    function drawBigEyes(target, rect, box, faceW, faceH) {
-      const eyeRx = Math.max(12, faceW * 0.17);
-      const eyeRy = Math.max(10, faceH * 0.12);
+    // The face outline in screen space: the tracked face contour when there is
+    // one, otherwise a plain oval. Painting on THIS instead of on an ellipse is
+    // what stops the "egg pasted in front of the face" look.
+    function faceOutline(rect, box) {
+      if (box.oval && box.oval.length >= 6) return box.oval.map((p) => toScreen(rect, p));
+      const a = toScreen(rect, { x: Math.min(box.left, box.right), y: Math.min(box.top, box.bottom) });
+      const b = toScreen(rect, { x: Math.max(box.left, box.right), y: Math.max(box.top, box.bottom) });
+      const cx = (a.x + b.x) / 2;
+      const cy = (a.y + b.y) / 2;
+      const rx = Math.max(16, (b.x - a.x) * 0.53);
+      const ry = Math.max(16, (b.y - a.y) * 0.55);
+      return Array.from({ length: 28 }, (_, i) => {
+        const angle = (i / 28) * Math.PI * 2;
+        return { x: cx + Math.cos(angle) * rx, y: cy + Math.sin(angle) * ry };
+      });
+    }
 
-      // 2.2x keeps both features clearly past the "twice as big" mark.
-      for (const key of ['eyeA', 'eyeB']) {
-        const eye = toScreen(rect, box[key]);
-        softWarp(target, rect, eye, eyeRx, eyeRy, 2.2, 2.2);
+    function traceShape(target, points) {
+      target.beginPath();
+      points.forEach((p, i) => (i === 0 ? target.moveTo(p.x, p.y) : target.lineTo(p.x, p.y)));
+      target.closePath();
+    }
+
+    // Flattens the face into the guest's own skin tone, following the face
+    // contour. Returns the outline so warps can be clipped to it.
+    function paintFace(target, rect, box, faceW, faceH, now) {
+      const outline = faceOutline(rect, box);
+      const tone = sampleSkinTone(box, now);
+      let top = Infinity;
+      let bottom = -Infinity;
+      for (const p of outline) {
+        if (p.y < top) top = p.y;
+        if (p.y > bottom) bottom = p.y;
       }
 
-      const mouth = toScreen(rect, box.mouth);
-      softWarp(
-        target, rect, mouth,
-        Math.max(18, faceW * 0.46), Math.max(10, faceH * 0.13),
-        2.2, 2.2
-      );
+      target.save();
+      traceShape(target, outline);
+      // Nearly flat fill in the sampled tone: a strong light-to-dark gradient
+      // over a plain ellipse is exactly what made it look like an egg.
+      const shade = target.createLinearGradient(0, top, 0, bottom);
+      shade.addColorStop(0, skinColor(tone, 1, 0.02));
+      shade.addColorStop(0.55, skinColor(tone, 1, 0));
+      shade.addColorStop(1, skinColor(tone, 0.97, 0));
+      target.fillStyle = shade;
+      // Soft edge, so the painted face melts into the real one instead of
+      // drawing a hard mask line.
+      const canFilter = 'filter' in target;
+      if (canFilter) target.filter = `blur(${Math.max(2, faceW * 0.012).toFixed(1)}px)`;
+      target.fill();
+      if (canFilter) target.filter = 'none';
+      target.restore();
+      return outline;
     }
 
-    function drawMegaSmile(target, rect, box, expr, faceW, faceH) {
-      const smile = Math.max(0, Math.min(1, (expr.smile - 0.12) / 0.68));
-      // Neutral faces get a tiny lift; a real smile stretches the mouth region
-      // up to ~3.6x wide and ~2.2x tall — a whole-face grin. The patch stays
-      // between the nose and chin so eyes and nose are never replaced.
-      const strength = 0.05 + 0.95 * smile;
+    // Stretches the real mouth about its centre.
+    function stretchMouth(target, rect, box, radiusX, radiusY, scaleX, scaleY) {
       const mouth = toScreen(rect, box.mouth);
-      softWarp(
-        target, rect, mouth,
-        faceW * 0.95, faceH * 0.12,
-        1 + 2.6 * strength,
-        1 + 1.2 * strength + 0.35 * Math.min(1, expr.jawOpen || 0)
-      );
+      softWarp(target, rect, mouth, radiusX, radiusY, scaleX, scaleY);
     }
 
-    function drawBalloon(target, rect, box, faceW, faceH) {
-      const center = toScreen(rect, {
-        x: (box.left + box.right) / 2,
-        y: (box.top + box.bottom) / 2
+    // "Annoying orange", but in the guest's own skin: the face is flattened to
+    // its own colour and only the real eyes and mouth are magnified on it.
+    function drawBigEyes(target, rect, box, expr, faceW, faceH, now) {
+      const outline = paintFace(target, rect, box, faceW, faceH, now);
+
+      // Everything below is clipped to the face, so no warp can spill past the
+      // head.
+      target.save();
+      traceShape(target, outline);
+      target.clip();
+
+      // The eyes keep their magnification; the window around each eye is what is
+      // bigger, so the eye sits in a wide magnifier instead of filling it edge
+      // to edge.
+      for (const key of ['eyeA', 'eyeB']) {
+        const eye = toScreen(rect, box[key]);
+        softWarp(
+          target, rect, eye,
+          Math.max(16, faceW * 0.28), Math.max(14, faceH * 0.2),
+          2.6, 2.6
+        );
+      }
+
+      stretchMouth(
+        target, rect, box,
+        faceW * 0.7, faceH * 0.2,
+        3.2, 2.4 + 0.5 * Math.min(1, expr.jawOpen || 0)
+      );
+
+      target.restore();
+    }
+
+    // Reaction filter: it wakes up when the person smiles. The mouth is stretched
+    // exactly like in Big Eyes + Mouth, the eyebrows get a lift and a gentle
+    // arch, and the nose shrinks a little.
+    function drawCheeky(target, rect, box, expr, faceW, faceH) {
+      const smile = Math.max(0, Math.min(1, (expr.smile - 0.1) / 0.7));
+
+      // Mouth: same stretch and window as the Big Eyes + Mouth filter.
+      stretchMouth(
+        target, rect, box,
+        faceW * 0.7, faceH * 0.2,
+        3.2, 2.4 + 0.5 * Math.min(1, expr.jawOpen || 0)
+      );
+
+      // Nose: a little smaller. The window is deliberately tiny: a shrinking
+      // window samples a LARGER slice of the frame, and a wide one reached down
+      // to the mouth — that is why the mouth showed up inside it.
+      const nose = toScreen(rect, box.nose);
+      const noseScale = 0.88 - 0.12 * smile;
+      softWarp(
+        target, rect, nose,
+        Math.max(10, faceW * 0.12), Math.max(8, faceH * 0.045),
+        noseScale, noseScale
+      );
+
+      // Eyebrows: one small patch per brow, lifted and tilted only slightly. An
+      // angled patch as wide as the whole forehead twisted the face around the
+      // eyes — this stays inside the brow band, so it reads as a cheeky arch.
+      const brows = [toScreen(rect, box.eyeA), toScreen(rect, box.eyeB)].sort((a, b) => a.x - b.x);
+      brows.forEach((eye, i) => {
+        warpPatch(
+          target, rect,
+          { x: eye.x, y: eye.y - faceH * 0.1 },
+          Math.max(14, faceW * 0.2), Math.max(9, faceH * 0.09),
+          (ctx) => {
+            ctx.rotate((i === 0 ? -1 : 1) * (0.05 + 0.17 * smile));
+            ctx.scale(1, 1 + 0.45 * smile);
+          }
+        );
       });
-      softWarp(target, rect, center, faceW * 0.75, faceH * 0.8, 1.35, 1.55);
+    }
+
+    // Paints a bushy unibrow across both brows. It is an added prop, so it is
+    // drawn on top of the skin and follows the head tilt.
+    function drawUnibrow(target, rect, box, faceW, faceH) {
+      const a = toScreen(rect, box.eyeA);
+      const b = toScreen(rect, box.eyeB);
+      const angle = headTilt(rect, box);
+      const centerX = (a.x + b.x) / 2;
+      const centerY = (a.y + b.y) / 2 - faceH * 0.115;
+      const halfW = Math.max(faceW * 0.3, Math.abs(b.x - a.x) * 0.62 + faceW * 0.13);
+      const thick = Math.max(6, faceH * 0.055);
+
+      target.save();
+      target.translate(centerX, centerY);
+      target.rotate(angle);
+
+      // Thick in the middle where the two brows meet, tapering to the ends.
+      target.beginPath();
+      target.moveTo(-halfW, thick * 0.3);
+      target.quadraticCurveTo(-halfW * 0.45, -thick * 0.6, 0, -thick * 0.8);
+      target.quadraticCurveTo(halfW * 0.45, -thick * 0.6, halfW, thick * 0.3);
+      target.quadraticCurveTo(halfW * 0.5, thick, 0, thick);
+      target.quadraticCurveTo(-halfW * 0.5, thick, -halfW, thick * 0.3);
+      target.closePath();
+
+      const hair = target.createLinearGradient(0, -thick, 0, thick);
+      hair.addColorStop(0, '#2c2018');
+      hair.addColorStop(1, '#120c08');
+      target.fillStyle = hair;
+      target.fill();
+
+      // A few stray hairs so it reads as hair, not a painted stripe.
+      target.strokeStyle = 'rgba(16, 10, 7, 0.9)';
+      target.lineWidth = Math.max(1, thick * 0.16);
+      for (let i = -3; i <= 3; i++) {
+        const x = i * halfW * 0.22;
+        target.beginPath();
+        target.moveTo(x, -thick * 0.35);
+        target.lineTo(x + halfW * 0.035, -thick * 1.0);
+        target.stroke();
+      }
+      target.restore();
     }
 
     function drawSquish(target, rect, box, faceW, faceH) {
@@ -434,7 +745,16 @@
     }
 
     function drawClown(target, rect, box, expr, faceW, faceH) {
-      drawMegaSmile(target, rect, box, expr, faceW, faceH);
+      // The clown uses the plain mouth stretch: no painted face, otherwise the
+      // white make-up look below would paint over the real one.
+      const smile = Math.max(0, Math.min(1, (expr.smile - 0.12) / 0.68));
+      const strength = 0.5 + 0.5 * smile;
+      stretchMouth(
+        target, rect, box,
+        faceW, faceH * 0.15,
+        1 + 3.2 * strength,
+        1 + 0.9 * strength + 0.45 * Math.min(1, expr.jawOpen || 0)
+      );
 
       const nose = toScreen(rect, box.nose);
       const noseR = Math.max(10, faceW * 0.11);
@@ -537,14 +857,271 @@
       drawMustache(target, nose.x, nose.y + faceW * 0.11, Math.max(30, faceW * 0.52), Math.max(10, faceW * 0.13), angle);
     }
 
+    // 8-bit "deal with it" shades on a hard pixel grid. Shared by the Thug Life
+    // and MLG filters, which differ only in palette.
+    function drawPixelShades(target, rect, box, faceW, faceH, palette) {
+      const a = toScreen(rect, box.eyeA);
+      const b = toScreen(rect, box.eyeB);
+      const angle = headTilt(rect, box);
+      const centerX = (a.x + b.x) / 2;
+      const centerY = (a.y + b.y) / 2 - faceH * 0.01;
+      const u = Math.max(2, faceW * 0.026); // one block of the pixel art
+
+      target.save();
+      target.translate(centerX, centerY);
+      target.rotate(angle);
+      const block = (x0, y0, x1, y1, color) => {
+        target.fillStyle = color;
+        target.fillRect(
+          Math.min(x0, x1) * u, Math.min(y0, y1) * u,
+          Math.abs(x1 - x0) * u, Math.abs(y1 - y0) * u
+        );
+      };
+
+      for (const side of [-1, 1]) {
+        const outer = side * 12;
+        const inner = side * 2;
+        const inset = outer - side;
+        // stepped pixel silhouette: wide middle, one block narrower top/bottom
+        block(outer, -1, inner, 1, palette.lens);
+        block(inset, -2, inner, -1, palette.edge);
+        block(inset, 1, inner, 2, palette.edge);
+        // temple arm
+        block(outer, -1, outer + side * 2, 0, palette.edge);
+        // glare pixel
+        block(side * 10, -1, side * 8, 0, palette.glint);
+      }
+      // bridge between the lenses
+      block(-2, -1, 2, 1, palette.edge);
+      target.restore();
+    }
+
+    // A four-pointed twinkle, the sparkle every MLG montage is made of.
+    function drawSparkle(target, x, y, size, color, alpha) {
+      if (size <= 0) return;
+      target.save();
+      target.globalAlpha = Math.max(0, Math.min(1, alpha));
+      target.translate(x, y);
+      target.fillStyle = color;
+      target.beginPath();
+      target.moveTo(0, -size);
+      target.quadraticCurveTo(size * 0.14, -size * 0.14, size, 0);
+      target.quadraticCurveTo(size * 0.14, size * 0.14, 0, size);
+      target.quadraticCurveTo(-size * 0.14, size * 0.14, -size, 0);
+      target.quadraticCurveTo(-size * 0.14, -size * 0.14, 0, -size);
+      target.closePath();
+      target.fill();
+      target.restore();
+    }
+
+    function drawIlluminati(target, x, y, size, angle) {
+      target.save();
+      target.translate(x, y);
+      target.rotate(angle);
+
+      const halo = target.createRadialGradient(0, 0, size * 0.2, 0, 0, size * 1.6);
+      halo.addColorStop(0, 'rgba(255, 216, 60, 0.5)');
+      halo.addColorStop(1, 'rgba(255, 216, 60, 0)');
+      target.fillStyle = halo;
+      target.beginPath();
+      target.arc(0, 0, size * 1.6, 0, Math.PI * 2);
+      target.fill();
+
+      target.beginPath();
+      target.moveTo(0, -size);
+      target.lineTo(size * 0.92, size * 0.72);
+      target.lineTo(-size * 0.92, size * 0.72);
+      target.closePath();
+      const gold = target.createLinearGradient(0, -size, 0, size);
+      gold.addColorStop(0, '#fff6b0');
+      gold.addColorStop(0.5, '#ffd400');
+      gold.addColorStop(1, '#a8790a');
+      target.fillStyle = gold;
+      target.fill();
+      target.lineWidth = Math.max(2, size * 0.1);
+      target.strokeStyle = '#4a3400';
+      target.stroke();
+
+      // the all-seeing eye
+      target.fillStyle = '#171006';
+      target.beginPath();
+      target.ellipse(0, size * 0.2, size * 0.28, size * 0.17, 0, 0, Math.PI * 2);
+      target.fill();
+      target.fillStyle = 'rgba(255, 255, 255, 0.85)';
+      target.beginPath();
+      target.arc(-size * 0.08, size * 0.13, size * 0.06, 0, Math.PI * 2);
+      target.fill();
+      target.restore();
+    }
+
+    // ---------- art props ----------
+    function propReady(prop) {
+      return !!(prop && prop.canvas && prop.w > 0 && prop.h > 0);
+    }
+
+    // A prop centred on (x, y), scaled to `width` on screen.
+    function drawProp(target, prop, x, y, width, angle) {
+      if (!propReady(prop)) return false;
+      const height = width * (prop.h / prop.w);
+      target.save();
+      target.translate(x, y);
+      if (angle) target.rotate(angle);
+      target.drawImage(prop.canvas, prop.x, prop.y, prop.w, prop.h, -width / 2, -height / 2, width, height);
+      target.restore();
+      return true;
+    }
+
+    // A prop held in the mouth: its own tip sits on (x, y) and the prop runs
+    // away from the face along `angle`, `length` being its full extent.
+    function drawPropHeld(target, prop, x, y, length, angle) {
+      if (!propReady(prop)) return false;
+      const width = length * (prop.w / Math.hypot(prop.w, prop.h));
+      const height = width * (prop.h / prop.w);
+      target.save();
+      target.translate(x, y);
+      if (angle) target.rotate(angle);
+      target.drawImage(prop.canvas, prop.x, prop.y, prop.w, prop.h, -width * 0.04, -height * 0.08, width, height);
+      target.restore();
+      return true;
+    }
+
+    function eyeCenter(rect, box) {
+      const a = toScreen(rect, box.eyeA);
+      const b = toScreen(rect, box.eyeB);
+      return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+    }
+
+    function faceCenterX(rect, box) {
+      return toScreen(rect, { x: (box.left + box.right) / 2, y: box.top }).x;
+    }
+
+    function faceTopY(rect, box) {
+      return toScreen(rect, { x: (box.left + box.right) / 2, y: Math.min(box.top, box.bottom) }).y;
+    }
+
+    function faceBottomY(rect, box) {
+      return toScreen(rect, { x: (box.left + box.right) / 2, y: Math.max(box.top, box.bottom) }).y;
+    }
+
+    function mouthCorner(rect, box) {
+      const left = toScreen(rect, box.mouthL);
+      const right = toScreen(rect, box.mouthR);
+      return left.x > right.x ? left : right;
+    }
+
+    function drawArtShades(target, rect, box, faceW, faceH) {
+      const center = eyeCenter(rect, box);
+      return drawProp(target, ART.shades, center.x, center.y - faceH * 0.005, faceW * 0.92, headTilt(rect, box));
+    }
+
+    // Cap on top of the head, its brim coming down just above the brows.
+    function drawArtCap(target, rect, box, faceW, faceH) {
+      if (!propReady(ART.cap)) return false;
+      const width = faceW * 1.26;
+      const height = width * (ART.cap.h / ART.cap.w);
+      const brim = faceTopY(rect, box) + faceH * 0.16;
+      return drawProp(target, ART.cap, faceCenterX(rect, box), brim - height / 2, width, headTilt(rect, box) * 0.45);
+    }
+
+    // Chain under the chin; `top` is where its top edge sits relative to the chin
+    // in face heights (negative pulls it up over the jaw).
+    function drawArtChain(target, rect, box, prop, faceW, faceH, widthFactor, top, angle) {
+      if (!propReady(prop)) return false;
+      const width = faceW * widthFactor;
+      const height = width * (prop.h / prop.w);
+      const topY = faceBottomY(rect, box) + faceH * top;
+      return drawProp(target, prop, faceCenterX(rect, box), topY + height / 2, width, angle || 0);
+    }
+
+    function drawArtJoint(target, rect, box, faceW, faceH, factor) {
+      const corner = mouthCorner(rect, box);
+      return drawPropHeld(target, ART.joint, corner.x, corner.y - faceH * 0.01, faceW * (factor || 0.66), -0.9);
+    }
+
+    function drawArtBlunt(target, rect, box, faceW, faceH) {
+      const corner = mouthCorner(rect, box);
+      return drawPropHeld(target, ART.blunt, corner.x, corner.y - faceH * 0.01, faceW * 0.42, -0.6);
+    }
+
+    function drawShades(target, rect, box, faceW, faceH) {
+      if (drawArtShades(target, rect, box, faceW, faceH)) return;
+      // Until the art is loaded: the hand-drawn 8-bit shades.
+      drawPixelShades(target, rect, box, faceW, faceH, {
+        lens: '#0a0a0f', edge: '#0a0a0f', glint: 'rgba(255, 255, 255, 0.35)'
+      });
+    }
+
+    function drawThug(target, rect, box, faceW, faceH) {
+      drawShades(target, rect, box, faceW, faceH);
+      drawArtJoint(target, rect, box, faceW, faceH);
+    }
+
+    // The whole outfit: cap, shades, dollar chain and a blunt.
+    function drawBoss(target, rect, box, faceW, faceH) {
+      drawArtCap(target, rect, box, faceW, faceH);
+      drawArtChain(target, rect, box, ART.chainBoss, faceW, faceH, 0.75, -0.16);
+      drawShades(target, rect, box, faceW, faceH);
+      drawArtBlunt(target, rect, box, faceW, faceH);
+    }
+
+    // Shades, a long link chain and a lit joint.
+    function drawBling(target, rect, box, faceW, faceH) {
+      drawShades(target, rect, box, faceW, faceH);
+      drawArtChain(target, rect, box, ART.chainBling, faceW, faceH, 1.26, -0.12);
+      drawArtJoint(target, rect, box, faceW, faceH, 0.62);
+    }
+
+    function drawJointFuel(target, rect, box, faceW, faceH) {
+      drawArtJoint(target, rect, box, faceW, faceH, 0.8);
+    }
+
+    // Over the top on purpose: gold 8-bit shades, a slowly turning illuminati
+    // above the head and sparkles orbiting the face.
+    function drawMlg(target, rect, box, faceW, faceH, now) {
+      const t = now / 1000;
+      const a = toScreen(rect, box.eyeA);
+      const b = toScreen(rect, box.eyeB);
+      const centerX = (a.x + b.x) / 2;
+      const centerY = (a.y + b.y) / 2;
+      const top = toScreen(rect, { x: (box.left + box.right) / 2, y: Math.min(box.top, box.bottom) });
+
+      for (let i = 0; i < 6; i++) {
+        const angle = t * 0.7 + (i / 6) * Math.PI * 2;
+        const radius = faceW * (0.6 + 0.1 * Math.sin(t * 1.7 + i));
+        drawSparkle(
+          target,
+          centerX + Math.cos(angle) * radius,
+          centerY + Math.sin(angle) * radius * 0.85,
+          faceW * (0.05 + 0.025 * Math.abs(Math.sin(t * 4 + i))),
+          '#fff8c0',
+          0.45 + 0.55 * Math.abs(Math.sin(t * 3 + i))
+        );
+      }
+
+      if (!drawArtShades(target, rect, box, faceW, faceH)) {
+        drawPixelShades(target, rect, box, faceW, faceH, {
+          lens: '#241600', edge: '#ffd400', glint: '#ffffff'
+        });
+      }
+      drawArtJoint(target, rect, box, faceW, faceH);
+
+      drawIlluminati(target, top.x, top.y - faceH * 0.3, faceW * 0.2, Math.sin(t * 0.8) * 0.5);
+    }
+
     function drawFilter(target, rect, box, id, expr, now) {
       if (id === 'none') return undefined;
       const faceW = Math.max(1, Math.abs(box.right - box.left) * rect.w);
       const faceH = Math.max(1, Math.abs(box.bottom - box.top) * rect.h);
       const faceExpr = expr || ZERO_EXPR;
-      if (id === 'smile') return drawMegaSmile(target, rect, box, faceExpr, faceW, faceH);
-      if (id === 'big') return drawBigEyes(target, rect, box, faceW, faceH);
-      if (id === 'balloon') return drawBalloon(target, rect, box, faceW, faceH);
+      if (id === 'thug') return drawThug(target, rect, box, faceW, faceH);
+      if (id === 'mlg') return drawMlg(target, rect, box, faceW, faceH, now);
+      if (id === 'shades') return drawShades(target, rect, box, faceW, faceH);
+      if (id === 'boss') return drawBoss(target, rect, box, faceW, faceH);
+      if (id === 'bling') return drawBling(target, rect, box, faceW, faceH);
+      if (id === 'joint') return drawJointFuel(target, rect, box, faceW, faceH);
+      if (id === 'big') return drawBigEyes(target, rect, box, faceExpr, faceW, faceH, now);
+      if (id === 'cheeky') return drawCheeky(target, rect, box, faceExpr, faceW, faceH);
+      if (id === 'unibrow') return drawUnibrow(target, rect, box, faceW, faceH);
       if (id === 'squish') return drawSquish(target, rect, box, faceW, faceH);
       if (id === 'melt') return drawMelt(target, rect, box, faceW, faceH);
       if (id === 'jelly') return drawJelly(target, rect, box, faceW, faceH, now);

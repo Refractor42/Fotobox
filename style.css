@@ -395,10 +395,6 @@ section.active { display: block; opacity: 1; }
   stroke: var(--c-text-3);
   opacity: 0.5;
 }
-.camera__hint {
-  font-size: 0.95rem;
-  letter-spacing: -0.005em;
-}
 
 /* Sound an/aus — schwebend über dem Livebild */
 .camera__sound {
