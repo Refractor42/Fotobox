@@ -424,6 +424,57 @@ section.active { display: block; opacity: 1; }
 .camera__sound svg { width: 1.15rem; height: 1.15rem; }
 .camera__sound:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
 
+/* ============================================================
+   SPRACHUMSCHALTER (DE/EN) — kleine Flaggen statt vorgeschalteter Screen
+   (HCI: Accessibility/i18n). Auf dem Splash fest unten rechts, in der
+   Kameraansicht rechts in der Steuerleiste. Große Trefferflächen (Kiosk).
+   ============================================================ */
+.lang-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.lang-switch--splash {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 9999; /* gleiche Ebene wie der Splash, steht danach im DOM */
+}
+.lang-switch__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 52px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid rgba(255 255 255 / 0.15);
+  border-radius: var(--radius-sm);
+  background: rgba(10 10 10 / 0.5);
+  cursor: pointer;
+  opacity: 0.55;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: opacity var(--transition), border-color var(--transition),
+    box-shadow var(--transition), transform 0.15s ease;
+}
+.lang-switch__btn svg {
+  width: 32px;
+  height: 21px;
+  border-radius: 3px;
+}
+.lang-switch__btn:hover { opacity: 0.9; }
+.lang-switch__btn:active { transform: scale(0.92); }
+.lang-switch__btn.is-selected {
+  opacity: 1;
+  border-color: rgba(255 215 0 / 0.8);
+  box-shadow: 0 0 0 1px rgba(255 215 0 / 0.35);
+}
+.lang-switch__btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
+@media (max-width: 420px) {
+  .lang-switch__btn { width: 44px; height: 33px; }
+  .lang-switch__btn svg { width: 27px; height: 18px; }
+}
+
 /* Post-shot editor — sits below the photo so the image stays untouched */
 .review {
   display: flex;

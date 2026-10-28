@@ -39,6 +39,258 @@ let viewfinderVisible = false;
 let isCapturing = false;
 
 // ============================================================
+//  I18N — Sprachumschaltung DE/EN (HCI: Accessibility/i18n)
+//  Dezente Flaggen-Schalter in der Ecke statt vorgeschalteter Screen.
+//  Die Sprache gilt für die ganze Session und springt am Session-Ende
+//  („Save“/„Fertig“) auf die Standardsprache zurück, damit der nächste
+//  Gast eine vorhersagbare Sprache vorfindet (Predictable System State).
+// ============================================================
+const DEFAULT_LANG = 'de';
+const I18N = {
+  de: {
+    splashSubtitle: 'Knipsen. Animieren. Erinnern.',
+    splashCta: 'Photobox starten',
+    cameraHint: 'Bereit zum Aufnehmen',
+    processing: 'Foto wird verarbeitet…',
+    permissionText: 'Kamerazugriff für SnapBox erforderlich',
+    permissionBtn: 'Kamera erlauben',
+    captionFace: 'Gesicht',
+    timerGroupAria: 'Countdown-Dauer',
+    faceGroupAria: 'Gesichtsfilter',
+    trayColor: 'Farbe',
+    trayStickers: 'Sticker',
+    filterGroupAria: 'Farbfilter',
+    stickerGroupAria: 'Sticker hinzufügen',
+    filterSw: 'Schwarzweiß',
+    filterKnackig: 'Knackig',
+    reviewHint: 'Sticker antippen und aufs Foto ziehen.',
+    btnRetake: 'Neu aufnehmen',
+    retakeAria: 'Foto neu aufnehmen',
+    stickerToggleAria: 'Sticker auswählen',
+    filterToggleAria: 'Filter auswählen',
+    btnFilters: 'Filter',
+    btnSave: 'Speichern',
+    stickerOhrenAria: 'Katzenohren hinzufügen',
+    stickerKroneAria: 'Krone hinzufügen',
+    stickerBrilleAria: 'Sonnenbrille hinzufügen',
+    stickerHutAria: 'Partyhut hinzufügen',
+    stickerSmaller: 'Sticker verkleinern',
+    stickerBigger: 'Sticker vergrößern',
+    stickerRemove: 'Sticker entfernen',
+    galleryBtn: 'Galerie',
+    galleryBack: 'Zurück',
+    galleryTitle: 'Deine Fotos',
+    galleryTrash: 'Papierkorb',
+    galleryEmpty: 'Noch keine Fotos — mach dein erstes Foto!',
+    trashHintBefore: 'Gelöschte Fotos werden nach',
+    trashHintAfter: 'endgültig gelöscht.',
+    trashOpt7: '7 Tagen',
+    trashOpt14: '14 Tagen',
+    trashOpt30: '30 Tagen',
+    trashEmpty: 'Der Papierkorb ist leer.',
+    confirmTitle: 'Endgültig löschen?',
+    confirmText: 'Das Foto wird für immer gelöscht und kann nicht wiederhergestellt werden.',
+    confirmCancel: 'Abbrechen',
+    confirmOk: 'Endgültig löschen',
+    qrTitle: 'Foto aufs Handy',
+    qrCloseAria: 'QR-Dialog schließen',
+    qrLoading: 'Link wird erstellt…',
+    qrHint: 'QR-Code mit der Handy-Kamera scannen — das Foto öffnet sich im Browser.',
+    qrTtl: 'Link ist 24 Stunden gültig.',
+    qrRetry: 'Erneut versuchen',
+    qrCopy: 'Link kopieren',
+    qrCopied: 'Link kopiert.',
+    qrCopyError: 'Link konnte nicht kopiert werden.',
+    qrNotSaved: 'Foto ist noch nicht gespeichert.',
+    qrSvgAria: 'QR-Code zum Herunterladen des Fotos',
+    toastSaved: 'Foto gespeichert.',
+    toastSaveError: 'Foto konnte nicht gespeichert werden — Verbindung prüfen.',
+    toastEditError: 'Änderungen konnten nicht gespeichert werden.',
+    toastEditErrorKeep: 'Änderungen konnten nicht gespeichert werden — Foto bleibt unverändert.',
+    toastEditedSaveError: 'Bearbeitetes Foto konnte nicht gespeichert werden — Original bleibt erhalten.',
+    toastTrashed: 'Foto in den Papierkorb verschoben.',
+    toastUndo: 'Rückgängig',
+    toastDeleteError: 'Foto konnte nicht gelöscht werden — Verbindung prüfen.',
+    toastRestored: 'Foto wiederhergestellt.',
+    toastRestoreError: 'Wiederherstellen fehlgeschlagen — das Foto bleibt im Papierkorb.',
+    toastRestoreError2: 'Foto konnte nicht wiederhergestellt werden.',
+    toastLoadError: 'Gespeicherte Fotos konnten nicht geladen werden.',
+    trashLoadError: 'Papierkorb konnte nicht geladen werden.',
+    trashRetentionSaved: 'Papierkorb wird nach {n} Tagen geleert.',
+    toastPurged: 'Foto endgültig gelöscht.',
+    toastPurgeError: 'Foto konnte nicht endgültig gelöscht werden.',
+    trashRestoreBtn: 'Wiederherstellen',
+    trashPurgeBtn: 'Endgültig löschen',
+    trashDaysLeftOne: 'noch 1 Tag',
+    trashDaysLeftMany: 'noch {n} Tage',
+    trashImgAlt: 'Gelöschtes Foto',
+    capturedPhotoAlt: 'Aufgenommenes Foto',
+    photoPreviewAlt: 'Foto-Vorschau',
+    deletePhotoAria: 'Foto löschen',
+    retentionAria: 'Aufbewahrungsdauer',
+    langGroupAria: 'Sprache wählen',
+    soundOn: 'Ton ausschalten',
+    soundOff: 'Ton einschalten',
+    streakAriaOne: 'Foto-Streak: 1 Tag, {s}',
+    streakAriaMany: 'Foto-Streak: {n} Tage, {s}',
+    streakTaken: 'Foto in den letzten 24 Stunden gemacht',
+    streakNone: 'kein Foto in den letzten 24 Stunden',
+    faceNone: 'Keine',
+    faceSmile: 'Mega-Lächeln',
+    faceBig: 'Große Augen + Mund',
+    faceBalloon: 'Ballonkopf',
+    faceSquish: 'Platt',
+    faceMelt: 'Schmelzen',
+    faceJelly: 'Gelee',
+    faceClown: 'Clown',
+    faceDog: 'Snap Dog',
+    faceClassic: 'Sonnenbrille',
+    qrBtnLabel: 'Aufs Handy'
+  },
+  en: {
+    splashSubtitle: 'Capture. Animate. Remember.',
+    splashCta: 'Start Photobox',
+    cameraHint: 'Ready to capture',
+    processing: 'Processing photo…',
+    permissionText: 'Camera access required for SnapBox',
+    permissionBtn: 'Allow Camera',
+    captionFace: 'Face',
+    timerGroupAria: 'Countdown duration',
+    faceGroupAria: 'Face filters',
+    trayColor: 'Color',
+    trayStickers: 'Stickers',
+    filterGroupAria: 'Color filters',
+    stickerGroupAria: 'Add stickers',
+    filterSw: 'Black & White',
+    filterKnackig: 'Vivid',
+    reviewHint: 'Tap a sticker, then drag it on the photo.',
+    btnRetake: 'Retake',
+    retakeAria: 'Retake photo',
+    stickerToggleAria: 'Choose stickers',
+    filterToggleAria: 'Choose filters',
+    btnFilters: 'Filters',
+    btnSave: 'Save',
+    stickerOhrenAria: 'Add cat ears',
+    stickerKroneAria: 'Add crown',
+    stickerBrilleAria: 'Add sunglasses',
+    stickerHutAria: 'Add party hat',
+    stickerSmaller: 'Shrink sticker',
+    stickerBigger: 'Enlarge sticker',
+    stickerRemove: 'Remove sticker',
+    galleryBtn: 'Gallery',
+    galleryBack: 'Back',
+    galleryTitle: 'Your Photos',
+    galleryTrash: 'Trash',
+    galleryEmpty: 'No photos yet. Capture your first memory!',
+    trashHintBefore: 'Deleted photos are permanently removed after',
+    trashHintAfter: '',
+    trashOpt7: '7 days',
+    trashOpt14: '14 days',
+    trashOpt30: '30 days',
+    trashEmpty: 'The trash is empty.',
+    confirmTitle: 'Delete permanently?',
+    confirmText: 'This photo will be deleted forever and cannot be recovered.',
+    confirmCancel: 'Cancel',
+    confirmOk: 'Delete permanently',
+    qrTitle: 'Photo to your phone',
+    qrCloseAria: 'Close QR dialog',
+    qrLoading: 'Creating link…',
+    qrHint: 'Scan the QR code with your phone camera — the photo opens in your browser.',
+    qrTtl: 'Link is valid for 24 hours.',
+    qrRetry: 'Try again',
+    qrCopy: 'Copy link',
+    qrCopied: 'Link copied.',
+    qrCopyError: 'Link could not be copied.',
+    qrNotSaved: 'Photo is not saved yet.',
+    qrSvgAria: 'QR code for downloading the photo',
+    toastSaved: 'Photo saved.',
+    toastSaveError: 'Photo could not be saved — check the connection.',
+    toastEditError: 'Changes could not be saved.',
+    toastEditErrorKeep: 'Changes could not be saved — the photo stays unchanged.',
+    toastEditedSaveError: 'Edited photo could not be saved — the original is kept.',
+    toastTrashed: 'Photo moved to trash.',
+    toastUndo: 'Undo',
+    toastDeleteError: 'Photo could not be deleted — check the connection.',
+    toastRestored: 'Photo restored.',
+    toastRestoreError: 'Restore failed — the photo stays in the trash.',
+    toastRestoreError2: 'Photo could not be restored.',
+    toastLoadError: 'Saved photos could not be loaded.',
+    trashLoadError: 'Trash could not be loaded.',
+    trashRetentionSaved: 'Trash will be emptied after {n} days.',
+    toastPurged: 'Photo deleted permanently.',
+    toastPurgeError: 'Photo could not be deleted permanently.',
+    trashRestoreBtn: 'Restore',
+    trashPurgeBtn: 'Delete permanently',
+    trashDaysLeftOne: '1 day left',
+    trashDaysLeftMany: '{n} days left',
+    trashImgAlt: 'Deleted photo',
+    capturedPhotoAlt: 'Captured photo',
+    photoPreviewAlt: 'Photo preview',
+    deletePhotoAria: 'Delete photo',
+    retentionAria: 'Retention period',
+    langGroupAria: 'Choose language',
+    soundOn: 'Mute sound',
+    soundOff: 'Turn sound on',
+    streakAriaOne: 'Photo streak: 1 day, {s}',
+    streakAriaMany: 'Photo streak: {n} days, {s}',
+    streakTaken: 'photo taken in the last 24 hours',
+    streakNone: 'no photo in the last 24 hours',
+    faceNone: 'None',
+    faceSmile: 'Mega Smile',
+    faceBig: 'Big Eyes + Mouth',
+    faceBalloon: 'Balloon Head',
+    faceSquish: 'Squish',
+    faceMelt: 'Meltdown',
+    faceJelly: 'Jelly',
+    faceClown: 'Clown',
+    faceDog: 'Snap Dog',
+    faceClassic: 'Shades',
+    qrBtnLabel: 'To phone'
+  }
+};
+let currentLang = DEFAULT_LANG;
+
+function t(key, vars) {
+  const dict = I18N[currentLang] && I18N[currentLang][key] != null ? I18N[currentLang] : I18N[DEFAULT_LANG];
+  let s = dict[key] != null ? dict[key] : key;
+  if (vars) for (const k of Object.keys(vars)) s = s.split('{' + k + '}').join(String(vars[k]));
+  return s;
+}
+
+const $splashLang = document.querySelector('.lang-switch--splash');
+
+function applyLanguage(lang) {
+  currentLang = I18N[lang] ? lang : DEFAULT_LANG;
+  document.documentElement.lang = currentLang;
+  document.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
+    el.setAttribute('aria-label', t(el.dataset.i18nAria));
+  });
+  document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
+    const active = btn.dataset.lang === currentLang;
+    btn.classList.toggle('is-selected', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+  applySoundState(); // Beschriftung des Ton-Buttons in der aktiven Sprache
+  // Beschriftungen der Gesichtsfilter-Chips in der aktiven Sprache nachziehen
+  if ($filterBar && window.SnapBoxFilters) {
+    $filterBar.querySelectorAll('.timer__chip').forEach((chip) => {
+      const filter = window.SnapBoxFilters.FILTERS.find((f) => f.id === chip.dataset.filter);
+      if (!filter) return;
+      chip.textContent = filter.emoji + ' ' + faceLabel(filter);
+      chip.setAttribute('aria-label', faceLabel(filter));
+    });
+  }
+  if ($streakPill.classList.contains('visible')) renderStreak();
+}
+
+document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
+  btn.addEventListener('click', () => applyLanguage(btn.dataset.lang));
+});
+
+// ============================================================
 //  CAMERA ACCESS
 // ============================================================
 let stream = null;
@@ -123,8 +375,10 @@ function renderStreak() {
   $streakPill.classList.toggle('streak--due', !takenRecently);
   $streakPill.setAttribute(
     'aria-label',
-    'Daily streak: ' + currentStreak + (currentStreak === 1 ? ' day, ' : ' days, ')
-      + (takenRecently ? 'photo taken in the last 24 hours' : 'no photo in the last 24 hours')
+    t(currentStreak === 1 ? 'streakAriaOne' : 'streakAriaMany', {
+      n: currentStreak,
+      s: takenRecently ? t('streakTaken') : t('streakNone')
+    })
   );
 }
 
@@ -349,6 +603,10 @@ function discardCurrentPhoto() {
 }
 
 $reviewKeep.addEventListener('click', () => {
+  // Session-Ende: Sprache für den nächsten Gast auf Deutsch zurücksetzen
+  // (HCI: Predictable System State — der Nachfolger in der Warteschlange
+  // darf nicht durch eine fremde Sprache verwirrt werden).
+  applyLanguage(DEFAULT_LANG);
   hideReview();
   setControlsLocked(false);
   // Farbe oder Sticker gewählt: Foto neu komponieren und serverseitig
@@ -381,7 +639,7 @@ function resetQrFrame() {
   $qrFrame.innerHTML = `
     <div class="qr-modal__loading" id="qrLoading">
       <span class="qr-modal__spinner" aria-hidden="true"></span>
-      <p>Link wird erstellt…</p>
+      <p>${t('qrLoading')}</p>
     </div>`;
   $qrTtl.textContent = '';
 }
@@ -401,7 +659,7 @@ function showErrorInQrFrame() {
   const retry = document.createElement('button');
   retry.className = 'qr-modal__retry';
   retry.type = 'button';
-  retry.textContent = 'Erneut versuchen';
+  retry.textContent = t('qrRetry');
   retry.addEventListener('click', () => showQrDialog(lastQrPhotoId));
   const wrap = document.createElement('div');
   wrap.className = 'qr-modal__loading';
@@ -420,7 +678,7 @@ function renderQrInto(frame, url) {
     const svg = holder.querySelector('svg');
     if (svg) {
       svg.setAttribute('role', 'img');
-      svg.setAttribute('aria-label', 'QR-Code zum Herunterladen des Fotos');
+      svg.setAttribute('aria-label', t('qrSvgAria'));
       frame.appendChild(svg);
       return;
     }
@@ -435,11 +693,11 @@ function renderQrInto(frame, url) {
   const copy = document.createElement('button');
   copy.className = 'qr-modal__retry';
   copy.type = 'button';
-  copy.textContent = 'Link kopieren';
+  copy.textContent = t('qrCopy');
   copy.addEventListener('click', () => {
     navigator.clipboard.writeText(url)
-      .then(() => showToast('Link kopiert.'))
-      .catch(() => showToast('Link konnte nicht kopiert werden.', { error: true }));
+      .then(() => showToast(t('qrCopied')))
+      .catch(() => showToast(t('qrCopyError'), { error: true }));
   });
   box.appendChild(link);
   box.appendChild(copy);
@@ -448,7 +706,7 @@ function renderQrInto(frame, url) {
 
 async function showQrDialog(photoId) {
   if (!photoId) {
-    showToast('Foto ist noch nicht gespeichert.', { error: true });
+    showToast(t('qrNotSaved'), { error: true });
     return;
   }
   lastQrPhotoId = photoId;
@@ -465,7 +723,7 @@ async function showQrDialog(photoId) {
     const data = await res.json();
     if ($qrModal.hidden || lastQrPhotoId !== photoId) return; // inzwischen geschlossen
     renderQrInto($qrFrame, data.url);
-    $qrTtl.textContent = 'Link ist 24 Stunden gültig.';
+    $qrTtl.textContent = t('qrTtl');
   } catch (err) {
     console.warn('QR link could not be created:', err);
     if (!$qrModal.hidden) showErrorInQrFrame();
@@ -497,6 +755,16 @@ try {
   console.warn('Face filters could not start, camera will run without them:', err);
 }
 
+const FACE_LABEL_KEYS = {
+  none: 'faceNone', smile: 'faceSmile', big: 'faceBig', balloon: 'faceBalloon',
+  squish: 'faceSquish', melt: 'faceMelt', jelly: 'faceJelly', clown: 'faceClown',
+  dog: 'faceDog', classic: 'faceClassic'
+};
+function faceLabel(filter) {
+  const key = FACE_LABEL_KEYS[filter.id];
+  return key ? t(key) : filter.label;
+}
+
 function initFilterBar() {
   if (!filterEngine || !$filterBar) return;
   window.SnapBoxFilters.FILTERS.forEach((filter) => {
@@ -508,8 +776,8 @@ function initFilterBar() {
     chip.setAttribute('aria-pressed', String(active));
     if (active) chip.classList.add('is-selected');
 
-    chip.textContent = filter.emoji + ' ' + filter.label;
-    chip.setAttribute('aria-label', filter.label);
+    chip.textContent = filter.emoji + ' ' + faceLabel(filter);
+    chip.setAttribute('aria-label', faceLabel(filter));
     chip.addEventListener('click', () => {
       const selected = filterEngine.setFilter(filter.id);
       $filterBar.querySelectorAll('.timer__chip').forEach((el) => {
@@ -633,9 +901,9 @@ function selectSticker(st) {
     b.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
     return b;
   };
-  ctrl.appendChild(mk('−', 'Sticker verkleinern', () => scaleSticker(st, 0.85)));
-  ctrl.appendChild(mk('+', 'Sticker vergrößern', () => scaleSticker(st, 1.18)));
-  ctrl.appendChild(mk('×', 'Sticker entfernen', () => removeSticker(st)));
+  ctrl.appendChild(mk('−', t('stickerSmaller'), () => scaleSticker(st, 0.85)));
+  ctrl.appendChild(mk('+', t('stickerBigger'), () => scaleSticker(st, 1.18)));
+  ctrl.appendChild(mk('×', t('stickerRemove'), () => removeSticker(st)));
   st.el.appendChild(ctrl);
 }
 
@@ -727,14 +995,14 @@ async function saveEditedPhoto() {
     edited = await renderEditedPhoto(photoEl);
   } catch (err) {
     console.warn('Foto konnte nicht komponiert werden:', err);
-    showToast('Änderungen konnten nicht gespeichert werden.', { error: true });
+    showToast(t('toastEditError'), { error: true });
     clearStickers();
     resetCameraView();
     return;
   }
   clearStickers();
   if (!lastPhoto || !lastPhoto.id) {
-    showToast('Änderungen konnten nicht gespeichert werden — Foto bleibt unverändert.', { error: true });
+    showToast(t('toastEditErrorKeep'), { error: true });
     resetCameraView();
     return;
   }
@@ -749,10 +1017,10 @@ async function saveEditedPhoto() {
       const cardImg = lastPhoto.card.querySelector('img');
       if (cardImg) cardImg.src = edited;
     }
-    showToast('Foto gespeichert.');
+    showToast(t('toastSaved'));
   } catch (err) {
     console.warn('Edited photo could not be saved:', err);
-    showToast('Bearbeitetes Foto konnte nicht gespeichert werden — Original bleibt erhalten.', { error: true });
+    showToast(t('toastEditedSaveError'), { error: true });
   }
   resetCameraView();
 }
@@ -951,7 +1219,7 @@ function savePhotoToServer(photoUrl) {
     })
     .catch((err) => {
       console.warn('Photo could not be saved to database:', err);
-      showToast('Foto konnte nicht gespeichert werden — Verbindung prüfen.', { error: true });
+      showToast(t('toastSaveError'), { error: true });
       return null;
     });
 }
@@ -978,16 +1246,16 @@ async function deletePhoto(card, photoId) {
     removeCard(card);
     refreshTrashCount();
     if (data.trashId) {
-      showToast('Foto in den Papierkorb verschoben.', {
-        actionLabel: 'Rückgängig',
+      showToast(t('toastTrashed'), {
+        actionLabel: t('toastUndo'),
         onAction: () => restoreFromTrash(data.trashId, image)
       });
     } else {
-      showToast('Foto in den Papierkorb verschoben.');
+      showToast(t('toastTrashed'));
     }
   } catch (err) {
     console.warn('Photo could not be deleted:', err);
-    showToast('Foto konnte nicht gelöscht werden — Verbindung prüfen.', { error: true });
+    showToast(t('toastDeleteError'), { error: true });
   } finally {
     pendingOps.delete(key);
   }
@@ -1005,10 +1273,10 @@ async function restoreFromTrash(trashId, image) {
     if (image && data.id) addToGallery(image, false, data.id);
     else loadPhotosFromServer(); // 404-Fall: Zustand vom Server nachladen
     refreshTrashCount();
-    showToast('Foto wiederhergestellt.');
+    showToast(t('toastRestored'));
   } catch (err) {
     console.warn('Photo could not be restored:', err);
-    showToast('Wiederherstellen fehlgeschlagen — das Foto bleibt im Papierkorb.', { error: true });
+    showToast(t('toastRestoreError'), { error: true });
   } finally {
     pendingOps.delete(key);
   }
@@ -1028,7 +1296,7 @@ function attachDelete(card, photoId) {
   const btn = document.createElement('button');
   btn.className = 'gallery__delete';
   btn.type = 'button';
-  btn.setAttribute('aria-label', 'Delete photo');
+  btn.setAttribute('aria-label', t('deletePhotoAria'));
   btn.textContent = '×';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -1047,7 +1315,7 @@ function loadPhotosFromServer() {
     .then((items) => items.forEach((item) => addToGallery(item.image, false, item.id)))
     .catch((err) => {
       console.warn('Photos could not be loaded from database:', err);
-      showToast('Gespeicherte Fotos konnten nicht geladen werden.', { error: true });
+      showToast(t('toastLoadError'), { error: true });
     });
 }
 
@@ -1059,7 +1327,7 @@ function addToGallery(photoUrl, save = true, photoId = null) {
       card.dataset.id = id;
       if (card.isConnected) {
         attachDelete(card, id);
-        showToast('Foto gespeichert.');
+        showToast(t('toastSaved'));
       } else {
         deletePhoto(card, id); // discarded before the save finished
       }
@@ -1072,7 +1340,7 @@ function addToGallery(photoUrl, save = true, photoId = null) {
 
   const img = document.createElement('img');
   img.src = photoUrl;
-  img.alt = 'Captured photo';
+  img.alt = t('capturedPhotoAlt');
   img.loading = 'lazy';
   card.appendChild(img);
   if (photoId) {
@@ -1116,7 +1384,7 @@ function openLightbox(photoUrl, photoId = null) {
 
   const img = document.createElement('img');
   img.src = photoUrl;
-  img.alt = 'Photo preview';
+  img.alt = t('photoPreviewAlt');
   lightbox.appendChild(img);
 
   // QR-Übergabe: Foto per signiertem Link aufs Handy laden
@@ -1130,7 +1398,7 @@ function openLightbox(photoUrl, photoId = null) {
       <span class="btn__icon">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><path d="M14 14h3v3h-3zM21 14v.01M14 21v.01M17.5 17.5L21 21"></path></svg>
       </span>
-      Aufs Handy`;
+      ${t('qrBtnLabel')}`;
     qrBtn.addEventListener('click', (e) => {
       e.stopPropagation();
       showQrDialog(photoId);
@@ -1172,6 +1440,11 @@ function goTo(sectionName) {
   gsap.to(target, { opacity: 1, duration: 0.3, ease: 'power2.out' });
 
   currentState = sectionName;
+
+  // Der Splash-Schalter (fest unten rechts) gehört zum Startbildschirm und
+  // verschwindet danach — in der Kameraansicht sitzt der zweite Schalter in
+  // der Steuerleiste, in der Galerie bleibt Sprache außen vor.
+  if ($splashLang) $splashLang.hidden = sectionName !== 'splash';
 
   if (sectionName === 'camera') {
     // init camera + reset view after fade
@@ -1298,7 +1571,7 @@ function refreshTrashCount() {
 $trashRetention.value = String(getRetentionDays());
 $trashRetention.addEventListener('change', () => {
   localStorage.setItem(RETENTION_KEY, $trashRetention.value);
-  showToast('Papierkorb wird nach ' + $trashRetention.value + ' Tagen geleert.');
+  showToast(t('trashRetentionSaved', { n: $trashRetention.value }));
 });
 
 function toggleTrash(force = !trashOpen) {
@@ -1328,7 +1601,7 @@ function loadTrash() {
     })
     .catch((err) => {
       console.warn('Trash could not be loaded:', err);
-      showToast('Papierkorb konnte nicht geladen werden.', { error: true });
+      showToast(t('trashLoadError'), { error: true });
     });
 }
 
@@ -1341,7 +1614,7 @@ function renderTrash() {
 function trashDaysLeftLabel(expiresAt) {
   if (!expiresAt) return '';
   const daysLeft = Math.max(0, Math.ceil((expiresAt * 1000 - Date.now()) / 86400000));
-  return 'noch ' + daysLeft + (daysLeft === 1 ? ' Tag' : ' Tage');
+  return daysLeft === 1 ? t('trashDaysLeftOne') : t('trashDaysLeftMany', { n: daysLeft });
 }
 
 function buildTrashCard(item) {
@@ -1350,7 +1623,7 @@ function buildTrashCard(item) {
 
   const img = document.createElement('img');
   img.src = item.image;
-  img.alt = 'Gelöschtes Foto';
+  img.alt = t('trashImgAlt');
   img.loading = 'lazy';
   card.appendChild(img);
 
@@ -1368,14 +1641,14 @@ function buildTrashCard(item) {
   const restoreBtn = document.createElement('button');
   restoreBtn.className = 'trash__btn trash__btn--restore';
   restoreBtn.type = 'button';
-  restoreBtn.textContent = 'Wiederherstellen';
+  restoreBtn.textContent = t('trashRestoreBtn');
   restoreBtn.addEventListener('click', () => restoreTrashedPhoto(item));
   actions.appendChild(restoreBtn);
 
   const purgeBtn = document.createElement('button');
   purgeBtn.className = 'trash__btn trash__btn--purge';
   purgeBtn.type = 'button';
-  purgeBtn.textContent = 'Endgültig löschen';
+  purgeBtn.textContent = t('trashPurgeBtn');
   // Nur die wirklich zerstörerische Aktion fragt nach — das Trash-Löschen
   // selbst bleibt ohne Dialog und über den Toast rückgängig machbar.
   purgeBtn.addEventListener('click', async () => {
@@ -1403,13 +1676,13 @@ async function restoreTrashedPhoto(item) {
     if (data.id) addToGallery(item.image, false, data.id);
     else loadPhotosFromServer(); // 404-Fall: Zustand vom Server nachladen
     refreshTrashCount();
-    showToast('Foto wiederhergestellt.');
+    showToast(t('toastRestored'));
   } catch (err) {
     trashVersion++;
     trashItems.push(item); // optimistic removal zurückrollen
     renderTrash();
     console.warn('Photo could not be restored:', err);
-    showToast('Foto konnte nicht wiederhergestellt werden.', { error: true });
+    showToast(t('toastRestoreError2'), { error: true });
   } finally {
     pendingOps.delete(key);
   }
@@ -1427,13 +1700,13 @@ async function purgeTrashedPhoto(item) {
     // 404 = bereits endgültig gelöscht — gilt ebenfalls als Erfolg
     if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
     refreshTrashCount();
-    showToast('Foto endgültig gelöscht.');
+    showToast(t('toastPurged'));
   } catch (err) {
     trashVersion++;
     trashItems.push(item); // optimistic removal zurückrollen
     renderTrash();
     console.warn('Photo could not be purged:', err);
-    showToast('Foto konnte nicht endgültig gelöscht werden.', { error: true });
+    showToast(t('toastPurgeError'), { error: true });
   } finally {
     pendingOps.delete(key);
   }
@@ -1670,7 +1943,7 @@ let soundEnabled = localStorage.getItem('soundEnabled') !== '0';
 
 function applySoundState() {
   $soundToggle.setAttribute('aria-pressed', String(soundEnabled));
-  $soundToggle.setAttribute('aria-label', soundEnabled ? 'Ton ausschalten' : 'Ton einschalten');
+  $soundToggle.setAttribute('aria-label', soundEnabled ? t('soundOn') : t('soundOff'));
   $soundToggle.querySelectorAll('.sound-on').forEach((el) => { el.style.display = soundEnabled ? '' : 'none'; });
   $soundToggle.querySelectorAll('.sound-off').forEach((el) => { el.style.display = soundEnabled ? 'none' : ''; });
 }
@@ -1745,12 +2018,18 @@ document.querySelectorAll('[data-action]').forEach((el) => {
         currentState = 'camera';
         initCamera(); // request camera immediately to preserve user-gesture context
         const tl = timeline();
-        tl.to('.splash__content', {
+        // Flaggen-Schalter ausblenden wie der Splash-Inhalt und danach
+        // verstecken — der Startbildschirm verschwindet als Ganzes.
+        tl.to(['.splash__content', '.lang-switch--splash'], {
           y: -30, opacity: 0, duration: 0.5, ease: 'power2.in'
         }).to($splash, {
           opacity: 0, duration: 0.01
         }, '+=0.2').add(() => {
           $splash.style.display = 'none';
+          if ($splashLang) {
+            $splashLang.hidden = true;
+            gsap.set($splashLang, { clearProps: 'opacity,transform' });
+          }
           animateCameraIn();
         }, '+=0.3');
         break;
@@ -1800,6 +2079,7 @@ document.querySelectorAll('[data-action]').forEach((el) => {
 //  INIT
 // ============================================================
 window.addEventListener('load', () => {
+  applyLanguage(DEFAULT_LANG);
   animateSplashIn();
   loadPhotosFromServer();
   loadStreak();
