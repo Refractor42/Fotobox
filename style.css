@@ -1372,6 +1372,14 @@ body.orientation-landscape {
   display: block;
 }
 
+/* Startbildschirm im Querformat: Die Basisregel `section` begrenzt ihn auf
+   420px (Smartphone-Spalte). Im Querformat soll er die ganze Fläche füllen. */
+body.orientation-landscape .splash {
+  max-width: none;
+  width: 100%;
+  padding: 0;
+}
+
 body.orientation-landscape section.camera {
   position: fixed;
   inset: 0;
