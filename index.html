@@ -135,34 +135,72 @@
       </div>
     </div>
 
-    <!-- Countdown-Dauer (Selbstauslöser) -->
-    <div class="timer" id="timerChips" role="group" aria-label="Countdown-Dauer" data-i18n-aria="timerGroupAria">
-      <button class="timer__chip" data-seconds="3" type="button" aria-pressed="false">3s</button>
-      <button class="timer__chip" data-seconds="5" type="button" aria-pressed="false">5s</button>
-      <button class="timer__chip" data-seconds="10" type="button" aria-pressed="false">10s</button>
-    </div>
+        <!-- Floating Dock: Im Querformat als schwebende Steuerleiste unten, im Hochformat vertikal gegliedert -->
+    <div class="camera__dock" id="cameraDock">
+      <!-- Countdown-Dauer (Selbstauslöser) -->
+      <div class="dock-group dock-group--timer">
+        <p class="dock-caption" aria-hidden="true" data-i18n="captionTimer">TIMER</p>
+        <div class="timer" id="timerChips" role="group" aria-label="Countdown-Dauer" data-i18n-aria="timerGroupAria">
+          <button class="timer__chip" data-seconds="3" type="button" aria-pressed="false">3s</button>
+          <button class="timer__chip" data-seconds="5" type="button" aria-pressed="false">5s</button>
+          <button class="timer__chip" data-seconds="10" type="button" aria-pressed="false">10s</button>
+        </div>
+      </div>
 
-    <!-- Gesichtsfilter (MediaPipe) — Live-Vorschau -->
-    <div class="filter-group">
-      <p class="timer__caption" aria-hidden="true" data-i18n="captionFace">Gesicht</p>
-      <div class="timer timer--filters" id="filterBar" role="group" aria-label="Gesichtsfilter" data-i18n-aria="faceGroupAria"></div>
+      <div class="dock-divider" aria-hidden="true"></div>
+
+      <!-- Gesichtsfilter (MediaPipe) — Live-Vorschau -->
+      <div class="dock-group dock-group--filters filter-group">
+        <p class="dock-caption timer__caption" aria-hidden="true" data-i18n="captionFace">GESICHTSFILTER</p>
+        <div class="timer timer--filters" id="filterBar" role="group" aria-label="Gesichtsfilter" data-i18n-aria="faceGroupAria"></div>
+      </div>
+
+      <div class="dock-divider" aria-hidden="true"></div>
+
+      <!-- Sprachumschalter für Querformat (mit Text DE / EN unter den Flaggen) -->
+      <div class="dock-group dock-group--lang">
+        <div class="lang-switch lang-switch--dock" role="group" aria-label="Sprache wählen" data-i18n-aria="langGroupAria">
+          <div class="lang-switch__unit">
+            <button class="lang-switch__btn is-selected" data-lang="de" type="button" aria-pressed="true" aria-label="Deutsch">
+              <svg viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#000"/><rect y="5.33" width="24" height="5.34" fill="#D00"/><rect y="10.67" width="24" height="5.33" fill="#FFCE00"/></svg>
+            </button>
+            <span class="lang-switch__label">DE</span>
+          </div>
+          <div class="lang-switch__unit">
+            <button class="lang-switch__btn" data-lang="en" type="button" aria-pressed="false" aria-label="English">
+              <svg viewBox="0 0 60 40" aria-hidden="true"><rect width="60" height="40" fill="#012169"/><path d="M0 0 L60 40 M60 0 L0 40" stroke="#fff" stroke-width="8"/><path d="M0 0 L60 40 M60 0 L0 40" stroke="#C8102E" stroke-width="4"/><path d="M30 0 V40 M0 20 H60" stroke="#fff" stroke-width="13"/><path d="M30 0 V40 M0 20 H60" stroke="#C8102E" stroke-width="7"/></svg>
+            </button>
+            <span class="lang-switch__label">EN</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="camera__controls">
       <button class="btn btn--ghost camera__btn" data-action="gallery" id="galleryBtn">
         <span class="btn__icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12l2-2v8a2 2 0 002 2h12a2 2 0 002-2V10l2 2"></path><path d="M5 10V5a2 2 0 012-2h10a2 2 0 012 2v5"></path></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+            <circle cx="8.5" cy="8.5" r="1.5"></circle>
+            <path d="M21 15l-5-5L5 21"></path>
+          </svg>
         </span>
-        <span data-i18n="galleryBtn">Galerie</span>
+        <span class="btn__label" data-i18n="galleryBtn">Galerie</span>
         <span class="btn__badge" id="galleryBadge">0</span>
       </button>
 
-      <button class="btn btn--capture" id="captureBtn" data-action="capture">
+      <button class="btn btn--capture" id="captureBtn" data-action="capture" aria-label="Foto aufnehmen">
         <span class="btn__inner"></span>
+        <span class="btn__capture-landscape" aria-hidden="true">
+          <svg class="btn__camera-icon" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
+          </svg>
+          <span class="btn__capture-text" data-i18n="shutterLabel">AUSLÖSER</span>
+        </span>
       </button>
 
-      <!-- Sprachumschalter für die Session — rechte Spalte der Steuerleiste -->
-      <div class="lang-switch" role="group" aria-label="Sprache wählen" data-i18n-aria="langGroupAria">
+      <!-- Sprachumschalter für Hochformat -->
+      <div class="lang-switch lang-switch--portrait" role="group" aria-label="Sprache wählen" data-i18n-aria="langGroupAria">
         <button class="lang-switch__btn is-selected" data-lang="de" type="button" aria-pressed="true" aria-label="Deutsch">
           <svg viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#000"/><rect y="5.33" width="24" height="5.34" fill="#D00"/><rect y="10.67" width="24" height="5.33" fill="#FFCE00"/></svg>
         </button>
@@ -183,6 +221,15 @@
         <span data-i18n="galleryBack">Zurück</span>
       </button>
       <h2 class="gallery__title" data-i18n="galleryTitle">Deine Fotos</h2>
+      <a href="/admin" class="btn btn--ghost gallery__admin-btn" title="Admin Panel" aria-label="Admin Panel">
+        <span class="btn__icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+        </span>
+        <span>Admin</span>
+      </a>
       <button class="btn btn--ghost gallery__trash-toggle" data-action="toggle-trash" id="trashToggle">
         <span class="btn__icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"></path></svg>

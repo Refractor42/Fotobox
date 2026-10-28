@@ -503,6 +503,65 @@ async function handleTrashApi(req, res) {
   }
 }
 
+
+// ---- Settings API (/api/settings) ----
+const SETTINGS_FILE = path.join(DIST_DIR, 'settings.json');
+
+function readSettings() {
+  try {
+    if (fs.existsSync(SETTINGS_FILE)) {
+      const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
+      return {
+        orientation: data.orientation === 'landscape' ? 'landscape' : 'portrait',
+        defaultLanguage: data.defaultLanguage === 'en' ? 'en' : 'de',
+        updatedAt: data.updatedAt || null
+      };
+    }
+  } catch (err) {
+    console.warn('Could not read settings.json:', err.message);
+  }
+  return { orientation: 'portrait', defaultLanguage: 'de', updatedAt: null };
+}
+
+function saveSettings(patch) {
+  const current = readSettings();
+  const next = {
+    ...current,
+    ...patch,
+    orientation: patch.orientation !== undefined ? (patch.orientation === 'landscape' ? 'landscape' : 'portrait') : current.orientation,
+    defaultLanguage: patch.defaultLanguage !== undefined ? (patch.defaultLanguage === 'en' ? 'en' : 'de') : current.defaultLanguage,
+    updatedAt: new Date().toISOString()
+  };
+  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), 'utf8');
+  return next;
+}
+
+async function handleSettingsApi(req, res) {
+  if (req.method === 'GET') {
+    const settings = readSettings();
+    const localIP = getLocalIP();
+    return sendJson(res, 200, {
+      ...settings,
+      server: {
+        port: PORT,
+        localIP,
+        localUrl: 'https://localhost:' + PORT,
+        networkUrl: 'https://' + localIP + ':' + PORT
+      }
+    });
+  }
+  if (req.method === 'POST') {
+    try {
+      const body = JSON.parse(await readBody(req, 64 * 1024));
+      const saved = saveSettings(body);
+      return sendJson(res, 200, { ok: true, settings: saved });
+    } catch (err) {
+      return sendJson(res, 400, { error: 'Invalid JSON or settings' });
+    }
+  }
+  return sendJson(res, 405, { error: 'Method not allowed' });
+}
+
 const requestHandler = (req, res) => {
   const route = req.url.split('?')[0];
   if (route === '/api/photos') {
@@ -517,9 +576,13 @@ const requestHandler = (req, res) => {
   if (route === '/api/trash') {
     return handleTrashApi(req, res);
   }
+  if (route === '/api/settings') {
+    return handleSettingsApi(req, res);
+  }
 
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
-  if (urlPath === '/') urlPath = '/index.html';
+  if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
+  if (urlPath === '/admin' || urlPath === '/admin/') urlPath = '/admin.html';
 
   const filePath = path.join(DIST_DIR, urlPath);
   const ext = path.extname(filePath).toLowerCase();

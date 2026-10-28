@@ -45,7 +45,11 @@ let isCapturing = false;
 //  („Save“/„Fertig“) auf die Standardsprache zurück, damit der nächste
 //  Gast eine vorhersagbare Sprache vorfindet (Predictable System State).
 // ============================================================
-const DEFAULT_LANG = 'de';
+let defaultLang = 'de';
+try {
+  const savedLang = localStorage.getItem('snapbox_default_language');
+  if (savedLang === 'en' || savedLang === 'de') defaultLang = savedLang;
+} catch (e) {}
 const I18N = {
   de: {
     splashSubtitle: 'Knipsen. Animieren. Erinnern.',
@@ -53,7 +57,9 @@ const I18N = {
     processing: 'Foto wird verarbeitet…',
     permissionText: 'Kamerazugriff für SnapBox erforderlich',
     permissionBtn: 'Kamera erlauben',
-    captionFace: 'Gesicht',
+    captionFace: 'GESICHTSFILTER',
+    captionTimer: 'TIMER',
+    shutterLabel: 'AUSLÖSER',
     timerGroupAria: 'Countdown-Dauer',
     faceGroupAria: 'Gesichtsfilter',
     trayColor: 'Farbe',
@@ -158,7 +164,9 @@ const I18N = {
     processing: 'Processing photo…',
     permissionText: 'Camera access required for SnapBox',
     permissionBtn: 'Allow Camera',
-    captionFace: 'Face',
+    captionFace: 'FACE FILTERS',
+    captionTimer: 'TIMER',
+    shutterLabel: 'CAPTURE',
     timerGroupAria: 'Countdown duration',
     faceGroupAria: 'Face filters',
     trayColor: 'Color',
@@ -258,10 +266,10 @@ const I18N = {
     qrBtnLabel: 'To phone'
   }
 };
-let currentLang = DEFAULT_LANG;
+let currentLang = defaultLang;
 
 function t(key, vars) {
-  const dict = I18N[currentLang] && I18N[currentLang][key] != null ? I18N[currentLang] : I18N[DEFAULT_LANG];
+  const dict = I18N[currentLang] && I18N[currentLang][key] != null ? I18N[currentLang] : I18N[defaultLang];
   let s = dict[key] != null ? dict[key] : key;
   if (vars) for (const k of Object.keys(vars)) s = s.split('{' + k + '}').join(String(vars[k]));
   return s;
@@ -270,7 +278,7 @@ function t(key, vars) {
 const $splashLang = document.querySelector('.lang-switch--splash');
 
 function applyLanguage(lang) {
-  currentLang = I18N[lang] ? lang : DEFAULT_LANG;
+  currentLang = I18N[lang] ? lang : defaultLang;
   document.documentElement.lang = currentLang;
   document.querySelectorAll('[data-i18n]').forEach((el) => {
     el.textContent = t(el.dataset.i18n);
@@ -282,6 +290,11 @@ function applyLanguage(lang) {
     const active = btn.dataset.lang === currentLang;
     btn.classList.toggle('is-selected', active);
     btn.setAttribute('aria-pressed', String(active));
+  });
+  document.querySelectorAll('.lang-switch__unit').forEach((unit) => {
+    const btn = unit.querySelector('.lang-switch__btn');
+    if (!btn) return;
+    unit.classList.toggle('is-selected', btn.dataset.lang === currentLang);
   });
   applySoundState(); // Beschriftung des Ton-Buttons in der aktiven Sprache
   // Beschriftungen der Gesichtsfilter-Chips in der aktiven Sprache nachziehen
@@ -299,6 +312,87 @@ function applyLanguage(lang) {
 document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
   btn.addEventListener('click', () => applyLanguage(btn.dataset.lang));
 });
+
+
+// ============================================================
+//  ORIENTATION SYNC (Hochformat / Querformat — Admin Panel)
+// ============================================================
+let currentOrientation = 'portrait';
+try {
+  const saved = localStorage.getItem('snapbox_orientation');
+  if (saved === 'landscape' || saved === 'portrait') currentOrientation = saved;
+} catch (e) {}
+
+function applyOrientation(orientation) {
+  if (orientation !== 'landscape' && orientation !== 'portrait') {
+    orientation = 'portrait';
+  }
+  currentOrientation = orientation;
+  const isLandscape = orientation === 'landscape';
+  document.body.classList.toggle('orientation-landscape', isLandscape);
+  try {
+    localStorage.setItem('snapbox_orientation', orientation);
+  } catch (e) {}
+}
+
+// Sofort initial anwenden
+applyOrientation(currentOrientation);
+
+// Synchronisation zwischen Tabs über BroadcastChannel
+if ('BroadcastChannel' in window) {
+  try {
+    const settingsChannel = new BroadcastChannel('snapbox_channel');
+    settingsChannel.onmessage = (event) => {
+      if (!event.data) return;
+      if (event.data.type === 'orientation_change') {
+        applyOrientation(event.data.orientation);
+      }
+      if (event.data.type === 'default_language_change') {
+        defaultLang = event.data.defaultLanguage === 'en' ? 'en' : 'de';
+        try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
+        applyLanguage(defaultLang);
+      }
+    };
+  } catch (e) {}
+}
+
+// Synchronisation bei storage Events
+window.addEventListener('storage', (e) => {
+  if (e.key === 'snapbox_orientation' && (e.newValue === 'landscape' || e.newValue === 'portrait')) {
+    applyOrientation(e.newValue);
+  }
+  if (e.key === 'snapbox_default_language' && (e.newValue === 'de' || e.newValue === 'en')) {
+    defaultLang = e.newValue;
+    applyLanguage(defaultLang);
+  }
+});
+
+// Periodische Synchronisation mit dem Server (/api/settings) für Multi-Device / Kiosk
+async function syncSettingsFromServer() {
+  try {
+    const res = await fetch('/api/settings');
+    if (res.ok) {
+      const data = await res.json();
+      if (data) {
+        if (data.orientation && data.orientation !== currentOrientation) {
+          applyOrientation(data.orientation);
+        }
+        if (data.defaultLanguage && (data.defaultLanguage === 'en' || data.defaultLanguage === 'de')) {
+          if (defaultLang !== data.defaultLanguage) {
+            defaultLang = data.defaultLanguage;
+            try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
+            if (currentState === 'splash') {
+              applyLanguage(defaultLang);
+            }
+          }
+        }
+      }
+    }
+  } catch (e) {}
+}
+
+syncSettingsFromServer();
+setInterval(syncSettingsFromServer, 2500);
 
 // ============================================================
 //  CAMERA ACCESS
@@ -638,7 +732,7 @@ $reviewKeep.addEventListener('click', () => {
   // Session-Ende: Sprache für den nächsten Gast auf Deutsch zurücksetzen
   // (HCI: Predictable System State — der Nachfolger in der Warteschlange
   // darf nicht durch eine fremde Sprache verwirrt werden).
-  applyLanguage(DEFAULT_LANG);
+  applyLanguage(defaultLang);
   hideReview();
   setControlsLocked(false);
   // Farbe oder Sticker gewählt: Foto neu komponieren und serverseitig
@@ -830,6 +924,42 @@ function initFilterBar() {
     $filterBar.scrollLeft += e.deltaY;
     e.preventDefault();
   }, { passive: false });
+
+  // Mouse drag-to-scroll for desktop
+  let isFilterDrag = false;
+  let filterStartX = 0;
+  let filterScrollLeft = 0;
+  let hasDragged = false;
+
+  $filterBar.addEventListener('mousedown', (e) => {
+    isFilterDrag = true;
+    hasDragged = false;
+    filterStartX = e.pageX - $filterBar.offsetLeft;
+    filterScrollLeft = $filterBar.scrollLeft;
+  });
+
+  window.addEventListener('mouseup', () => {
+    isFilterDrag = false;
+    setTimeout(() => { hasDragged = false; }, 50);
+  });
+
+  $filterBar.addEventListener('mousemove', (e) => {
+    if (!isFilterDrag) return;
+    const x = e.pageX - $filterBar.offsetLeft;
+    const walk = (x - filterStartX) * 1.2;
+    if (Math.abs(walk) > 4) {
+      hasDragged = true;
+      e.preventDefault();
+      $filterBar.scrollLeft = filterScrollLeft - walk;
+    }
+  });
+
+  $filterBar.addEventListener('click', (e) => {
+    if (hasDragged) {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+    }
+  }, true);
 }
 initFilterBar();
 // Farbfilter werden erst nach der Aufnahme im Review gewählt und auf das
@@ -2137,7 +2267,7 @@ document.querySelectorAll('[data-action]').forEach((el) => {
 //  INIT
 // ============================================================
 window.addEventListener('load', () => {
-  applyLanguage(DEFAULT_LANG);
+  applyLanguage(defaultLang);
   animateSplashIn();
   loadPhotosFromServer();
   loadStreak();
