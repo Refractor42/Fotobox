@@ -1787,6 +1787,11 @@ body.orientation-landscape section.gallery {
   width: 94%;
   margin: 0 auto;
   padding: 2.5rem 1.5rem 4rem;
+  /* Der Body ist im Querformat auf 100vh fixiert und darf nicht scrollen.
+     Galerie und Papierkorb brauchen deshalb einen eigenen Scrollbereich. */
+  height: 100dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 body.orientation-landscape .gallery__grid {
