@@ -1380,6 +1380,25 @@ body.orientation-landscape .splash {
   padding: 0;
 }
 
+/* Primäre Aktion am Kiosk: größere Trefferfläche nach Fitts' Law. */
+body.orientation-landscape .splash__cta {
+  min-width: 300px;
+  min-height: 70px;
+  padding: 1rem 2.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+/* Typografie am Kiosk mitwachsen lassen, aber die Hierarchie erhalten:
+   Titel deutlich größer, Untertitel nur leicht, mehr Luft zum Button. */
+body.orientation-landscape .splash__title {
+  font-size: clamp(3.5rem, 4.5vw, 4.5rem);
+}
+body.orientation-landscape .splash__subtitle {
+  font-size: clamp(1.1rem, 1.3vw, 1.3rem);
+  margin-bottom: 2.5rem;
+}
+
 body.orientation-landscape section.camera {
   position: fixed;
   inset: 0;
