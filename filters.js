@@ -18,7 +18,7 @@
   const MODEL_URL = 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 
   const FILTERS = [
-    { id: 'none', label: 'None', emoji: '🚫' },
+    { id: 'none', label: 'Original', emoji: '' },
     { id: 'thug', label: 'Thug Life', emoji: '🕶️' },
     { id: 'mlg', label: 'MLG', emoji: '💯' },
     { id: 'shades', label: 'Pixel Shades', emoji: '😎' },

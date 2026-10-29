@@ -140,7 +140,7 @@ const I18N = {
     streakAriaMany: 'Foto-Streak: {n} Tage, {s}',
     streakTaken: 'Foto heute gemacht',
     streakNone: 'heute noch kein Foto',
-    faceNone: 'Keine',
+    faceNone: 'Original',
     faceBig: 'Große Augen + Mund',
     faceThug: 'Thug Life',
     faceMlg: 'MLG',
@@ -247,7 +247,7 @@ const I18N = {
     streakAriaMany: 'Photo streak: {n} days, {s}',
     streakTaken: 'photo taken today',
     streakNone: 'no photo yet today',
-    faceNone: 'None',
+    faceNone: 'Original',
     faceBig: 'Big Eyes + Mouth',
     faceThug: 'Thug Life',
     faceMlg: 'MLG',
@@ -302,7 +302,7 @@ function applyLanguage(lang) {
     $filterBar.querySelectorAll('.timer__chip').forEach((chip) => {
       const filter = window.SnapBoxFilters.FILTERS.find((f) => f.id === chip.dataset.filter);
       if (!filter) return;
-      chip.textContent = filter.emoji + ' ' + faceLabel(filter);
+      chip.textContent = (filter.emoji ? filter.emoji + ' ' : '') + faceLabel(filter);
       chip.setAttribute('aria-label', faceLabel(filter));
     });
   }
@@ -728,7 +728,7 @@ function discardCurrentPhoto() {
   }
 }
 
-$reviewKeep.addEventListener('click', () => {
+$reviewKeep.addEventListener('click', async () => {
   // Session-Ende: Sprache für den nächsten Gast auf Deutsch zurücksetzen
   // (HCI: Predictable System State — der Nachfolger in der Warteschlange
   // darf nicht durch eine fremde Sprache verwirrt werden).
@@ -740,7 +740,15 @@ $reviewKeep.addEventListener('click', () => {
   if (activeStickers.length || currentFilter !== 'standard') {
     saveEditedPhoto();
   } else {
+    // Erst „Speichern“ bestätigt das Foto. Die Server-Speicherung läuft
+    // bereits seit der Aufnahme; hier warten wir ihr Ergebnis ab, damit
+    // „Foto gespeichert“ nicht fälschlich vor der Entscheidung erscheint.
+    const photo = lastPhoto;
     resetCameraView();
+    if (photo && photo.savePromise) {
+      try { await photo.savePromise; } catch (e) { /* Fehler wurde bereits gemeldet */ }
+      if (photo.id) showToast(t('toastSaved'));
+    }
   }
 });
 
@@ -904,7 +912,7 @@ function initFilterBar() {
     chip.setAttribute('aria-pressed', String(active));
     if (active) chip.classList.add('is-selected');
 
-    chip.textContent = filter.emoji + ' ' + faceLabel(filter);
+    chip.textContent = (filter.emoji ? filter.emoji + ' ' : '') + faceLabel(filter);
     chip.setAttribute('aria-label', faceLabel(filter));
     chip.addEventListener('click', () => {
       const selected = filterEngine.setFilter(filter.id);
@@ -1515,7 +1523,8 @@ function addToGallery(photoUrl, save = true, photoId = null) {
       card.dataset.id = id;
       if (card.isConnected) {
         attachDelete(card, id);
-        showToast(t('toastSaved'));
+        // Keine Bestätigung hier: Der Gast entscheidet erst im Review
+        // zwischen „Neu aufnehmen“ und „Speichern“.
       } else {
         deletePhoto(card, id); // discarded before the save finished
       }
