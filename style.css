@@ -441,8 +441,8 @@ section.active { display: block; opacity: 1; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  height: 44px;
+  width: 96px;
+  height: 74px;
   padding: 0;
   border: 1px solid rgba(255 255 255 / 0.15);
   border-radius: var(--radius-sm);
@@ -455,9 +455,9 @@ section.active { display: block; opacity: 1; }
     box-shadow var(--transition), transform 0.15s ease;
 }
 .lang-switch__btn svg {
-  width: 32px;
-  height: 21px;
-  border-radius: 3px;
+  width: 82px;
+  height: 54px;
+  border-radius: 5px;
 }
 .lang-switch__btn:hover { opacity: 0.9; }
 .lang-switch__btn:active { transform: scale(0.92); }
@@ -468,8 +468,8 @@ section.active { display: block; opacity: 1; }
 }
 .lang-switch__btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
 @media (max-width: 420px) {
-  .lang-switch__btn { width: 48px; height: 44px; }
-  .lang-switch__btn svg { width: 27px; height: 18px; }
+  .lang-switch__btn { width: 76px; height: 60px; }
+  .lang-switch__btn svg { width: 64px; height: 43px; }
 }
 
 /* Post-shot editor — sits below the photo so the image stays untouched */

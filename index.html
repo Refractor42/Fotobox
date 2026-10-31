@@ -5,18 +5,52 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SnapBox — Minimalist Photobox</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="kiosk.css" />
 </head>
 <body>
-  <!-- Landing / Splash -->
+  <!-- Landing / Idle: Foto-Kette, Swipe-up und Monats-Challenge -->
   <section class="splash" id="splash">
     <div class="splash__bg">
       <div class="splash__gradient"></div>
     </div>
-    <div class="splash__content">
+    <div class="splash__chain" id="splashChain" aria-hidden="true"></div>
+    <p class="splash__brand">SnapBox</p>
+
+    <div class="splash__content splash__content--portrait">
       <h1 class="splash__title">SnapBox</h1>
       <p class="splash__subtitle" data-i18n="splashSubtitle">Knipsen. Animieren. Erinnern.</p>
       <button class="btn btn--primary splash__cta" data-action="start" data-i18n="splashCta">Fotobox starten</button>
     </div>
+
+    <div class="splash__content splash__content--kiosk">
+      <button class="splash__start" id="splashStart" data-action="start" type="button" aria-label="Fotobox starten" data-i18n-aria="splashCta">
+        <span class="splash__start-label" data-i18n="splashTap">Zum Starten tippen</span>
+        <span class="splash__tap" aria-hidden="true">
+          <span class="splash__tap-ring"></span>
+          <span class="splash__tap-dot"></span>
+        </span>
+      </button>
+    </div>
+
+    <aside class="challenge-card" id="challengeCard" aria-live="polite">
+      <p class="challenge-card__title" data-i18n="challengeTitle">Monthly Challenge</p>
+      <p class="challenge-card__progress">
+        <span class="challenge-card__count"><span id="challengeCount">0</span> / <span id="challengeGoal">42</span></span>
+        <span class="challenge-card__unit" id="challengePhotos">Fotos</span>
+        <span class="challenge-card__days" id="challengeDays"></span>
+      </p>
+      <p class="challenge-card__theme" id="challengeTheme">Halloween Motive</p>
+    </aside>
+
+    <button class="splash__sound" id="splashSound" type="button" aria-label="Ton ausschalten">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+        <path class="sound-on" d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+        <path class="sound-on" d="M18.5 5.5a9 9 0 0 1 0 13"></path>
+        <line class="sound-off" x1="16" y1="9" x2="22" y2="15"></line>
+        <line class="sound-off" x1="22" y1="9" x2="16" y2="15"></line>
+      </svg>
+    </button>
   </section>
 
   <!-- Sprachumschaltung DE/EN (HCI: Accessibility/i18n): dezente Flaggen in
@@ -34,7 +68,13 @@
   <!-- Camera -->
   <section class="camera" id="camera">
     <div class="camera__stage">
+      <div class="stage-left">
       <div class="viewfinder">
+        <!-- Physischer Auslöser links vom Bildschirm: der Streifen ist hier
+             auch als Touch-Fläche nutzbar, damit die Box ohne Hardware läuft. -->
+        <button class="shutter-rail" id="shutterRail" type="button" aria-label="Foto aufnehmen">
+          <span class="shutter-rail__label" data-i18n="shutterLabel">AUSLÖSER</span>
+        </button>
         <video class="camera__video" id="cameraVideo" autoplay playsinline muted></video>
         <canvas class="filter-canvas" id="filterCanvas" aria-hidden="true"></canvas>
         <div class="viewfinder__frame">
@@ -83,6 +123,77 @@
           </div>
         </div>
       </div>
+
+        <!-- Untere Steuerleiste: Countdown, Modus, Abbrechen -->
+        <div class="capture-bar" id="captureBar">
+          <div class="capture-switch">
+            <div class="seg" id="kioskTimer" role="group" aria-label="Countdown-Dauer" data-i18n-aria="timerGroupAria">
+              <button class="seg__btn" data-seconds="3" type="button">3s</button>
+              <button class="seg__btn" data-seconds="5" type="button">5s</button>
+              <button class="seg__btn" data-seconds="10" type="button">10s</button>
+            </div>
+            <p class="capture-switch__label" data-i18n="captionTimer">COUNTDOWN</p>
+          </div>
+
+          <div class="capture-switch">
+            <div class="seg" id="modeChips" role="group" aria-label="Aufnahmemodus" data-i18n-aria="modeGroupAria">
+              <button class="seg__btn" data-mode="single" type="button" data-i18n="modeSingle">Einzelfoto</button>
+              <button class="seg__btn" data-mode="strip" type="button" data-i18n="modeStrip">Fotostreifen</button>
+            </div>
+            <p class="capture-switch__label" data-i18n="captionMode">MODUS</p>
+          </div>
+
+          <button class="abort-btn" id="abortBtn" type="button" aria-label="Abbrechen" data-i18n-aria="abortAria">
+            <svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="19" fill="none" stroke="currentColor" stroke-width="3"></circle><line x1="12" y1="12" x2="36" y2="36" stroke="currentColor" stroke-width="3"></line></svg>
+          </button>
+        </div>
+
+        <!-- Review-Aktionen direkt unter dem Foto -->
+        <div class="review-actions" id="reviewActions" hidden>
+          <button class="round-action" id="landscapeRetake" type="button" aria-label="Foto neu aufnehmen" data-i18n-aria="retakeAria">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"></path><path d="M3.5 15a9 9 0 1 0 2-9.4L1 10"></path></svg></span>
+            <span class="round-action__label" data-i18n="btnRetake">Neu aufnehmen</span>
+          </button>
+          <button class="round-action round-action--accept" id="landscapeKeep" type="button" aria-label="Foto annehmen" data-i18n-aria="acceptAria">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12.5 9.5 18 20 6.5"></path></svg></span>
+            <span class="round-action__label" data-i18n="btnAccept">Annehmen</span>
+          </button>
+          <button class="round-action" id="landscapeStamp" type="button" aria-label="Stempel auswählen" data-i18n-aria="stampOpenAria">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><circle cx="9" cy="10" r="1"></circle><circle cx="15" cy="10" r="1"></circle><path d="M8.5 14.5c1.2 1.4 5.8 1.4 7 0"></path></svg></span>
+            <span class="round-action__label" data-i18n="btnStamp">Stempel</span>
+          </button>
+        </div>
+
+        <!-- Stempel-Modus: dieselbe Position, andere Aktionen -->
+        <div class="review-actions" id="stampActions" hidden>
+          <button class="round-action round-action--cancel" id="stampCancel" type="button">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+            <span class="round-action__label" data-i18n="stampCancel">Stempeln abbrechen</span>
+          </button>
+          <button class="round-action round-action--accept" id="stampDone" type="button">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12.5 9.5 18 20 6.5"></path></svg></span>
+            <span class="round-action__label" data-i18n="stampDone">Stempeln fertig</span>
+          </button>
+          <button class="round-action" id="stampDelete" type="button">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></span>
+            <span class="round-action__label" data-i18n="stampDelete">Stempel löschen</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Kontextmenü rechts: Filter, Overlays oder Stempel -->
+      <aside class="side-menu" id="sideMenu" data-context="filter" aria-label="Filter und Effekte">
+        <div class="side-menu__head" id="sideMenuHead">Filter</div>
+        <div class="side-menu__tabs" id="sideMenuTabs" role="tablist"></div>
+        <div class="side-menu__viewport">
+          <div class="side-menu__list" id="sideMenuList" role="listbox" aria-label="Auswahl"></div>
+        </div>
+        <div class="side-menu__hints">
+          <button class="side-menu__arrow" id="sideScrollUp" type="button" aria-label="Nach oben scrollen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 15l6-6 6 6"></path></svg></button>
+          <span class="side-menu__hint" data-i18n="scrollHint">scroll</span>
+          <button class="side-menu__arrow" id="sideScrollDown" type="button" aria-label="Nach unten scrollen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"></path></svg></button>
+        </div>
+      </aside>
     </div>
 
     <!-- Post-shot editor: everything sits below the photo, never over it -->
@@ -207,6 +318,19 @@
         <button class="lang-switch__btn" data-lang="en" type="button" aria-pressed="false" aria-label="English">
           <svg viewBox="0 0 60 40" aria-hidden="true"><rect width="60" height="40" fill="#012169"/><path d="M0 0 L60 40 M60 0 L0 40" stroke="#fff" stroke-width="8"/><path d="M0 0 L60 40 M60 0 L0 40" stroke="#C8102E" stroke-width="4"/><path d="M30 0 V40 M0 20 H60" stroke="#fff" stroke-width="13"/><path d="M30 0 V40 M0 20 H60" stroke="#C8102E" stroke-width="7"/></svg>
         </button>
+      </div>
+    </div>
+
+    <!-- Endscreen: fertiges Foto + QR / Insta / Print -->
+    <div class="endscreen" id="endScreen" hidden>
+      <div class="endscreen__inner">
+        <div class="endscreen__photo" id="endPhoto"></div>
+        <div class="endscreen__actions">
+          <button class="endscreen__btn" type="button" data-end="qr">QR</button>
+          <button class="endscreen__btn" type="button" data-end="insta">Insta</button>
+          <button class="endscreen__btn" type="button" data-end="print">Print</button>
+        </div>
+        <button class="endscreen__done" id="endDone" type="button" data-i18n="btnDone">Fertig</button>
       </div>
     </div>
   </section>
