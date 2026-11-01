@@ -19,6 +19,8 @@ const $viewfinderFrame = $camera.querySelector('.viewfinder__frame');
 const $corners       = $camera.querySelectorAll('.viewfinder__corner');
 const $galleryGrid   = document.getElementById('galleryGrid');
 const $galleryEmpty  = document.getElementById('galleryEmpty');
+const $galleryLoadMoreWrap = document.getElementById('galleryLoadMoreWrap');
+const $galleryLoadMore = document.getElementById('galleryLoadMore');
 const $video         = document.getElementById('cameraVideo');
 const $permission    = document.getElementById('permission');
 const $galleryBadge  = document.getElementById('galleryBadge');
@@ -29,6 +31,11 @@ let currentStreak = 0;
 let lastPhotoTimestamp = null;
 
 const photos = [];
+// Wie photos, aber mit Server-ID — für Splash-Kette und Galerie.
+const photoRecords = [];
+// Alle Server-IDs ohne Bilddaten: hält Gesamtzahl und Challenge-Zähler
+// korrekt, auch wenn nur eine Fotoseite geladen ist.
+const photoIndexIds = [];
 
 // --- State ---
 let currentState = 'splash';
@@ -37,6 +44,9 @@ let photoCount = 0;
 let videoPlaying = false;
 let viewfinderVisible = false;
 let isCapturing = false;
+let captureRunId = 0;
+let captureCommitted = false;
+let countdownState = null;
 
 // ============================================================
 //  I18N — Sprachumschaltung DE/EN (HCI: Accessibility/i18n)
@@ -54,12 +64,69 @@ const I18N = {
   de: {
     splashSubtitle: 'Knipsen. Animieren. Erinnern.',
     splashCta: 'Fotobox starten',
+    splashTap: 'Zum Starten tippen',
+    challengeTitle: 'Monthly Challenge',
+    challengePhotos: 'Fotos',
+    challengeDaysOne: 'noch 1 Tag',
+    challengeDays: 'noch {n} Tage',
+    challengeLastDay: 'letzter Tag',
+    themeHalloween: 'Halloween Motive',
+    themeWinter: 'Winterzauber',
+    themeDefault: 'Monatsmotiv',
+    captionMode: 'MODUS',
+    modeGroupAria: 'Aufnahmemodus',
+    modeSingle: 'Einzelfoto',
+    modeStrip: 'Fotostreifen',
+    startHomeAria: 'Zum Startbildschirm',
+    startHomeLabel: 'Start',
+    endHomeAria: 'Fertig — zurück zum Startbildschirm',
+    captureCancel: 'Abbrechen',
+    captureCancelAria: 'Aufnahme abbrechen',
+    acceptAria: 'Foto annehmen',
+    btnAccept: 'Annehmen',
+    btnStamp: 'Sticker',
+    stampOpenAria: 'Sticker auswählen',
+    stampCancel: 'Abbrechen',
+    stampDone: 'Fertig',
+    stampDelete: 'Sticker löschen',
+    btnDone: 'Fertig',
+    endQr: 'QR-Code',
+    endInsta: 'Instagram',
+    endPrint: 'Drucken',
+    sideFilter: 'Filter',
+    sideOverlay: 'Overlays',
+    sideStamp: 'Sticker',
+    tabFace: 'Gesicht',
+    tabAll: 'Komplett',
+    tabStandard: 'Standard',
+    tabEvent: 'Event',
+    tabEmoji: 'Emojis',
+    tabUni: 'Hochschule',
+    scrollHint: 'scrollen',
+    scrollUpAria: 'Nach oben scrollen',
+    scrollDownAria: 'Nach unten scrollen',
+    overlayNone: 'Kein Rahmen',
+    overlayColorFrame: 'Farbrahmen',
+    overlayWhiteFrame: 'Weißer Rahmen',
+    overlayStripesH: 'Horizontale Streifen',
+    overlayStripesV: 'Vertikale Streifen',
+    filterStandard: 'Standard',
+    filterVintage: 'Vintage',
+    toastDownloaded: 'Foto heruntergeladen.',
+    toastPrintBlocked: 'Druckfenster wurde blockiert — bitte Pop-ups erlauben.',
+    toastFullscreenOn: 'Vollbild an — Shift+F zum Verlassen',
+    toastFullscreenError: 'Vollbild konnte nicht geöffnet werden.',
     processing: 'Foto wird verarbeitet…',
+    idleResetTitle: 'Noch da?',
+    idleResetText: 'Zurück zum Start in',
+    idleResetStay: 'Hier bleiben',
     permissionText: 'Kamerazugriff für SnapBox erforderlich',
+    permissionHint: 'Dauerhaft blockiert? Erlaube die Kamera in den Browser-Einstellungen und lade die Seite neu.',
     permissionBtn: 'Kamera erlauben',
     captionFace: 'GESICHTSFILTER',
     captionTimer: 'COUNTDOWN',
     shutterLabel: 'AUSLÖSER',
+    captureAria: 'Foto aufnehmen',
     timerGroupAria: 'Countdown-Dauer',
     faceGroupAria: 'Gesichtsfilter',
     trayColor: 'Farbe',
@@ -68,7 +135,8 @@ const I18N = {
     stickerGroupAria: 'Sticker hinzufügen',
     filterSw: 'Schwarzweiß',
     filterKnackig: 'Knackig',
-    reviewHint: 'Sticker antippen und aufs Foto ziehen.',
+    reviewHint: 'Sticker antippen, ziehen und mit +/− in der Größe ändern.',
+    stickerDragHint: 'Sticker ziehen · +/− für Größe',
     btnRetake: 'Neu aufnehmen',
     retakeAria: 'Foto neu aufnehmen',
     stickerToggleAria: 'Sticker auswählen',
@@ -85,18 +153,22 @@ const I18N = {
     galleryBtn: 'Galerie',
     galleryBack: 'Zurück',
     galleryTitle: 'Deine Fotos',
+    galleryLoadMore: 'Mehr laden',
+    galleryLoading: 'Wird geladen…',
     galleryTrash: 'Papierkorb',
+    trashBackShort: 'Fotos',
+    trashBackToPhotos: 'Zurück zu deinen Fotos',
     galleryEmpty: 'Noch keine Fotos — mach dein erstes Foto!',
-    trashHintBefore: 'Gelöschte Fotos werden nach',
-    trashHintAfter: 'endgültig gelöscht.',
-    trashOpt7: '7 Tagen',
-    trashOpt14: '14 Tagen',
-    trashOpt30: '30 Tagen',
+    trashRetentionText: 'Neu gelöschte Fotos werden nach {n} Tagen endgültig gelöscht.',
     trashEmpty: 'Der Papierkorb ist leer.',
     confirmTitle: 'Endgültig löschen?',
     confirmText: 'Das Foto wird für immer gelöscht und kann nicht wiederhergestellt werden.',
     confirmCancel: 'Abbrechen',
     confirmOk: 'Endgültig löschen',
+    discardTitle: 'Foto verwerfen?',
+    discardText: 'Das Foto wurde noch nicht angenommen und wird endgültig gelöscht.',
+    discardCancel: 'Weiter bearbeiten',
+    discardConfirm: 'Verwerfen',
     qrTitle: 'Foto aufs Handy',
     qrCloseAria: 'QR-Dialog schließen',
     qrLoading: 'Link wird erstellt…',
@@ -109,6 +181,7 @@ const I18N = {
     qrNotSaved: 'Foto ist noch nicht gespeichert.',
     qrSvgAria: 'QR-Code zum Herunterladen des Fotos',
     toastSaved: 'Foto gespeichert.',
+    toastCaptureCancelled: 'Aufnahme abgebrochen.',
     toastSaveError: 'Foto konnte nicht gespeichert werden — Verbindung prüfen.',
     toastEditError: 'Änderungen konnten nicht gespeichert werden.',
     toastEditErrorKeep: 'Änderungen konnten nicht gespeichert werden — Foto bleibt unverändert.',
@@ -121,7 +194,6 @@ const I18N = {
     toastRestoreError2: 'Foto konnte nicht wiederhergestellt werden.',
     toastLoadError: 'Gespeicherte Fotos konnten nicht geladen werden.',
     trashLoadError: 'Papierkorb konnte nicht geladen werden.',
-    trashRetentionSaved: 'Papierkorb wird nach {n} Tagen geleert.',
     toastPurged: 'Foto endgültig gelöscht.',
     toastPurgeError: 'Foto konnte nicht endgültig gelöscht werden.',
     trashRestoreBtn: 'Wiederherstellen',
@@ -132,7 +204,6 @@ const I18N = {
     capturedPhotoAlt: 'Aufgenommenes Foto',
     photoPreviewAlt: 'Foto-Vorschau',
     deletePhotoAria: 'Foto löschen',
-    retentionAria: 'Aufbewahrungsdauer',
     langGroupAria: 'Sprache wählen',
     soundOn: 'Ton ausschalten',
     soundOff: 'Ton einschalten',
@@ -161,12 +232,69 @@ const I18N = {
   en: {
     splashSubtitle: 'Capture. Animate. Remember.',
     splashCta: 'Start Photobox',
+    splashTap: 'Tap to start',
+    challengeTitle: 'Monthly Challenge',
+    challengePhotos: 'photos',
+    challengeDaysOne: '1 day left',
+    challengeDays: '{n} days left',
+    challengeLastDay: 'last day',
+    themeHalloween: 'Halloween motifs',
+    themeWinter: 'Winter magic',
+    themeDefault: 'Theme of the month',
+    captionMode: 'MODE',
+    modeGroupAria: 'Capture mode',
+    modeSingle: 'Single photo',
+    modeStrip: 'Photo strip',
+    startHomeAria: 'Home — go to start screen',
+    startHomeLabel: 'Home',
+    endHomeAria: 'Done — go to start screen',
+    captureCancel: 'Cancel',
+    captureCancelAria: 'Cancel capture',
+    acceptAria: 'Accept photo',
+    btnAccept: 'Accept',
+    btnStamp: 'Sticker',
+    stampOpenAria: 'Choose sticker',
+    stampCancel: 'Cancel',
+    stampDone: 'Done',
+    stampDelete: 'Delete sticker',
+    btnDone: 'Done',
+    endQr: 'QR Code',
+    endInsta: 'Instagram',
+    endPrint: 'Print',
+    sideFilter: 'Filters',
+    sideOverlay: 'Overlays',
+    sideStamp: 'Stickers',
+    tabFace: 'Face',
+    tabAll: 'Full image',
+    tabStandard: 'Standard',
+    tabEvent: 'Event',
+    tabEmoji: 'Emojis',
+    tabUni: 'University',
+    scrollHint: 'scroll',
+    scrollUpAria: 'Scroll up',
+    scrollDownAria: 'Scroll down',
+    overlayNone: 'No frame',
+    overlayColorFrame: 'Color frame',
+    overlayWhiteFrame: 'White frame',
+    overlayStripesH: 'Horizontal stripes',
+    overlayStripesV: 'Vertical stripes',
+    filterStandard: 'Standard',
+    filterVintage: 'Vintage',
+    toastDownloaded: 'Photo downloaded.',
+    toastPrintBlocked: 'Print window was blocked — please allow pop-ups.',
+    toastFullscreenOn: 'Fullscreen on — Shift+F to exit',
+    toastFullscreenError: 'Fullscreen could not be opened.',
     processing: 'Processing photo…',
+    idleResetTitle: 'Still there?',
+    idleResetText: 'Returning to start in',
+    idleResetStay: 'Stay here',
     permissionText: 'Camera access required for SnapBox',
+    permissionHint: 'Blocked permanently? Allow the camera in your browser settings, then reload the page.',
     permissionBtn: 'Allow Camera',
     captionFace: 'FACE FILTERS',
     captionTimer: 'COUNTDOWN',
     shutterLabel: 'CAPTURE',
+    captureAria: 'Take photo',
     timerGroupAria: 'Countdown duration',
     faceGroupAria: 'Face filters',
     trayColor: 'Color',
@@ -175,7 +303,8 @@ const I18N = {
     stickerGroupAria: 'Add stickers',
     filterSw: 'Black & White',
     filterKnackig: 'Vivid',
-    reviewHint: 'Tap a sticker, then drag it on the photo.',
+    reviewHint: 'Tap a sticker, drag it, and resize with +/−.',
+    stickerDragHint: 'Drag stickers · +/− to resize',
     btnRetake: 'Retake',
     retakeAria: 'Retake photo',
     stickerToggleAria: 'Choose stickers',
@@ -192,18 +321,22 @@ const I18N = {
     galleryBtn: 'Gallery',
     galleryBack: 'Back',
     galleryTitle: 'Your Photos',
+    galleryLoadMore: 'Load more',
+    galleryLoading: 'Loading…',
     galleryTrash: 'Trash',
+    trashBackShort: 'Photos',
+    trashBackToPhotos: 'Back to your photos',
     galleryEmpty: 'No photos yet. Capture your first memory!',
-    trashHintBefore: 'Deleted photos are permanently removed after',
-    trashHintAfter: '',
-    trashOpt7: '7 days',
-    trashOpt14: '14 days',
-    trashOpt30: '30 days',
+    trashRetentionText: 'Newly deleted photos are permanently removed after {n} days.',
     trashEmpty: 'The trash is empty.',
     confirmTitle: 'Delete permanently?',
     confirmText: 'This photo will be deleted forever and cannot be recovered.',
     confirmCancel: 'Cancel',
     confirmOk: 'Delete permanently',
+    discardTitle: 'Discard photo?',
+    discardText: 'The photo has not been accepted yet and will be deleted permanently.',
+    discardCancel: 'Keep editing',
+    discardConfirm: 'Discard',
     qrTitle: 'Photo to your phone',
     qrCloseAria: 'Close QR dialog',
     qrLoading: 'Creating link…',
@@ -216,6 +349,7 @@ const I18N = {
     qrNotSaved: 'Photo is not saved yet.',
     qrSvgAria: 'QR code for downloading the photo',
     toastSaved: 'Photo saved.',
+    toastCaptureCancelled: 'Capture cancelled.',
     toastSaveError: 'Photo could not be saved — check the connection.',
     toastEditError: 'Changes could not be saved.',
     toastEditErrorKeep: 'Changes could not be saved — the photo stays unchanged.',
@@ -228,7 +362,6 @@ const I18N = {
     toastRestoreError2: 'Photo could not be restored.',
     toastLoadError: 'Saved photos could not be loaded.',
     trashLoadError: 'Trash could not be loaded.',
-    trashRetentionSaved: 'Trash will be emptied after {n} days.',
     toastPurged: 'Photo deleted permanently.',
     toastPurgeError: 'Photo could not be deleted permanently.',
     trashRestoreBtn: 'Restore',
@@ -239,7 +372,6 @@ const I18N = {
     capturedPhotoAlt: 'Captured photo',
     photoPreviewAlt: 'Photo preview',
     deletePhotoAria: 'Delete photo',
-    retentionAria: 'Retention period',
     langGroupAria: 'Choose language',
     soundOn: 'Mute sound',
     soundOff: 'Turn sound on',
@@ -297,6 +429,7 @@ function applyLanguage(lang) {
     unit.classList.toggle('is-selected', btn.dataset.lang === currentLang);
   });
   applySoundState(); // Beschriftung des Ton-Buttons in der aktiven Sprache
+  renderTrashRetention(); // dynamische Aufbewahrungsdauer (Serverwert)
   // Beschriftungen der Gesichtsfilter-Chips in der aktiven Sprache nachziehen
   if ($filterBar && window.SnapBoxFilters) {
     $filterBar.querySelectorAll('.timer__chip').forEach((chip) => {
@@ -307,6 +440,15 @@ function applyLanguage(lang) {
     });
   }
   if ($streakPill.classList.contains('visible')) renderStreak();
+  // Kiosk-Menü und Challenge-Karte in der neuen Sprache nachziehen.
+  if (document.getElementById('sideMenu')) {
+    if ($sideMenuHead) $sideMenuHead.textContent = t(sideConfig().head);
+    syncSideMenuHint();
+    renderSideTabs();
+    renderSideMenu();
+    updateChallengeCard();
+  }
+  syncGalleryContext();
 }
 
 document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
@@ -335,6 +477,14 @@ function applyOrientation(orientation) {
   } catch (e) {}
 }
 
+// Aufbewahrungsdauer aus den Server-Einstellungen (Admin-geschützt).
+let serverRetentionDays = 7;
+
+function renderTrashRetention() {
+  const el = document.getElementById('trashRetentionText');
+  if (el) el.textContent = t('trashRetentionText', { n: serverRetentionDays });
+}
+
 // Sofort initial anwenden
 applyOrientation(currentOrientation);
 
@@ -351,6 +501,13 @@ if ('BroadcastChannel' in window) {
         defaultLang = event.data.defaultLanguage === 'en' ? 'en' : 'de';
         try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
         applyLanguage(defaultLang);
+      }
+      if (event.data.type === 'retention_change') {
+        const retention = Number(event.data.trashRetentionDays);
+        if ([7, 14, 30].includes(retention)) {
+          serverRetentionDays = retention;
+          renderTrashRetention();
+        }
       }
     };
   } catch (e) {}
@@ -385,6 +542,11 @@ async function syncSettingsFromServer() {
               applyLanguage(defaultLang);
             }
           }
+        }
+        const retention = Number(data.trashRetentionDays);
+        if ([7, 14, 30].includes(retention) && retention !== serverRetentionDays) {
+          serverRetentionDays = retention;
+          renderTrashRetention();
         }
       }
     }
@@ -575,11 +737,37 @@ function animateSplashIn() {
     .from('.splash__cta', { y: 30, opacity: 0, duration: 0.8, ease: 'power2.out' }, 0.55);
 }
 
+// Start des Kiosk-Flows: Splash ausblenden, Kamera starten. Wird vom
+// Swipe-up, vom Start-Button und von der Leertaste aufgerufen.
+function startSession() {
+  if (currentState === 'camera') return;
+  unlockAudio(); // create the AudioContext inside the user gesture
+  currentState = 'camera';
+  initCamera(); // request camera immediately to preserve user-gesture context
+
+  if (isKioskLayout()) openSideMenu('filter');
+
+  const tl = timeline();
+  tl.to(['.splash__content--portrait', '.splash__content--kiosk', '.lang-switch--splash',
+    '.splash__brand', '.challenge-card', '.splash__sound'], {
+    y: -24, opacity: 0, duration: 0.45, ease: 'power2.in'
+  }).to($splash, {
+    opacity: 0, duration: 0.01
+  }, '+=0.15').add(() => {
+    $splash.style.display = 'none';
+    if ($splashLang) {
+      $splashLang.hidden = true;
+      gsap.set($splashLang, { clearProps: 'opacity,transform' });
+    }
+    animateCameraIn();
+  }, '+=0.2');
+}
+
 // ============================================================
 //  ANIMATIONS: Camera enter
 // ============================================================
 function animateCameraIn() {
-  const tl = timeline({ onStart: () => { $camera.style.display = 'block'; } });
+  const tl = timeline({ onStart: () => { $camera.style.display = 'block'; syncCancelHome(); } });
   tl.to($camera, { opacity: 1, duration: 0.01 })
     .from($camera.querySelector('.camera__stage'), {
       y: 60, opacity: 0, duration: 0.9, ease: 'power3.out'
@@ -629,14 +817,21 @@ const $stickerToggle = document.getElementById('stickerToggle');
 const $filterToggle = document.getElementById('filterToggle');
 const $timerChips = document.getElementById('timerChips');
 
-// Countdown-Dauer (Selbstauslöser) — sichtbar gewählt, pro Gerät gemerkt.
+// Gäste-Einstellungen gelten nur für die aktuelle Sitzung. Beim Verlassen
+// des Startbildschirms werden sie auf diese neutralen Werte zurückgesetzt,
+// damit der nächste Gast nicht die Wahl des Vorgängers erbt.
+const DEFAULT_CAPTURE_MODE = 'single';
+const DEFAULT_COUNTDOWN_SECONDS = 5;
+
+// Countdown-Dauer (Selbstauslöser) — sichtbar gewählt, pro Sitzung gemerkt.
 // Default 5s: Standard bei echten Fotoboxen und genug Zeit, um sich zu
 // positionieren; 3s bleibt als Schnell-Option wählbar.
 let countdownSeconds = Number(localStorage.getItem('countdownSeconds'));
-if (![3, 5, 10].includes(countdownSeconds)) countdownSeconds = 5;
+if (![3, 5, 10].includes(countdownSeconds)) countdownSeconds = DEFAULT_COUNTDOWN_SECONDS;
 
 function applyTimerSelection() {
-  $timerChips.querySelectorAll('.timer__chip').forEach((chip) => {
+  // Hochformat-Dock und Kiosk-Leiste teilen sich denselben Zustand.
+  document.querySelectorAll('[data-seconds]').forEach((chip) => {
     const active = Number(chip.dataset.seconds) === countdownSeconds;
     chip.classList.toggle('is-selected', active);
     chip.setAttribute('aria-pressed', String(active));
@@ -644,37 +839,204 @@ function applyTimerSelection() {
 }
 applyTimerSelection();
 
-$timerChips.addEventListener('click', (e) => {
-  const chip = e.target.closest('.timer__chip');
+document.addEventListener('click', (e) => {
+  const chip = e.target.closest('[data-seconds]');
   if (!chip) return;
   countdownSeconds = Number(chip.dataset.seconds);
   localStorage.setItem('countdownSeconds', String(countdownSeconds));
   applyTimerSelection();
 });
 
+// Aufnahmemodus: Einzelfoto oder vierteiliger Fotostreifen.
+let captureMode = localStorage.getItem('snapbox_capture_mode') === 'strip' ? 'strip' : DEFAULT_CAPTURE_MODE;
+
+function applyModeSelection() {
+  document.querySelectorAll('[data-mode]').forEach((btn) => {
+    const active = btn.dataset.mode === captureMode;
+    btn.classList.toggle('is-selected', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+}
+applyModeSelection();
+
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('[data-mode]');
+  if (!btn) return;
+  captureMode = btn.dataset.mode === 'strip' ? 'strip' : 'single';
+  try { localStorage.setItem('snapbox_capture_mode', captureMode); } catch (err) {}
+  applyModeSelection();
+});
+
+function syncFaceFilterSelection() {
+  if (!filterEngine || !$filterBar) return;
+  const active = filterEngine.getFilter();
+  $filterBar.querySelectorAll('.timer__chip').forEach((chip) => {
+    const isActive = chip.dataset.filter === active;
+    chip.classList.toggle('is-selected', isActive);
+    chip.setAttribute('aria-pressed', String(isActive));
+  });
+}
+
+// Setzt alle gastbezogenen Aufnahme-Einstellungen auf den neutralen Zustand.
+// Betreiber-Einstellungen (Ausrichtung, Standardsprache, Aufbewahrung) bleiben
+// davon unberührt, weil sie nicht in dieser Funktion liegen.
+function resetGuestCaptureSettings() {
+  captureMode = DEFAULT_CAPTURE_MODE;
+  countdownSeconds = DEFAULT_COUNTDOWN_SECONDS;
+  currentFilter = 'standard';
+  currentOverlay = null;
+  soundEnabled = true;
+
+  // Keine Gästeauswahl im Gerät behalten: Beim nächsten Laden gilt der
+  // Standard, nicht die letzte Wahl eines fremden Gastes.
+  try {
+    localStorage.removeItem('snapbox_capture_mode');
+    localStorage.removeItem('countdownSeconds');
+    localStorage.removeItem('soundEnabled');
+  } catch (err) {}
+
+  if (filterEngine) filterEngine.setFilter('none');
+  applyModeSelection();
+  applyTimerSelection();
+  applyFilterSelection();
+  syncFaceFilterSelection();
+  applySoundState();
+}
+
 // Während der Aufnahmesequenz (Countdown → Verarbeitung) sind Gallery, Timer
 // gesperrt: Fehlklicks können die Sequenz nicht mehr abreißen
 // (Fehlervermeidung) — Kontrolle kommt danach über Behalten/Neu aufnehmen.
 function setControlsLocked(locked) {
+  // Alles, was die Aufnahme verändern oder verlassen kann, wird wirklich
+  // deaktiviert — nicht nur per pointer-events ausgeblendet. So verhalten
+  // sich Maus, Tastatur und Screenreader gleich (HCI: Consistency).
   $galleryBtn.classList.toggle('is-locked', locked);
+  $galleryBtn.disabled = locked;
   $timerChips.classList.toggle('is-locked', locked);
+  $timerChips.querySelectorAll('button').forEach((btn) => { btn.disabled = locked; });
+  ['kioskTimer', 'modeChips'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('is-locked', locked);
+    el.querySelectorAll('button').forEach((btn) => { btn.disabled = locked; });
+    const switchEl = el.closest('.capture-switch');
+    if (switchEl) switchEl.classList.toggle('is-locked', locked);
+  });
+  const kioskShutter = document.getElementById('landscapeCaptureBtn');
+  if (kioskShutter) kioskShutter.disabled = locked;
+  const sideMenu = document.getElementById('sideMenu');
+  if (sideMenu) {
+    sideMenu.classList.toggle('is-locked', locked);
+    sideMenu.inert = locked;
+    if (locked) sideMenu.setAttribute('aria-disabled', 'true');
+    else sideMenu.removeAttribute('aria-disabled');
+  }
 }
 
 // Das Review-Panel bleibt während der Bearbeitung sichtbar: „Save“ ist
 // damit auch nach dem Platzieren eines Stickers immer direkt erreichbar.
+function isKioskLayout() {
+  return document.body.classList.contains('orientation-landscape');
+}
+
+// Der globale Start-Button sitzt auf jedem Screen an derselben Stelle:
+// unten rechts, bündig mit der rechten Kante des Seitenmenüs. Damit springt
+// er weder beim Review-Wechsel noch beim Wechsel in Galerie, Papierkorb oder
+// Endscreen.
+function syncCancelHome() {
+  if (!$cancelHome) return;
+  $cancelHome.hidden = currentState === 'splash';
+}
+
+// Derselbe Button hat drei Zustände: normal „Start“, während der Aufnahme
+// „Abbrechen“ und auf dem Endscreen „Fertig“. Position und Größe bleiben
+// dabei unverändert; nur Icon, Label, ARIA und Farbe wechseln.
+function setHomeMode(mode = 'default') {
+  if (!$cancelHome) return;
+  const cancelling = mode === 'cancel';
+  const done = mode === 'done';
+  $cancelHome.classList.toggle('is-cancelling', cancelling);
+  $cancelHome.classList.toggle('is-done', done);
+  const label = $cancelHome.querySelector('.cancel-home__label');
+  const labelKey = done ? 'btnDone' : cancelling ? 'captureCancel' : 'startHomeLabel';
+  const ariaKey = done ? 'endHomeAria' : cancelling ? 'captureCancelAria' : 'startHomeAria';
+  if (label) {
+    label.dataset.i18n = labelKey;
+    label.textContent = t(labelKey);
+  }
+  $cancelHome.dataset.i18nAria = ariaKey;
+  $cancelHome.setAttribute('aria-label', t(ariaKey));
+}
+
+function setHomeCancelMode(active) {
+  setHomeMode(active ? 'cancel' : 'default');
+}
+
+function cancelCapture() {
+  if (!isCapturing || captureCommitted) return;
+  // Laufende asynchrone Schritte (Countdown, Verarbeitung) invalidieren.
+  captureRunId += 1;
+  finishCountdown(false);
+  hideStripProgress();
+  gsap.killTweensOf($countdown);
+  gsap.set($countdown, { scale: 1, opacity: 0 });
+  $countdown.style.opacity = '0';
+  $countdown.setAttribute('aria-hidden', 'true');
+  gsap.killTweensOf([...$corners, $viewfinderFrame]);
+  gsap.killTweensOf($processing);
+  gsap.killTweensOf($flash);
+  gsap.set($processing, { opacity: 0 });
+  gsap.set($flash, { opacity: 0 });
+  $processingFill.style.width = '0%';
+  $processingFill.style.transition = 'none';
+  isCapturing = false;
+  $captureBtn.disabled = false;
+  currentState = 'camera';
+  setHomeCancelMode(false);
+  setControlsLocked(false);
+  resetCameraView();
+  syncCancelHome();
+  showToast(t('toastCaptureCancelled'));
+  if ($cancelHome) $cancelHome.focus({ preventScroll: true });
+}
+
 function showReview() {
-  $review.hidden = false;
   $camera.classList.add('is-reviewing');
+  syncCancelHome();
   closeReviewTools();
   // Ausgangszustand: ungefiltertes Foto, Auswahl auf „Standard“.
   applyFilterSelection();
+  renderOverlayPreview();
+
+  if (isKioskLayout()) {
+    // Im Querformat liegen die Aktionen unter dem Foto und das Menü rechts.
+    $review.hidden = true;
+    const actions = document.getElementById('reviewActions');
+    const stamps = document.getElementById('stampActions');
+    if (stamps) stamps.hidden = true;
+    if (actions) {
+      actions.hidden = false;
+      gsap.from(actions, { y: 16, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
+    }
+    openSideMenu('overlay');
+    const keepBtn = document.getElementById('landscapeKeep');
+    if (keepBtn) keepBtn.focus();
+    return;
+  }
+
+  $review.hidden = false;
   gsap.from($review, { y: 24, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
   $reviewKeep.focus();
 }
 
 function hideReview() {
   $review.hidden = true;
-  $camera.classList.remove('is-reviewing');
+  const actions = document.getElementById('reviewActions');
+  const stamps = document.getElementById('stampActions');
+  if (actions) actions.hidden = true;
+  if (stamps) stamps.hidden = true;
+  $camera.classList.remove('is-reviewing', 'is-stamping');
+  syncCancelHome();
   closeReviewTools();
 }
 
@@ -728,36 +1090,69 @@ function discardCurrentPhoto() {
   }
 }
 
-$reviewKeep.addEventListener('click', async () => {
+// Home-Abbruch vor „Annehmen“: Die Aufnahme wurde nie bestätigt und wird
+// deshalb endgültig verworfen statt in den Papierkorb zu wandern.
+function discardUnacceptedPhoto() {
+  if (!hasPhoto) return;
+  if (lastPhoto) {
+    deletePhoto(lastPhoto.card, lastPhoto.id, { permanent: true });
+    lastPhoto = null;
+  }
+}
+
+async function keepPhoto() {
   // Session-Ende: Sprache für den nächsten Gast auf Deutsch zurücksetzen
   // (HCI: Predictable System State — der Nachfolger in der Warteschlange
   // darf nicht durch eine fremde Sprache verwirrt werden).
   applyLanguage(defaultLang);
   hideReview();
   setControlsLocked(false);
-  // Farbe oder Sticker gewählt: Foto neu komponieren und serverseitig
-  // überschreiben, sonst zurück ins Livebild, bereit für den nächsten Schuss.
-  if (activeStickers.length || currentFilter !== 'standard') {
-    saveEditedPhoto();
-  } else {
-    // Erst „Speichern“ bestätigt das Foto. Die Server-Speicherung läuft
-    // bereits seit der Aufnahme; hier warten wir ihr Ergebnis ab, damit
-    // „Foto gespeichert“ nicht fälschlich vor der Entscheidung erscheint.
-    const photo = lastPhoto;
-    resetCameraView();
+
+  const photo = lastPhoto;
+  const stagePhoto = $camera.querySelector('.viewfinder img.stage-photo');
+  const photoUrl = stagePhoto ? stagePhoto.src : null;
+  const hasEdits = activeStickers.length || currentFilter !== 'standard' || !!currentOverlay;
+
+  // Farbe, Sticker oder Overlay gewählt: Foto neu komponieren und serverseitig
+  // überschreiben. Im Kiosk endet der Flow danach auf dem Endscreen.
+  if (hasEdits) {
+    await saveEditedPhoto({ endScreen: isKioskLayout() });
+    return;
+  }
+
+  if (isKioskLayout()) {
     if (photo && photo.savePromise) {
       try { await photo.savePromise; } catch (e) { /* Fehler wurde bereits gemeldet */ }
-      if (photo.id) showToast(t('toastSaved'));
     }
+    if (photo && photo.id) showToast(t('toastSaved'));
+    if (photoUrl) showEndScreen(photoUrl);
+    return;
   }
-});
 
-$reviewRetake.addEventListener('click', () => {
+  // Erst „Speichern“ bestätigt das Foto. Die Server-Speicherung läuft
+  // bereits seit der Aufnahme; hier warten wir ihr Ergebnis ab, damit
+  // „Foto gespeichert“ nicht fälschlich vor der Entscheidung erscheint.
+  resetCameraView();
+  if (photo && photo.savePromise) {
+    try { await photo.savePromise; } catch (e) { /* Fehler wurde bereits gemeldet */ }
+    if (photo.id) showToast(t('toastSaved'));
+  }
+}
+
+function retakePhoto() {
   hideReview();
   setControlsLocked(false);
   clearStickers();
   discardCurrentPhoto();
-});
+}
+
+$reviewKeep.addEventListener('click', keepPhoto);
+$reviewRetake.addEventListener('click', retakePhoto);
+
+const $landscapeKeep = document.getElementById('landscapeKeep');
+if ($landscapeKeep) $landscapeKeep.addEventListener('click', keepPhoto);
+const $landscapeRetake = document.getElementById('landscapeRetake');
+if ($landscapeRetake) $landscapeRetake.addEventListener('click', retakePhoto);
 
 // ============================================================
 //  QR-DIALOG: Foto aufs Handy (signierter Download-Link)
@@ -981,6 +1376,20 @@ function applyStageFilter() {
   stage.style.filter = css === 'none' ? 'none' : css;
 }
 
+// Komplett-Filter im Kiosk schon in der Live-Vorschau zeigen. Das Foto wird
+// beim Auslösen mit demselben Filter gebacken (WYSIWYG).
+function applyColorPreview() {
+  const css = FILTERS[currentFilter] ? FILTERS[currentFilter].css : 'none';
+  const show = isKioskLayout()
+    && currentState === 'camera'
+    && !$camera.classList.contains('is-reviewing')
+    && !$camera.classList.contains('is-stamping');
+  [$video, $filterCanvas].forEach((el) => {
+    if (!el) return;
+    el.style.filter = show && css !== 'none' ? css : '';
+  });
+}
+
 function applyFilterSelection() {
   $filterChips.forEach((chip) => {
     const selected = chip.dataset.filter === currentFilter;
@@ -988,6 +1397,7 @@ function applyFilterSelection() {
     chip.setAttribute('aria-pressed', String(selected));
   });
   applyStageFilter();
+  applyColorPreview();
 }
 
 $filterChips.forEach((chip) => chip.addEventListener('click', () => {
@@ -1023,38 +1433,200 @@ function addSticker(kind) {
   el.appendChild(img);
 
   const st = { el, x: 50, y: 35, w: 26 };
-  positionSticker(st);
   $camera.querySelector('.viewfinder').appendChild(el);
   activeStickers.push(st);
+  positionSticker(st);
 
   el.addEventListener('pointerdown', (e) => {
+    // Tippen auf die Größen-/Löschen-Buttons darf keinen Drag starten:
+    // sonst springt der Sticker beim Touch-Tap auf die Button-Position.
+    if (e.target.closest('.sticker__ctrl')) return;
     e.preventDefault();
     e.stopPropagation();
     selectSticker(st);
-    const rect = $camera.querySelector('.viewfinder').getBoundingClientRect();
+    const frame = photoStageRect();
     const move = (ev) => {
-      st.x = ((ev.clientX - rect.left) / rect.width) * 100;
-      st.y = ((ev.clientY - rect.top) / rect.height) * 100;
-      st.x = Math.min(100, Math.max(0, st.x));
-      st.y = Math.min(100, Math.max(0, st.y));
+      st.x = ((ev.clientX - frame.left) / frame.width) * 100;
+      st.y = ((ev.clientY - frame.top) / frame.height) * 100;
       positionSticker(st);
     };
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   });
 
   selectSticker(st);
 }
 
+// Sichtbarer Fotobereich innerhalb der Bühne. Ohne Overlay füllt das Foto
+// die Bühne (cover, wird beschnitten); mit Overlay wird das ganze Foto
+// gezeigt (contain). Sticker-Prozente beziehen sich immer auf genau diese
+// Fläche, damit sie nie in den schwarzen Rand oder über den Rahmen laufen.
+function photoStageRect() {
+  const viewfinder = $camera.querySelector('.viewfinder');
+  if (!viewfinder) return { left: 0, top: 0, width: 1, height: 1, right: 1, bottom: 1 };
+  const vf = viewfinder.getBoundingClientRect();
+  const stage = viewfinder.querySelector('img.stage-photo');
+  const nw = stage ? stage.naturalWidth : 0;
+  const nh = stage ? stage.naturalHeight : 0;
+  const fit = stage
+    ? (stage.style.objectFit || getComputedStyle(stage).objectFit || 'cover').toLowerCase()
+    : 'cover';
+  if (!nw || !nh || fit !== 'contain') return vf;
+  const scale = Math.min(vf.width / nw, vf.height / nh);
+  const width = nw * scale;
+  const height = nh * scale;
+  return {
+    left: vf.left + (vf.width - width) / 2,
+    top: vf.top + (vf.height - height) / 2,
+    width,
+    height,
+    right: vf.left + (vf.width + width) / 2,
+    bottom: vf.top + (vf.height + height) / 2
+  };
+}
+
+// Rahmen-Overlays haben einen transparenten Innenbereich. Die Ränder werden
+// aus dem Alphakanal des Overlays gemessen, damit Sticker nicht auf dem
+// dekorativen Rahmen landen. Bis die Messung vorliegt, gilt ein ruhiger
+// Standardrand; „Kein Rahmen“ hat keinen Rand.
+const DEFAULT_OVERLAY_INSET = 5;
+const NO_INSET = { left: 0, right: 0, top: 0, bottom: 0 };
+
+function overlaySafeInsets(overlay) {
+  if (!overlay) return NO_INSET;
+  return overlay.safeInsets || {
+    left: DEFAULT_OVERLAY_INSET,
+    right: DEFAULT_OVERLAY_INSET,
+    top: DEFAULT_OVERLAY_INSET,
+    bottom: DEFAULT_OVERLAY_INSET
+  };
+}
+
+function measureOverlaySafeArea(overlay) {
+  if (!overlay || overlay.safeInsets || overlay.safeMeasure) return;
+  overlay.safeMeasure = true;
+  const img = new Image();
+  img.onload = () => {
+    overlay.safeMeasure = false;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      const W = canvas.width;
+      const H = canvas.height;
+      const data = ctx.getImageData(0, 0, W, H).data;
+      const alphaAt = (x, y) => data[(y * W + x) * 4 + 3];
+      const cx = W >> 1;
+      const cy = H >> 1;
+      let left = cx;
+      let right = cx;
+      let top = cy;
+      let bottom = cy;
+      if (alphaAt(cx, cy) < 10) {
+        while (left > 0 && alphaAt(left - 1, cy) < 10) left--;
+        while (right < W - 1 && alphaAt(right + 1, cy) < 10) right++;
+        while (top > 0 && alphaAt(cx, top - 1) < 10) top--;
+        while (bottom < H - 1 && alphaAt(cx, bottom + 1) < 10) bottom++;
+        overlay.safeInsets = {
+          left: (left / W) * 100,
+          right: ((W - 1 - right) / W) * 100,
+          top: (top / H) * 100,
+          bottom: ((H - 1 - bottom) / H) * 100
+        };
+        if (currentOverlay === overlay) repositionStickers();
+      } else {
+        overlay.safeInsets = NO_INSET;
+      }
+    } catch (err) {
+      // Bei einem nicht lesbaren Bild bleibt der Standardrand aktiv.
+      console.warn('Overlay-Rahmen konnte nicht gemessen werden:', err);
+    }
+  };
+  img.onerror = () => { overlay.safeMeasure = false; };
+  img.src = overlay.src;
+}
+
+// Fotobereich abzüglich des Overlay-Rahmens: hier dürfen Sticker sitzen.
+function stickerSafeRect() {
+  const photo = photoStageRect();
+  const ins = overlaySafeInsets(currentOverlay);
+  const left = photo.left + (photo.width * ins.left) / 100;
+  const top = photo.top + (photo.height * ins.top) / 100;
+  const right = photo.right - (photo.width * ins.right) / 100;
+  const bottom = photo.bottom - (photo.height * ins.bottom) / 100;
+  return { left, top, right, bottom, width: right - left, height: bottom - top };
+}
+
+// Die +/−/×-Leiste sitzt normalerweise über dem Sticker. Ist dort kein
+// Platz, klappt sie unter den Sticker und wird an den Fotorändern gehalten.
+function positionStickerControls(st) {
+  const ctrl = st.el.querySelector('.sticker__ctrl');
+  if (!ctrl || !ctrl.isConnected) return;
+  const frame = stickerSafeRect();
+  const sr = st.el.getBoundingClientRect();
+  const cw = ctrl.offsetWidth || 148;
+  const ch = ctrl.offsetHeight || 44;
+  const pad = 4;
+  const gap = 8;
+  const minLeft = frame.left + pad;
+  const maxLeft = Math.max(minLeft, frame.right - pad - cw);
+  let left = sr.left + sr.width / 2 - cw / 2;
+  left = Math.min(maxLeft, Math.max(minLeft, left));
+
+  let top = sr.top - ch - gap;
+  if (top < frame.top + pad) top = sr.bottom + gap;
+  if (top + ch > frame.bottom - pad) {
+    top = Math.max(frame.top + pad, frame.bottom - pad - ch);
+  }
+
+  ctrl.style.left = (left - sr.left) + 'px';
+  ctrl.style.top = (top - sr.top) + 'px';
+  ctrl.style.transform = 'none';
+}
+
 function positionSticker(st) {
-  st.el.style.width = st.w + '%';
-  st.el.style.left = st.x + '%';
-  st.el.style.top = st.y + '%';
+  const viewfinder = $camera.querySelector('.viewfinder');
+  if (!viewfinder) return;
+  const vf = viewfinder.getBoundingClientRect();
+  const photo = photoStageRect();
+  const safe = stickerSafeRect();
+  const width = Math.max(1, (st.w / 100) * photo.width);
+
+  st.el.style.width = width + 'px';
+  if (st.emoji) {
+    st.el.style.fontSize = Math.max(12, Math.round(width * 0.9)) + 'px';
+  }
+
+  // Sticker samt sichtbarer Fläche innerhalb der sicheren Fotofläche halten.
+  // Das gilt besonders beim Vergrößern direkt am Rand und beim Rahmen.
+  const height = st.el.offsetHeight || width;
+  const halfW = width / 2;
+  const halfH = height / 2;
+  let minX = ((safe.left - photo.left) + halfW) / photo.width * 100;
+  let maxX = ((safe.right - photo.left) - halfW) / photo.width * 100;
+  let minY = ((safe.top - photo.top) + halfH) / photo.height * 100;
+  let maxY = ((safe.bottom - photo.top) - halfH) / photo.height * 100;
+  if (minX > maxX) minX = maxX = 50;
+  if (minY > maxY) minY = maxY = 50;
+  st.x = Math.min(maxX, Math.max(minX, st.x));
+  st.y = Math.min(maxY, Math.max(minY, st.y));
+
+  st.el.style.left = (photo.left - vf.left + (st.x / 100) * photo.width) + 'px';
+  st.el.style.top = (photo.top - vf.top + (st.y / 100) * photo.height) + 'px';
   st.el.style.transform = 'translate(-50%, -50%)';
+  positionStickerControls(st);
+}
+
+function repositionStickers() {
+  activeStickers.forEach(positionSticker);
 }
 
 function selectSticker(st) {
@@ -1077,6 +1649,7 @@ function selectSticker(st) {
   ctrl.appendChild(mk('+', t('stickerBigger'), () => scaleSticker(st, 1.18)));
   ctrl.appendChild(mk('×', t('stickerRemove'), () => removeSticker(st)));
   st.el.appendChild(ctrl);
+  requestAnimationFrame(() => positionStickerControls(st));
 }
 
 function deselectSticker() {
@@ -1129,27 +1702,6 @@ function loadImg(src) {
   });
 }
 
-// Das Foto wird in der Bühne mit object-fit: cover angezeigt — dabei wird
-// links/rechts oder oben/unten ein Teil des Bildes abgeschnitten. Sticker
-// liegen in Prozent der SICHTBAREN Bühnenfläche, das gespeicherte Bild enthält
-// aber das ganze Foto. Diese Zuordnung rechnet Bühnen-Prozente in
-// Bild-Koordinaten um, damit ein Sticker exakt dort und so groß landet, wie
-// er platziert wurde.
-function stageToImageMapping(stageEl, img) {
-  const rect = stageEl.getBoundingClientRect();
-  const iw = img.naturalWidth || rect.width;
-  const ih = img.naturalHeight || rect.height;
-  // cover: das Bild wird so skaliert, dass es die Bühne vollständig füllt
-  const scale = Math.max(rect.width / iw, rect.height / ih);
-  return {
-    rect,
-    scale,
-    // abgeschnittener Teil auf jeder Seite, in Bühnen-Pixeln
-    offsetX: Math.max(0, (iw * scale - rect.width) / 2),
-    offsetY: Math.max(0, (ih * scale - rect.height) / 2)
-  };
-}
-
 async function renderEditedPhoto(photoEl) {
   const base = await loadImg(photoEl.src);
   const canvas = document.createElement('canvas');
@@ -1161,25 +1713,63 @@ async function renderEditedPhoto(photoEl) {
   if (filterCss !== 'none') ctx.filter = filterCss;
   ctx.drawImage(base, 0, 0);
   ctx.filter = 'none';
-  const map = stageToImageMapping($camera.querySelector('.viewfinder'), base);
+  // Sticker-Prozente beziehen sich auf die sichtbare Fotofläche. Beim
+  // beschnittenen Cover-Bild wird der abgeschnittene Rand eingerechnet, beim
+  // vollständig gezeigten Foto (Overlay) direkt auf das Bild abgebildet.
+  const viewfinder = $camera.querySelector('.viewfinder');
+  const frame = photoStageRect();
+  const vf = viewfinder.getBoundingClientRect();
+  const fit = (photoEl.style.objectFit || getComputedStyle(photoEl).objectFit || 'cover').toLowerCase();
+  const cropped = fit !== 'contain';
+  const mapScale = cropped
+    ? Math.max(vf.width / base.naturalWidth, vf.height / base.naturalHeight)
+    : frame.width / base.naturalWidth;
+  const offsetX = cropped ? Math.max(0, (base.naturalWidth * mapScale - vf.width) / 2) : 0;
+  const offsetY = cropped ? Math.max(0, (base.naturalHeight * mapScale - vf.height) / 2) : 0;
+
   for (const st of [...activeStickers]) {
     try {
-      const si = await loadImg(st.el.querySelector('img').src);
-      // Bühnen-Pixel der Sticker-Mitte, um den abgeschnittenen Rand verschoben,
-      // dann durch den Anzeige-Faktor in Bild-Pixel umgerechnet.
-      const w = ((st.w / 100) * map.rect.width) / map.scale;
-      const h = w * (si.naturalHeight / si.naturalWidth);
-      const x = ((st.x / 100) * map.rect.width + map.offsetX) / map.scale - w / 2;
-      const y = ((st.y / 100) * map.rect.height + map.offsetY) / map.scale - h / 2;
-      ctx.drawImage(si, x, y, w, h);
+      const w = ((st.w / 100) * frame.width) / mapScale;
+      const x = ((st.x / 100) * frame.width + offsetX) / mapScale;
+      const y = ((st.y / 100) * frame.height + offsetY) / mapScale;
+      if (st.emoji) {
+        ctx.save();
+        ctx.font = (w * 0.92) + 'px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(st.emoji, x, y);
+        ctx.restore();
+      } else {
+        const si = await loadImg(st.el.querySelector('img').src);
+        const h = w * (si.naturalHeight / si.naturalWidth);
+        ctx.drawImage(si, x - w / 2, y - h / 2, w, h);
+      }
     } catch (err) {
       console.warn('Sticker konnte nicht gerendert werden:', err);
+    }
+  }
+
+  // Bild-Overlay wie in der Vorschau einbrennen: beim Fotostreifen je
+  // Einzelbild, beim Einzelfoto über die volle Fotofläche.
+  if (currentOverlay && currentOverlay.src) {
+    try {
+      const overlayImg = await loadImg(currentOverlay.src);
+      if (photoEl.classList.contains('stage-photo--strip') && lastStripLayout) {
+        const { w, h, pad, gap, count } = lastStripLayout;
+        for (let i = 0; i < count; i++) {
+          ctx.drawImage(overlayImg, pad, pad + i * (h + gap), w, h);
+        }
+      } else {
+        ctx.drawImage(overlayImg, 0, 0, base.naturalWidth, base.naturalHeight);
+      }
+    } catch (err) {
+      console.warn('Overlay konnte nicht gerendert werden:', err);
     }
   }
   return canvas.toDataURL('image/jpeg', 0.92);
 }
 
-async function saveEditedPhoto() {
+async function saveEditedPhoto(options = {}) {
   const photoEl = $camera.querySelector('.viewfinder img.stage-photo');
   if (!photoEl) { clearStickers(); resetCameraView(); return; }
   // Original-Speicherung muss durch sein, damit wir ihren Key überschreiben können
@@ -1218,7 +1808,110 @@ async function saveEditedPhoto() {
     console.warn('Edited photo could not be saved:', err);
     showToast(t('toastEditedSaveError'), { error: true });
   }
-  resetCameraView();
+  if (options.endScreen) {
+    showEndScreen(edited);
+  } else {
+    resetCameraView();
+  }
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function flashCapture() {
+  gsap.to($flash, { opacity: 1, duration: 0.01 });
+  gsap.fromTo($flash, { opacity: 1 }, {
+    opacity: 0, duration: 0.35, ease: 'power2.out', delay: 0.02
+  });
+}
+
+async function runSingleCapture(runId) {
+  lastStripLayout = null;
+  // 1. countdown with tick sounds
+  if (!(await runCountdown(runId))) return false;
+  if (runId !== captureRunId) return false;
+
+  // 2. hide viewfinder + placeholder
+  await hideViewfinder();
+  if (runId !== captureRunId) return false;
+  gsap.to($placeholder, { opacity: 0, duration: 0.2, ease: 'power2.in' });
+
+  // 3. flash + shutter sound
+  playShutterSound();
+  flashCapture();
+
+  // 4. process photo. Im Kiosk wird der gewählte Komplett-Filter bereits
+  // ins JPEG gebacken; danach wird die Auswahl für die Review-Pipeline auf
+  // Standard gesetzt, damit der Filter nicht doppelt angewendet wird.
+  if (!isKioskLayout()) {
+    currentFilter = 'standard';
+    applyFilterSelection();
+  }
+  showProcessing();
+  await sleep(200);
+  if (runId !== captureRunId) return false;
+  $video.pause();
+  const photoUrl = await captureFromVideo();
+  if (runId !== captureRunId) return false;
+  if (isKioskLayout()) {
+    currentFilter = 'standard';
+    applyFilterSelection();
+  }
+
+  // 5. reveal photo in stage
+  if (!(await showCaptureResult(photoUrl, runId))) return false;
+
+  // 6. add to gallery + ask for the keep/retake decision
+  if (runId !== captureRunId) return false;
+  captureCommitted = true;
+  addToGallery(photoUrl);
+  return true;
+}
+
+async function runStripCapture(runId) {
+  const frames = [];
+  const total = 4;
+
+  await hideViewfinder();
+  if (runId !== captureRunId) return false;
+  gsap.to($placeholder, { opacity: 0, duration: 0.2, ease: 'power2.in' });
+
+  for (let i = 0; i < total; i++) {
+    if (runId !== captureRunId) return false;
+    showStripProgress(i + 1, total);
+    if (!(await runCountdown(runId))) {
+      hideStripProgress();
+      return false;
+    }
+    if (runId !== captureRunId) return false;
+    playShutterSound();
+    flashCapture();
+    await sleep(120);
+    if (runId !== captureRunId) return false;
+    frames.push(await captureFromVideo());
+    if (runId !== captureRunId) return false;
+    await sleep(550);
+  }
+  if (runId !== captureRunId) return false;
+  hideStripProgress();
+
+  if (isKioskLayout()) {
+    currentFilter = 'standard';
+    applyFilterSelection();
+  }
+  showProcessing();
+  await sleep(250);
+  if (runId !== captureRunId) return false;
+  $video.pause();
+  const stripUrl = await composeStrip(frames);
+  if (runId !== captureRunId) return false;
+  if (!(await showCaptureResult(stripUrl, runId))) return false;
+
+  if (runId !== captureRunId) return false;
+  captureCommitted = true;
+  addToGallery(stripUrl);
+  return true;
 }
 
 async function runCaptureSequence() {
@@ -1228,61 +1921,110 @@ async function runCaptureSequence() {
     showPermissionPrompt();
     return;
   }
+  const runId = ++captureRunId;
+  captureCommitted = false;
   isCapturing = true;
   $captureBtn.disabled = true;
   setControlsLocked(true);
+  setHomeCancelMode(true);
+  if ($cancelHome) $cancelHome.focus({ preventScroll: true });
 
   // unlock / resume audio while we still have the user gesture
   unlockAudio();
 
   try {
-    // 1. countdown with tick sounds
-    await runCountdown();
-
-    // 2. hide viewfinder + placeholder
-    await hideViewfinder();
-    gsap.to($placeholder, { opacity: 0, duration: 0.2, ease: 'power2.in' });
-
-    // 3. flash + shutter sound
-    playShutterSound();
-    gsap.to($flash, { opacity: 1, duration: 0.01 });
-    gsap.fromTo($flash, { opacity: 1 }, {
-      opacity: 0, duration: 0.35, ease: 'power2.out', delay: 0.02
-    });
-
-    // 4. process photo — die Live-Vorschau ist immer ungefiltert; Farbe wird
-    // erst im Review auf das fertige Foto angewendet.
-    currentFilter = 'standard';
-    applyFilterSelection();
-    showProcessing();
-    await new Promise((r) => setTimeout(r, 200));
-    $video.pause();
-    const photoUrl = await captureFromVideo();
-
-    // 5. reveal photo in stage
-    await showCaptureResult(photoUrl);
-
-    // 6. add to gallery + ask for the keep/retake decision
-    addToGallery(photoUrl);
+    const completed = captureMode === 'strip'
+      ? await runStripCapture(runId)
+      : await runSingleCapture(runId);
+    if (!completed || runId !== captureRunId) return;
     showReview();
   } finally {
+    // Ein abgebrochener Lauf darf einen bereits gestarteten neuen Lauf
+    // nicht mehr zurücksetzen.
+    if (runId !== captureRunId) return;
     isCapturing = false;
     $captureBtn.disabled = false;
     currentState = 'camera';
+    setHomeCancelMode(false);
     // während des Reviews bleiben die übrigen Buttons gesperrt
     if ($review.hidden) setControlsLocked(false);
   }
 }
 
-function runCountdown() {
+function showStripProgress(current, total) {
+  let el = document.getElementById('stripProgress');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'stripProgress';
+    el.className = 'strip-progress';
+    el.setAttribute('aria-live', 'polite');
+    $camera.querySelector('.viewfinder').appendChild(el);
+  }
+  el.textContent = current + ' / ' + total;
+  el.classList.add('is-visible');
+}
+
+function hideStripProgress() {
+  const el = document.getElementById('stripProgress');
+  if (el) el.remove();
+}
+
+async function composeStrip(frames) {
+  const images = await Promise.all(frames.map(loadImg));
+  const w = images[0].naturalWidth || 1280;
+  const h = images[0].naturalHeight || 960;
+  const pad = Math.round(w * 0.035);
+  const gap = Math.round(w * 0.018);
+  const footer = Math.round(w * 0.075);
+  lastStripLayout = { w, h, pad, gap, footer, count: images.length };
+  const canvas = document.createElement('canvas');
+  canvas.width = w + pad * 2;
+  canvas.height = pad * 2 + h * images.length + gap * (images.length - 1) + footer;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  images.forEach((img, i) => {
+    ctx.drawImage(img, pad, pad + i * (h + gap), w, h);
+  });
+  ctx.fillStyle = '#111111';
+  ctx.font = '700 ' + Math.round(footer * 0.5) + "px 'SF Pro Display', -apple-system, sans-serif";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('SNAPBOX', canvas.width / 2, canvas.height - footer * 0.55);
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+function finishCountdown(completed) {
+  if (!countdownState) return;
+  const state = countdownState;
+  countdownState = null;
+  state.timers.forEach((id) => clearTimeout(id));
+  $countdown.setAttribute('aria-hidden', 'true');
+  state.resolve(completed);
+}
+
+function runCountdown(runId) {
+  if (countdownState) finishCountdown(false);
   return new Promise((resolve) => {
     let count = countdownSeconds;
     const STEP_MS = 900;
+    const state = { resolve, timers: [] };
+    countdownState = state;
+
+    const schedule = (fn, ms) => {
+      const id = setTimeout(fn, ms);
+      state.timers.push(id);
+    };
 
     gsap.killTweensOf($countdown);
     $countdown.style.opacity = '1';
+    $countdown.setAttribute('aria-hidden', 'false');
 
     const showTick = () => {
+      if (runId !== captureRunId) {
+        finishCountdown(false);
+        return;
+      }
       $countdown.textContent = String(count);
       playCountdownTick(count === 1);
 
@@ -1294,7 +2036,7 @@ function runCountdown() {
 
       // Fade the digit out near the end of the step, but keep the timing
       // logic independent of GSAP so a throttled tab can't stall the capture.
-      setTimeout(() => {
+      schedule(() => {
         gsap.to($countdown, {
           scale: 0.8,
           opacity: 0,
@@ -1303,13 +2045,13 @@ function runCountdown() {
         });
       }, STEP_MS - 220);
 
-      setTimeout(() => {
+      schedule(() => {
         count--;
         if (count >= 1) {
           showTick();
         } else {
           gsap.set($countdown, { opacity: 0 });
-          resolve();
+          finishCountdown(true);
         }
       }, STEP_MS);
     };
@@ -1324,15 +2066,20 @@ function showProcessing() {
   $processingFill.style.width = '100%';
 }
 
-async function showCaptureResult(photoUrl) {
+async function showCaptureResult(photoUrl, runId = captureRunId) {
+  if (runId !== captureRunId) return false;
   gsap.to($placeholder, { opacity: 0, duration: 0.001 });
 
   const img = document.createElement('img');
   img.className = 'stage-photo';
+  // Ein Fotostreifen ist hochkant und würde mit "cover" beschnitten —
+  // deshalb wird er vollständig (contain) gezeigt.
+  const fit = captureMode === 'strip' ? 'contain' : 'cover';
+  if (captureMode === 'strip') img.classList.add('stage-photo--strip');
   img.src = photoUrl;
   img.style.cssText = `
     position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: cover; opacity: 0;
+    object-fit: ${fit}; background: #000; opacity: 0;
     border-radius: 0; filter: grayscale(100%) contrast(1.1);
   `;
   $camera.querySelector('.viewfinder').appendChild(img);
@@ -1340,11 +2087,13 @@ async function showCaptureResult(photoUrl) {
   const tl = timeline({ defaults: { ease: 'power2.out' } });
   await tl.to($flash, { opacity: 0.9, duration: 0.01 })
     .to($flash, { opacity: 0, duration: 0.3 }, '+=0.05');
+  if (runId !== captureRunId) { img.remove(); return false; }
 
   gsap.to(img, { opacity: 1, duration: 0.5 });
   await gsap.to(img, {
     filter: 'grayscale(0%) contrast(1)', duration: 0.7, delay: 0.2
   });
+  if (runId !== captureRunId) { img.remove(); return false; }
 
   gsap.to($processing, { opacity: 0, duration: 0.3, delay: 0.5 });
   $processingFill.style.width = '0%';
@@ -1352,18 +2101,35 @@ async function showCaptureResult(photoUrl) {
 
   img.style.cssText = `
     position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: cover; opacity: 1; border-radius: 0;
+    object-fit: ${fit}; background: #000; opacity: 1; border-radius: 0;
     filter: grayscale(0%) contrast(1);
   `;
   // a photo is now shown in the stage
   hasPhoto = true;
-  return new Promise((r) => setTimeout(r, 300));
+  await new Promise((r) => setTimeout(r, 300));
+  if (runId !== captureRunId) {
+    img.remove();
+    hasPhoto = false;
+    return false;
+  }
+  return true;
 }
 
 function resetCameraView() {
   const existingImg = $camera.querySelector('.viewfinder img.stage-photo');
   if (existingImg) existingImg.remove();
   clearStickers();
+  currentOverlay = null;
+  lastStripLayout = null;
+  renderOverlayPreview();
+  $camera.classList.remove('is-reviewing', 'is-stamping', 'is-ended');
+  const endScreen = document.getElementById('endScreen');
+  if (endScreen) endScreen.hidden = true;
+  const reviewActions = document.getElementById('reviewActions');
+  const stampActions = document.getElementById('stampActions');
+  if (reviewActions) reviewActions.hidden = true;
+  if (stampActions) stampActions.hidden = true;
+  if (isKioskLayout()) openSideMenu('filter');
   currentFilter = 'standard';
   applyFilterSelection();
 
@@ -1421,25 +2187,34 @@ function savePhotoToServer(photoUrl) {
 }
 
 // Moves a photo to the trash (Papierkorb) on the server, removes its card and
-// offers an undo toast. Without a server id the photo was never saved, so only
-// the card is removed.
-async function deletePhoto(card, photoId) {
+// offers an undo toast. With options.permanent the object is deleted for good
+// (unaccepted captures aborted via the Home button). Without a server id the
+// photo was never saved, so only the card is removed.
+async function deletePhoto(card, photoId, options = {}) {
+  const permanent = options.permanent === true;
   if (!photoId) {
+    // Noch kein Server-Objekt: Die ID kommt ggf. erst nach dem Upload. Merken,
+    // damit der Save-Callback die Datei dann endgültig löscht.
+    if (permanent && card) card.dataset.discardPermanent = '1';
     removeCard(card);
     return;
   }
-  const key = 'trash:' + photoId;
+  const key = (permanent ? 'purge:' : 'trash:') + photoId;
   if (pendingOps.has(key)) return;
   pendingOps.add(key);
   const image = card.querySelector('img') ? card.querySelector('img').src : null;
   try {
-    const res = await fetch('/api/photos?id=' + encodeURIComponent(photoId) + '&days=' + getRetentionDays(), {
+    // Die Aufbewahrungsdauer setzt der Server aus den Admin-Einstellungen.
+    const query = 'id=' + encodeURIComponent(photoId) + (permanent ? '&purge=1' : '');
+    const res = await fetch('/api/photos?' + query, {
       method: 'DELETE'
     });
-    // 404 = bereits verschoben (Doppelklick-Race) — gilt ebenfalls als Erfolg
+    // 404 = bereits gelöscht/verschoben (Doppelklick-Race) — gilt als Erfolg
     if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
     const data = res.status === 404 ? {} : await res.json();
     removeCard(card);
+    // Verworfene, nie angenommene Fotos landen nicht im Papierkorb.
+    if (permanent) return;
     refreshTrashCount();
     if (data.trashId) {
       showToast(t('toastTrashed'), {
@@ -1481,10 +2256,21 @@ async function restoreFromTrash(trashId, image) {
 function removeCard(card) {
   if (!card.isConnected) return;
   if (lastPhoto && lastPhoto.card === card) lastPhoto = null;
+  // Auch den Datensatz entfernen, sonst taucht das gelöschte Foto weiter in
+  // Challenge-Zähler und Splash-Kette auf.
+  if (card._photoRecord) {
+    const record = card._photoRecord;
+    if (record.id) removePhotoIndexId(record.id);
+    const recordIndex = photoRecords.indexOf(record);
+    if (recordIndex !== -1) photoRecords.splice(recordIndex, 1);
+    const urlIndex = photos.indexOf(record.url);
+    if (urlIndex !== -1) photos.splice(urlIndex, 1);
+  }
   card.remove();
-  photoCount = Math.max(0, photoCount - 1);
-  $galleryBadge.textContent = String(photoCount);
+  setPhotoCount(photoCount - 1);
   if (!$galleryGrid.querySelector('.gallery__card')) $galleryEmpty.style.display = '';
+  updateChallengeCard();
+  renderSplashChain();
 }
 
 // Adds a delete button to a gallery card.
@@ -1493,7 +2279,9 @@ function attachDelete(card, photoId) {
   btn.className = 'gallery__delete';
   btn.type = 'button';
   btn.setAttribute('aria-label', t('deletePhotoAria'));
-  btn.textContent = '×';
+  btn.title = t('deletePhotoAria');
+  // Papierkorb statt ×: Die Aktion löscht, sie schließt nichts.
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     deletePhoto(card, photoId);
@@ -1501,21 +2289,114 @@ function attachDelete(card, photoId) {
   card.appendChild(btn);
 }
 
-// Loads all stored photos from the database when the page starts.
-function loadPhotosFromServer() {
-  return fetch('/api/photos', { cache: 'no-store' })
-    .then((res) => {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-    .then((items) => items.forEach((item) => addToGallery(item.image, false, item.id)))
-    .catch((err) => {
-      console.warn('Photos could not be loaded from database:', err);
-      showToast(t('toastLoadError'), { error: true });
-    });
+const PHOTO_PAGE_SIZE = 12;
+let photoCursor = null;
+let photoHasMore = false;
+let photoPageLoading = false;
+
+function setPhotoCount(count) {
+  photoCount = Math.max(0, Number(count) || 0);
+  $galleryBadge.textContent = String(photoCount);
 }
 
-function addToGallery(photoUrl, save = true, photoId = null) {
+function setLoadMoreBusy(busy) {
+  if (!$galleryLoadMore) return;
+  const key = busy ? 'galleryLoading' : 'galleryLoadMore';
+  $galleryLoadMore.disabled = busy;
+  $galleryLoadMore.dataset.i18n = key;
+  $galleryLoadMore.textContent = t(key);
+}
+
+function updateGalleryLoadMore() {
+  if (!$galleryLoadMoreWrap || !$galleryLoadMore) return;
+  const hasCards = !!$galleryGrid.querySelector('.gallery__card');
+  $galleryLoadMoreWrap.hidden = trashOpen
+    || !hasCards
+    || (!photoHasMore && !photoPageLoading);
+  $galleryLoadMore.disabled = photoPageLoading;
+}
+
+function resetGalleryFeed() {
+  $galleryGrid.innerHTML = '';
+  photos.length = 0;
+  photoRecords.length = 0;
+  photoIndexIds.length = 0;
+  photoCursor = null;
+  photoHasMore = false;
+  photoPageLoading = false;
+  setPhotoCount(0);
+  $galleryEmpty.style.display = trashOpen ? 'none' : '';
+  setLoadMoreBusy(false);
+  updateGalleryLoadMore();
+  updateChallengeCard();
+  renderSplashChain();
+}
+
+async function loadPhotoPage() {
+  if (photoPageLoading) return;
+  photoPageLoading = true;
+  setLoadMoreBusy(true);
+  updateGalleryLoadMore();
+  try {
+    const params = new URLSearchParams({ limit: String(PHOTO_PAGE_SIZE) });
+    if (photoCursor) params.set('before', photoCursor);
+    const res = await fetch('/api/photos?' + params.toString(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    // Ältere Server ohne Pagination liefern weiterhin ein Array.
+    const legacy = Array.isArray(data);
+    const items = legacy ? data : (Array.isArray(data.items) ? data.items : []);
+    // Die alte Vollliste war aufsteigend; für die Galerie neueste zuerst.
+    const pageItems = legacy ? items.slice().reverse() : items;
+    pageItems.forEach((item) => addToGallery(item.image, false, item.id, {
+      prepend: false,
+      count: false
+    }));
+
+    if (legacy) {
+      photoHasMore = false;
+      photoCursor = null;
+      setPhotoCount(items.length);
+      setPhotoIndexIds(items.map((item) => item.id));
+    } else {
+      const total = Number(data.total);
+      setPhotoCount(Number.isFinite(total) ? total : photoCount + items.length);
+      setPhotoIndexIds(Array.isArray(data.allIds) ? data.allIds : items.map((item) => item.id));
+      photoHasMore = data.hasMore === true;
+      photoCursor = data.nextCursor || null;
+    }
+
+    if ($galleryGrid.querySelector('.gallery__card')) {
+      $galleryEmpty.style.display = 'none';
+    }
+    updateChallengeCard();
+    renderSplashChain();
+  } catch (err) {
+    console.warn('Photos could not be loaded from database:', err);
+    showToast(t('toastLoadError'), { error: true });
+  } finally {
+    photoPageLoading = false;
+    setLoadMoreBusy(false);
+    updateGalleryLoadMore();
+  }
+}
+
+// Startet die Galerie mit der neuesten Seite statt mit allen Bildern.
+function loadPhotosFromServer() {
+  if (photoPageLoading) return Promise.resolve();
+  resetGalleryFeed();
+  return loadPhotoPage();
+}
+
+if ($galleryLoadMore) {
+  $galleryLoadMore.addEventListener('click', () => loadPhotoPage());
+}
+
+function addToGallery(photoUrl, save = true, photoId = null, options = {}) {
+  // Neue Aufnahmen kommen oben dazu; ältere Server-Seiten werden angehängt.
+  const prepend = options.prepend === true || (options.prepend !== false && save);
+  const countNew = options.count !== false;
   let savePromise = null;
   if (save) {
     savePromise = savePhotoToServer(photoUrl).then((id) => {
@@ -1526,9 +2407,15 @@ function addToGallery(photoUrl, save = true, photoId = null) {
         // Keine Bestätigung hier: Der Gast entscheidet erst im Review
         // zwischen „Neu aufnehmen“ und „Speichern“.
       } else {
-        deletePhoto(card, id); // discarded before the save finished
+        // Vor dem Speichern verworfen: endgültig löschen, wenn es ein
+        // Home-Abbruch war; sonst wie bisher in den Papierkorb.
+        deletePhoto(card, id, { permanent: card.dataset.discardPermanent === '1' });
       }
       if (lastPhoto && lastPhoto.card === card) lastPhoto.id = id;
+      record.id = id;
+      addPhotoIndexId(id);
+      updateChallengeCard();
+      renderSplashChain();
     });
   }
 
@@ -1545,7 +2432,8 @@ function addToGallery(photoUrl, save = true, photoId = null) {
     attachDelete(card, photoId);
   }
 
-  $galleryGrid.appendChild(card);
+  if (prepend) $galleryGrid.prepend(card);
+  else $galleryGrid.appendChild(card);
   $galleryEmpty.style.display = 'none';
 
   // staggered entrance
@@ -1558,14 +2446,24 @@ function addToGallery(photoUrl, save = true, photoId = null) {
   // Beim Klick die AKTUELLE Bildquelle lesen — nach dem Sticker-Überschreiben
   // wäre die ursprüngliche photoUrl aus dem Closure veraltet.
   card.addEventListener('click', () => openLightbox(card.querySelector('img').src, card.dataset.id || null));
-  photos.push(photoUrl);
+  if (prepend) {
+    photos.unshift(photoUrl);
+  } else {
+    photos.push(photoUrl);
+  }
+  const record = { id: photoId || null, url: photoUrl };
+  if (prepend) photoRecords.unshift(record);
+  else photoRecords.push(record);
+  card._photoRecord = record;
   if (save) lastPhoto = { card, id: null, savePromise };
 
-  // update badge
-  photoCount++;
-  $galleryBadge.textContent = String(photoCount);
-  $galleryBadge.classList.add('has-new');
-  setTimeout(() => $galleryBadge.classList.remove('has-new'), 600);
+  if (countNew) {
+    if (photoId) addPhotoIndexId(photoId);
+    setPhotoCount(photoCount + 1);
+    updateChallengeCard();
+    $galleryBadge.classList.add('has-new');
+    setTimeout(() => $galleryBadge.classList.remove('has-new'), 600);
+  }
 
   // success animation on gallery button
   gsap.from($galleryBtn, {
@@ -1637,6 +2535,7 @@ function goTo(sectionName) {
   gsap.to(target, { opacity: 1, duration: 0.3, ease: 'power2.out' });
 
   currentState = sectionName;
+  syncCancelHome();
 
   // Der Splash-Schalter (fest unten rechts) gehört zum Startbildschirm und
   // verschwindet danach — in der Kameraansicht sitzt der zweite Schalter in
@@ -1702,14 +2601,22 @@ function showToast(message, options = {}) {
 //  CONFIRM MODAL (nur für endgültiges, unwiederbringliches Löschen)
 // ============================================================
 const $confirmModal = document.getElementById('confirmModal');
+const $confirmTitle = document.getElementById('confirmTitle');
+const $confirmText = document.getElementById('confirmText');
 const $confirmOk = document.getElementById('confirmOk');
 const $confirmCancel = document.getElementById('confirmCancel');
 let confirmResolve = null;
 
 // Löst mit true (bestätigt) oder false (abgebrochen).
-function askConfirm() {
+// Optionaler Text, damit derselbe Dialog auch das Verwerfen eines noch nicht
+// angenommenen Fotos absichern kann.
+function askConfirm(options = {}) {
   return new Promise((resolve) => {
     confirmResolve = resolve;
+    $confirmTitle.textContent = options.title || t('confirmTitle');
+    $confirmText.textContent = options.text || t('confirmText');
+    $confirmOk.textContent = options.ok || t('confirmOk');
+    $confirmCancel.textContent = options.cancel || t('confirmCancel');
     $confirmModal.hidden = false;
     gsap.from($confirmModal.querySelector('.modal__card'), {
       y: 24, opacity: 0, scale: 0.96, duration: 0.3, ease: 'power2.out', clearProps: 'all'
@@ -1734,20 +2641,30 @@ $confirmModal.addEventListener('click', (e) => { if (e.target === $confirmModal)
 //  PAPIERKORB (trash view)
 // ============================================================
 const $trashToggle = document.getElementById('trashToggle');
+const $galleryBack = document.querySelector('.gallery__back');
 const $trashBadge = document.getElementById('trashBadge');
 const $trashView = document.getElementById('trashView');
 const $trashGrid = document.getElementById('trashGrid');
 const $trashEmpty = document.getElementById('trashEmpty');
-const $trashRetention = document.getElementById('trashRetention');
-const RETENTION_KEY = 'trashRetentionDays';
 
 let trashOpen = false;
 let trashItems = []; // { id, image, expiresAt }
 let trashVersion = 0; // lokale Änderungen invalidieren noch laufende loadTrash-Antworten
 
-function getRetentionDays() {
-  const v = Number(localStorage.getItem(RETENTION_KEY));
-  return [7, 14, 30].includes(v) ? v : 7;
+// Der Papierkorb ist eine eigene Ansicht: Titel und Rückweg müssen ihn
+// benennen, sonst bleibt oben weiter „Deine Fotos“ stehen.
+function syncGalleryContext() {
+  const title = document.getElementById('galleryTitle');
+  const back = document.getElementById('galleryBackLabel');
+  const toggle = document.getElementById('trashToggle');
+  if (title) title.textContent = t(trashOpen ? 'galleryTrash' : 'galleryTitle');
+  if (back) {
+    back.textContent = t(trashOpen ? 'trashBackShort' : 'galleryBack');
+    const btn = back.closest('button');
+    if (btn) btn.setAttribute('aria-label', t(trashOpen ? 'trashBackToPhotos' : 'galleryBack'));
+  }
+  // Im Papierkorb ist der Umschalter doppelt; der Zurück-Weg übernimmt.
+  if (toggle) toggle.hidden = trashOpen;
 }
 
 // Mülleimer-Zähler am Galerie-Header — erst ab 1 sichtbar (0 = Rauschen).
@@ -1765,13 +2682,10 @@ function refreshTrashCount() {
     .catch(() => { /* Zähler ist optional — still ignorieren */ });
 }
 
-$trashRetention.value = String(getRetentionDays());
-$trashRetention.addEventListener('change', () => {
-  localStorage.setItem(RETENTION_KEY, $trashRetention.value);
-  showToast(t('trashRetentionSaved', { n: $trashRetention.value }));
-});
-
 function toggleTrash(force = !trashOpen) {
+  // Der Umschalter verschwindet im Papierkorb. Tastaturfokus auf den
+  // sichtbaren Zurück-Weg legen, damit er nicht ins Leere fällt.
+  const moveFocus = !!force && document.activeElement === $trashToggle;
   trashOpen = force;
   $trashToggle.classList.toggle('active', trashOpen);
   $trashView.hidden = !trashOpen;
@@ -1779,6 +2693,9 @@ function toggleTrash(force = !trashOpen) {
   $galleryEmpty.style.display = trashOpen
     ? 'none'
     : ($galleryGrid.querySelector('.gallery__card') ? 'none' : '');
+  updateGalleryLoadMore();
+  syncGalleryContext();
+  if (moveFocus && $galleryBack) $galleryBack.focus({ preventScroll: true });
   if (trashOpen) loadTrash();
 }
 
@@ -2136,21 +3053,27 @@ function playSynthShutter(ctx) {
 //  SOUND: An/Aus-Schalter
 // ============================================================
 const $soundToggle = document.getElementById('soundToggle');
+const $splashSound = document.getElementById('splashSound');
 let soundEnabled = localStorage.getItem('soundEnabled') !== '0';
 
 function applySoundState() {
-  $soundToggle.setAttribute('aria-pressed', String(soundEnabled));
-  $soundToggle.setAttribute('aria-label', soundEnabled ? t('soundOn') : t('soundOff'));
-  $soundToggle.querySelectorAll('.sound-on').forEach((el) => { el.style.display = soundEnabled ? '' : 'none'; });
-  $soundToggle.querySelectorAll('.sound-off').forEach((el) => { el.style.display = soundEnabled ? 'none' : ''; });
+  [$soundToggle, $splashSound].forEach((btn) => {
+    if (!btn) return;
+    btn.setAttribute('aria-pressed', String(soundEnabled));
+    btn.setAttribute('aria-label', soundEnabled ? t('soundOn') : t('soundOff'));
+    btn.querySelectorAll('.sound-on').forEach((el) => { el.style.display = soundEnabled ? '' : 'none'; });
+    btn.querySelectorAll('.sound-off').forEach((el) => { el.style.display = soundEnabled ? 'none' : ''; });
+  });
 }
 applySoundState();
 
-$soundToggle.addEventListener('click', () => {
+function toggleSound() {
   soundEnabled = !soundEnabled;
   localStorage.setItem('soundEnabled', soundEnabled ? '1' : '0');
   applySoundState();
-});
+}
+$soundToggle.addEventListener('click', toggleSound);
+if ($splashSound) $splashSound.addEventListener('click', toggleSound);
 
 function playShutterSound(ctx = getAudioContext()) {
   if (!soundEnabled) return false;
@@ -2211,24 +3134,7 @@ document.querySelectorAll('[data-action]').forEach((el) => {
     const action = el.dataset.action;
     switch (action) {
       case 'start':
-        unlockAudio(); // create the AudioContext inside the user gesture
-        currentState = 'camera';
-        initCamera(); // request camera immediately to preserve user-gesture context
-        const tl = timeline();
-        // Flaggen-Schalter ausblenden wie der Splash-Inhalt und danach
-        // verstecken — der Startbildschirm verschwindet als Ganzes.
-        tl.to(['.splash__content', '.lang-switch--splash'], {
-          y: -30, opacity: 0, duration: 0.5, ease: 'power2.in'
-        }).to($splash, {
-          opacity: 0, duration: 0.01
-        }, '+=0.2').add(() => {
-          $splash.style.display = 'none';
-          if ($splashLang) {
-            $splashLang.hidden = true;
-            gsap.set($splashLang, { clearProps: 'opacity,transform' });
-          }
-          animateCameraIn();
-        }, '+=0.3');
+        startSession();
         break;
       case 'capture':
         runCaptureSequence();
@@ -2273,26 +3179,787 @@ document.querySelectorAll('[data-action]').forEach((el) => {
 
 
 // ============================================================
+//  KIOSK-FLOW (UX-SKIZZEN): Seitenmenü, Overlays, Sticker, Endscreen
+// ============================================================
+const $sideMenu = document.getElementById('sideMenu');
+const $sideMenuHead = document.getElementById('sideMenuHead');
+const $sideMenuSubhead = document.getElementById('sideMenuSubhead');
+const $sideMenuTabs = document.getElementById('sideMenuTabs');
+const $sideMenuList = document.getElementById('sideMenuList');
+const $sideScrollUp = document.getElementById('sideScrollUp');
+const $sideScrollDown = document.getElementById('sideScrollDown');
+const $endScreen = document.getElementById('endScreen');
+const $cancelHome = document.getElementById('cancelHome');
+
+const SIDE_CONFIG = {
+  filter: {
+    head: 'sideFilter',
+    defaultTab: 'face',
+    tabs: [['face', 'tabFace'], ['all', 'tabAll']]
+  },
+  overlay: {
+    head: 'sideOverlay',
+    defaultTab: 'standard',
+    tabs: [['standard', 'tabStandard'], ['event', 'tabEvent'], ['uni', 'tabUni']]
+  },
+  stamp: {
+    head: 'sideStamp',
+    defaultTab: 'emoji',
+    tabs: [['emoji', 'tabEmoji'], ['uni', 'tabUni']]
+  }
+};
+
+let sideContext = 'filter';
+let sideTab = 'face';
+let currentOverlay = null;
+// Bildpixel-Layout des zuletzt erzeugten Fotostreifens, damit das Overlay in
+// der Vorschau und im gespeicherten Foto je Einzelbild sitzt.
+let lastStripLayout = null;
+let stampSnapshot = [];
+let endPhotoUrl = null;
+
+// Bild-Overlays im 16:9-Format (1280×720, transparente Bildmitte). Sie liegen
+// deckungsgleich über dem Foto und werden beim Speichern mit eingebrannt.
+const OVERLAY_DIR = 'assets/overlays/';
+const NO_OVERLAY_ID = 'none';
+// Leeres, durchgestrichenes 16:9-Feld als Vorschau für „Kein Rahmen“.
+const NO_OVERLAY_THUMB = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 36">'
+  + '<rect x="2" y="2" width="60" height="32" rx="4" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2" stroke-dasharray="5 4"/>'
+  + '<path d="M18 27 46 9" stroke="#fff" stroke-opacity=".8" stroke-width="3" stroke-linecap="round"/>'
+  + '</svg>'
+);
+const NO_OVERLAY_OPTION = { id: NO_OVERLAY_ID, labelKey: 'overlayNone', src: NO_OVERLAY_THUMB };
+const OVERLAYS = {
+  standard: [
+    { id: 'color-frame', labelKey: 'overlayColorFrame', src: OVERLAY_DIR + 'standard-farbrahmen.png' },
+    { id: 'white-frame', labelKey: 'overlayWhiteFrame', src: OVERLAY_DIR + 'standard-weiss.png' },
+    { id: 'stripes-h', labelKey: 'overlayStripesH', src: OVERLAY_DIR + 'standard-streifen-horizontal.png' },
+    { id: 'stripes-v', labelKey: 'overlayStripesV', src: OVERLAY_DIR + 'standard-streifen-vertikal.png' }
+  ],
+  event: [
+    { id: 'cobooo-urg', label: 'CoBOOOurg', src: OVERLAY_DIR + 'event-cobooo-urg.png' },
+    { id: 'pumpkins-ahead', label: 'Pumpkins ahead', src: OVERLAY_DIR + 'event-pumpkins-ahead.png' },
+    { id: 'scary-season', label: 'Scary season', src: OVERLAY_DIR + 'event-scary-season.png' },
+    { id: 'cozy-campus-time', label: 'Cozy campus time', src: OVERLAY_DIR + 'event-cozy-campus-time.png' },
+    { id: 'cozy-november', label: 'Cozy november', src: OVERLAY_DIR + 'event-cozy-november.png' }
+  ],
+  uni: [
+    { id: 'uni-co-frame', label: 'CO-Rahmen', src: OVERLAY_DIR + 'uni-rahmen-co.png' },
+    { id: 'uni-come-together', label: 'Come together', src: OVERLAY_DIR + 'uni-come-together.png' },
+    { id: 'uni-cool-to-be-here', label: 'Cool to be here', src: OVERLAY_DIR + 'uni-cool-to-be-here.png' },
+    { id: 'uni-coffee-chaos', label: 'Coffee & chaos', src: OVERLAY_DIR + 'uni-coffee-chaos.png' },
+    { id: 'uni-core-memory', label: 'Core memory', src: OVERLAY_DIR + 'uni-core-memory.png' },
+    { id: 'uni-lcc', label: 'LCC', src: OVERLAY_DIR + 'uni-lcc.png' },
+    { id: 'uni-co-white', label: 'CO weiß', src: OVERLAY_DIR + 'uni-co-white.png' }
+  ]
+};
+
+const STAMPS = {
+  emoji: [
+    { glyph: '❤️' }, { glyph: '🔥' }, { glyph: '⭐' }, { glyph: '🎉' },
+    { glyph: '😎' }, { glyph: '✨' }, { glyph: '👻' }, { glyph: '🎃' }
+  ],
+  uni: [
+    { glyph: '🎓' }, { glyph: '📚' }, { glyph: '🍻' },
+    { glyph: '🧪' }, { glyph: '🏛️' }, { glyph: '🎒' }
+  ]
+};
+
+function photoTimestamp(id) {
+  const match = /^photos\/(\d+)-/.exec(String(id || ''));
+  return match ? Number(match[1]) : null;
+}
+
+function photoIsCurrentMonth(id) {
+  const ts = photoTimestamp(id);
+  if (!ts) return false;
+  const now = new Date();
+  const date = new Date(ts);
+  return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+}
+
+function setPhotoIndexIds(ids) {
+  photoIndexIds.length = 0;
+  (ids || []).forEach((id) => {
+    if (id && !photoIndexIds.includes(id)) photoIndexIds.push(id);
+  });
+}
+
+function addPhotoIndexId(id) {
+  if (id && !photoIndexIds.includes(id)) photoIndexIds.unshift(id);
+}
+
+function removePhotoIndexId(id) {
+  const index = photoIndexIds.indexOf(id);
+  if (index !== -1) photoIndexIds.splice(index, 1);
+}
+
+function themeKeyForNow() {
+  const month = new Date().getMonth();
+  if (month === 9) return 'themeHalloween';
+  if (month === 11) return 'themeWinter';
+  return 'themeDefault';
+}
+
+function updateChallengeCard() {
+  const countEl = document.getElementById('challengeCount');
+  if (!countEl) return;
+  const now = new Date();
+  const ids = photoIndexIds.length
+    ? photoIndexIds
+    : photoRecords.map((record) => record.id).filter(Boolean);
+  const count = ids.filter(photoIsCurrentMonth).length;
+  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+  countEl.textContent = String(count);
+  const goal = document.getElementById('challengeGoal');
+  if (goal) goal.textContent = '42';
+  const unit = document.getElementById('challengePhotos');
+  if (unit) unit.textContent = t('challengePhotos');
+  const days = document.getElementById('challengeDays');
+  if (days) {
+    days.textContent = daysLeft === 0
+      ? t('challengeLastDay')
+      : (daysLeft === 1 ? t('challengeDaysOne') : t('challengeDays', { n: daysLeft }));
+  }
+  const theme = document.getElementById('challengeTheme');
+  if (theme) theme.textContent = t(themeKeyForNow());
+}
+
+function renderSplashChain() {
+  const chain = document.getElementById('splashChain');
+  if (!chain) return;
+  // Neueste zuerst: die erste Seite enthält die aktuellsten Fotos.
+  const urls = photoRecords.slice(0, 10).map((record) => record.url).filter(Boolean);
+  chain.innerHTML = '';
+  if (!urls.length) return;
+  const track = document.createElement('div');
+  track.className = 'splash__chain-track';
+  // Zwei Kopien, damit die -50%-Animation nahtlos umläuft.
+  urls.concat(urls).forEach((url) => {
+    const card = document.createElement('div');
+    card.className = 'splash__chain-card';
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = '';
+    img.draggable = false;
+    card.appendChild(img);
+    track.appendChild(card);
+  });
+  chain.appendChild(track);
+}
+
+function sideConfig() {
+  return SIDE_CONFIG[sideContext] || SIDE_CONFIG.filter;
+}
+
+function syncSideMenuHint() {
+  if (!$sideMenuSubhead) return;
+  const show = sideContext === 'stamp';
+  $sideMenuSubhead.textContent = show ? t('stickerDragHint') : '';
+  $sideMenuSubhead.hidden = !show;
+}
+
+function openSideMenu(context, tab) {
+  if (!SIDE_CONFIG[context] || !$sideMenu) return;
+  sideContext = context;
+  const config = SIDE_CONFIG[context];
+  const wanted = tab || config.defaultTab;
+  sideTab = config.tabs.some((pair) => pair[0] === wanted) ? wanted : config.defaultTab;
+  $sideMenu.dataset.context = context;
+  $sideMenuHead.textContent = t(config.head);
+  syncSideMenuHint();
+  renderSideTabs();
+  renderSideMenu();
+}
+
+function renderSideTabs() {
+  if (!$sideMenuTabs) return;
+  $sideMenuTabs.innerHTML = '';
+  sideConfig().tabs.forEach(([id, labelKey]) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'side-tab';
+    btn.dataset.tab = id;
+    btn.setAttribute('role', 'tab');
+    const active = id === sideTab;
+    btn.classList.toggle('is-active', active);
+    btn.setAttribute('aria-selected', String(active));
+    btn.textContent = t(labelKey);
+    btn.addEventListener('click', () => {
+      sideTab = id;
+      renderSideTabs();
+      renderSideMenu();
+    });
+    $sideMenuTabs.appendChild(btn);
+  });
+}
+
+function renderSideMenu() {
+  if (!$sideMenuList) return;
+  $sideMenuList.innerHTML = '';
+
+  if (sideContext === 'filter' && sideTab === 'face') {
+    const filters = window.SnapBoxFilters ? window.SnapBoxFilters.FILTERS : [];
+    filters.forEach((filter) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'side-menu__item';
+      btn.dataset.value = filter.id;
+      btn.setAttribute('role', 'option');
+      const active = !!filterEngine && filterEngine.getFilter() === filter.id;
+      btn.classList.toggle('is-selected', active);
+      btn.setAttribute('aria-selected', String(active));
+      if (filter.emoji) {
+        const emoji = document.createElement('span');
+        emoji.className = 'side-menu__emoji';
+        emoji.textContent = filter.emoji;
+        btn.appendChild(emoji);
+      }
+      const label = document.createElement('span');
+      label.textContent = faceLabel(filter);
+      btn.appendChild(label);
+      btn.addEventListener('click', () => {
+        if (!filterEngine) return;
+        filterEngine.setFilter(filter.id);
+        updateSideSelection();
+      });
+      $sideMenuList.appendChild(btn);
+    });
+  } else if (sideContext === 'filter') {
+    const labels = { standard: 'filterStandard', sw: 'filterSw', vintage: 'filterVintage', knackig: 'filterKnackig' };
+    Object.keys(FILTERS).forEach((id) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'side-menu__item side-menu__item--overlay';
+      btn.dataset.value = id;
+      btn.setAttribute('role', 'option');
+      const active = currentFilter === id;
+      btn.classList.toggle('is-selected', active);
+      btn.setAttribute('aria-selected', String(active));
+      btn.textContent = t(labels[id] || id);
+      btn.addEventListener('click', () => {
+        currentFilter = id;
+        applyFilterSelection();
+        updateSideSelection();
+      });
+      $sideMenuList.appendChild(btn);
+    });
+  } else if (sideContext === 'overlay') {
+    [NO_OVERLAY_OPTION, ...(OVERLAYS[sideTab] || [])].forEach((overlay) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'side-menu__item side-menu__item--overlay';
+      btn.dataset.value = overlay.id;
+      btn.setAttribute('role', 'option');
+      const isNone = overlay.id === NO_OVERLAY_ID;
+      const active = isNone ? !currentOverlay : (!!currentOverlay && currentOverlay.id === overlay.id);
+      btn.classList.toggle('is-selected', active);
+      btn.setAttribute('aria-selected', String(active));
+      const thumb = document.createElement('span');
+      thumb.className = 'side-menu__thumb';
+      const thumbImg = document.createElement('img');
+      thumbImg.src = overlay.src;
+      thumbImg.alt = '';
+      thumbImg.loading = 'lazy';
+      thumb.appendChild(thumbImg);
+      btn.appendChild(thumb);
+      const label = document.createElement('span');
+      label.className = 'side-menu__label';
+      label.textContent = overlayLabel(overlay);
+      btn.appendChild(label);
+      btn.addEventListener('click', () => setOverlay(overlay.id));
+      $sideMenuList.appendChild(btn);
+    });
+  } else if (sideContext === 'stamp') {
+    (STAMPS[sideTab] || []).forEach((stamp) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'side-menu__item';
+      btn.setAttribute('aria-label', stamp.glyph);
+      const glyph = document.createElement('span');
+      glyph.className = 'side-menu__glyph';
+      glyph.textContent = stamp.glyph;
+      btn.appendChild(glyph);
+      btn.addEventListener('click', () => addEmojiStamp(stamp.glyph));
+      $sideMenuList.appendChild(btn);
+    });
+  }
+
+  requestAnimationFrame(updateScrollHints);
+}
+
+function updateSideSelection() {
+  if (!$sideMenuList) return;
+  $sideMenuList.querySelectorAll('.side-menu__item').forEach((el) => {
+    const value = el.dataset.value;
+    let active = false;
+    if (sideContext === 'filter' && sideTab === 'face') {
+      active = !!filterEngine && filterEngine.getFilter() === value;
+    } else if (sideContext === 'filter') {
+      active = currentFilter === value;
+    } else if (sideContext === 'overlay') {
+      active = value === NO_OVERLAY_ID ? !currentOverlay : (!!currentOverlay && currentOverlay.id === value);
+    }
+    el.classList.toggle('is-selected', active);
+    el.setAttribute('aria-selected', String(active));
+  });
+}
+
+function updateScrollHints() {
+  const viewport = document.querySelector('.side-menu__viewport');
+  if (!viewport || !$sideScrollUp || !$sideScrollDown) return;
+  $sideScrollUp.classList.toggle('is-enabled', viewport.scrollTop > 2);
+  $sideScrollDown.classList.toggle('is-enabled', viewport.scrollTop + viewport.clientHeight < viewport.scrollHeight - 2);
+}
+
+if ($sideScrollUp) {
+  $sideScrollUp.addEventListener('click', () => {
+    const viewport = document.querySelector('.side-menu__viewport');
+    if (viewport) viewport.scrollBy({ top: -viewport.clientHeight * 0.8, behavior: 'smooth' });
+  });
+}
+if ($sideScrollDown) {
+  $sideScrollDown.addEventListener('click', () => {
+    const viewport = document.querySelector('.side-menu__viewport');
+    if (viewport) viewport.scrollBy({ top: viewport.clientHeight * 0.8, behavior: 'smooth' });
+  });
+}
+const $sideViewport = document.querySelector('.side-menu__viewport');
+if ($sideViewport) $sideViewport.addEventListener('scroll', updateScrollHints, { passive: true });
+window.addEventListener('resize', () => {
+  updateScrollHints();
+  repositionStickers();
+});
+
+function overlayLabel(overlay) {
+  return overlay.labelKey ? t(overlay.labelKey) : overlay.label;
+}
+
+function findOverlay(id) {
+  return Object.keys(OVERLAYS)
+    .reduce((all, key) => all.concat(OVERLAYS[key]), [])
+    .find((overlay) => overlay.id === id) || null;
+}
+
+function setOverlay(id) {
+  if (id === NO_OVERLAY_ID) {
+    currentOverlay = null;
+    renderOverlayPreview();
+    updateSideSelection();
+    repositionStickers();
+    return;
+  }
+  const found = findOverlay(id);
+  currentOverlay = currentOverlay && currentOverlay.id === id ? null : (found || null);
+  renderOverlayPreview();
+  updateSideSelection();
+  repositionStickers();
+}
+
+function renderOverlayPreview() {
+  const viewfinder = $camera.querySelector('.viewfinder');
+  if (!viewfinder) return;
+  viewfinder.querySelectorAll('.photo-overlay, .photo-overlay-strip').forEach((el) => el.remove());
+  // Der orange Review-Rahmen würde den Overlay-Rahmen überdecken.
+  $camera.classList.toggle('has-overlay', !!currentOverlay);
+  const stage = viewfinder.querySelector('img.stage-photo');
+  if (!currentOverlay) {
+    // Ohne Overlay wieder randlos wie bisher.
+    if (stage && !stage.classList.contains('stage-photo--strip')) stage.style.objectFit = 'cover';
+    return;
+  }
+  if (!stage) return;
+  measureOverlaySafeArea(currentOverlay);
+
+  // Ist das Foto noch nicht dekodiert, wären die Maße 0 und das Overlay
+  // würde unsichtbar in der Ecke sitzen. Nach dem Laden neu berechnen.
+  if (!stage.naturalWidth || !stage.naturalHeight) {
+    stage.style.objectFit = 'contain';
+    if (!stage.dataset.overlayLoadHooked) {
+      stage.dataset.overlayLoadHooked = '1';
+      stage.addEventListener('load', () => {
+        delete stage.dataset.overlayLoadHooked;
+        if (currentOverlay) {
+          renderOverlayPreview();
+          repositionStickers();
+        }
+      }, { once: true });
+    }
+    return;
+  }
+
+  // Fotostreifen werden vollständig (contain) gezeigt. Das Overlay wird
+  // deshalb je Einzelbild platziert, nicht über den ganzen Streifen gezogen.
+  if (stage.classList.contains('stage-photo--strip') && lastStripLayout && stage.naturalWidth) {
+    const vf = viewfinder.getBoundingClientRect();
+    const scale = Math.min(vf.width / stage.naturalWidth, vf.height / stage.naturalHeight);
+    const displayW = stage.naturalWidth * scale;
+    const displayH = stage.naturalHeight * scale;
+    const { w, h, pad, gap, footer, count } = lastStripLayout;
+    const totalW = w + pad * 2;
+    const totalH = pad * 2 + h * count + gap * (count - 1) + footer;
+    const wrap = document.createElement('div');
+    wrap.className = 'photo-overlay-strip';
+    wrap.style.left = Math.round((vf.width - displayW) / 2) + 'px';
+    wrap.style.top = Math.round((vf.height - displayH) / 2) + 'px';
+    wrap.style.width = Math.round(displayW) + 'px';
+    wrap.style.height = Math.round(displayH) + 'px';
+    for (let i = 0; i < count; i++) {
+      const img = document.createElement('img');
+      img.src = currentOverlay.src;
+      img.alt = '';
+      img.style.left = ((pad / totalW) * 100) + '%';
+      img.style.top = (((pad + i * (h + gap)) / totalH) * 100) + '%';
+      img.style.width = ((w / totalW) * 100) + '%';
+      img.style.height = ((h / totalH) * 100) + '%';
+      wrap.appendChild(img);
+    }
+    viewfinder.appendChild(wrap);
+    return;
+  }
+
+  // Einzelfoto: Für die Auswahl wird das ganze Foto gezeigt (contain), damit
+  // der Rahmen ringsum sichtbar ist; das Overlay deckt exakt diese Fläche.
+  stage.style.objectFit = 'contain';
+  const img = document.createElement('img');
+  img.className = 'photo-overlay';
+  img.src = currentOverlay.src;
+  img.alt = '';
+  const vf = viewfinder.getBoundingClientRect();
+  if (stage.naturalWidth && stage.naturalHeight && vf.width && vf.height) {
+    const fit = Math.min(vf.width / stage.naturalWidth, vf.height / stage.naturalHeight);
+    const w = stage.naturalWidth * fit;
+    const h = stage.naturalHeight * fit;
+    img.style.left = Math.round((vf.width - w) / 2) + 'px';
+    img.style.top = Math.round((vf.height - h) / 2) + 'px';
+    img.style.width = Math.round(w) + 'px';
+    img.style.height = Math.round(h) + 'px';
+  } else {
+    // Bühne noch nicht vermessen (z. B. direkt nach dem Aufbau): erst die
+    // volle Fläche nutzen und nach dem nächsten Layout neu berechnen.
+    img.style.width = '100%';
+    img.style.height = '100%';
+    requestAnimationFrame(() => {
+      if (!currentOverlay) return;
+      const rect = viewfinder.getBoundingClientRect();
+      if (rect.width && rect.height) renderOverlayPreview();
+    });
+  }
+  viewfinder.appendChild(img);
+}
+
+function addEmojiStamp(glyph) {
+  const el = document.createElement('div');
+  el.className = 'sticker sticker--emoji';
+  const span = document.createElement('span');
+  span.textContent = glyph;
+  span.setAttribute('aria-hidden', 'true');
+  el.appendChild(span);
+
+  // Neue Sticker leicht versetzt platzieren, damit sie nicht exakt stapeln.
+  const step = (activeStickers.length % 3) - 1;
+  const st = { el, x: 50 + step * 9, y: 38 + step * 8, w: 12, emoji: glyph };
+  $camera.querySelector('.viewfinder').appendChild(el);
+  activeStickers.push(st);
+  positionSticker(st);
+
+  el.addEventListener('pointerdown', (e) => {
+    // Tippen auf die Größen-/Löschen-Buttons darf keinen Drag starten:
+    // sonst springt der Sticker beim Touch-Tap auf die Button-Position.
+    if (e.target.closest('.sticker__ctrl')) return;
+    e.preventDefault();
+    e.stopPropagation();
+    selectSticker(st);
+    const frame = photoStageRect();
+    const move = (ev) => {
+      st.x = ((ev.clientX - frame.left) / frame.width) * 100;
+      st.y = ((ev.clientY - frame.top) / frame.height) * 100;
+      positionSticker(st);
+    };
+    const up = () => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  });
+
+  selectSticker(st);
+}
+
+function openStampMode() {
+  if (!hasPhoto) return;
+  stampSnapshot = activeStickers.slice();
+  $camera.classList.add('is-stamping');
+  const actions = document.getElementById('reviewActions');
+  const stampActions = document.getElementById('stampActions');
+  if (actions) actions.hidden = true;
+  if (stampActions) stampActions.hidden = false;
+  openSideMenu('stamp', 'emoji');
+  const done = document.getElementById('stampDone');
+  if (done) done.focus();
+}
+
+function closeStampMode(keep) {
+  if (!keep) {
+    [...activeStickers].forEach((st) => {
+      if (!stampSnapshot.includes(st)) removeSticker(st);
+    });
+  }
+  stampSnapshot = [];
+  $camera.classList.remove('is-stamping');
+  const actions = document.getElementById('reviewActions');
+  const stampActions = document.getElementById('stampActions');
+  if (actions) actions.hidden = false;
+  if (stampActions) stampActions.hidden = true;
+  if (isKioskLayout()) openSideMenu('overlay');
+}
+
+function deleteSelectedStamp() {
+  if (selectedSticker) { removeSticker(selectedSticker); return; }
+  if (activeStickers.length) removeSticker(activeStickers[activeStickers.length - 1]);
+}
+
+const $landscapeStamp = document.getElementById('landscapeStamp');
+if ($landscapeStamp) $landscapeStamp.addEventListener('click', openStampMode);
+const $stampCancel = document.getElementById('stampCancel');
+if ($stampCancel) $stampCancel.addEventListener('click', () => closeStampMode(false));
+const $stampDone = document.getElementById('stampDone');
+if ($stampDone) $stampDone.addEventListener('click', () => closeStampMode(true));
+const $stampDelete = document.getElementById('stampDelete');
+if ($stampDelete) $stampDelete.addEventListener('click', deleteSelectedStamp);
+
+function showEndScreen(url) {
+  endPhotoUrl = url;
+  const wrap = document.getElementById('endPhoto');
+  if (wrap) {
+    wrap.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = url;
+    img.alt = t('photoPreviewAlt');
+    wrap.appendChild(img);
+  }
+  if ($endScreen) $endScreen.hidden = false;
+  $camera.classList.add('is-ended');
+  $camera.classList.remove('is-reviewing', 'is-stamping');
+  setHomeMode('done');
+  syncCancelHome();
+  if ($cancelHome) $cancelHome.focus({ preventScroll: true });
+}
+
+function returnToIdle() {
+  resetGuestCaptureSettings();
+  if ($endScreen) $endScreen.hidden = true;
+  $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping');
+  setHomeMode('default');
+  clearStickers();
+  currentOverlay = null;
+  lastStripLayout = null;
+  renderOverlayPreview();
+  resetCameraView();
+  $gallery.style.display = 'none';
+  $camera.style.display = 'none';
+  $splash.style.display = 'flex';
+  // Beim Start wurden Brand, Challenge-Karte und Ton-Button ausgeblendet;
+  // für den nächsten Gast müssen sie wieder sichtbar sein.
+  gsap.set(['.splash__brand', '.challenge-card', '.splash__sound', '.splash__content--kiosk'], { clearProps: 'all' });
+  gsap.fromTo($splash, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
+  gsap.fromTo('.splash__content--kiosk', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out', delay: 0.1, clearProps: 'all' });
+  currentState = 'splash';
+  syncCancelHome();
+  if ($splashLang) $splashLang.hidden = false;
+  applyLanguage(defaultLang);
+  updateChallengeCard();
+  renderSplashChain();
+}
+
+async function shareEndPhoto() {
+  if (!endPhotoUrl) return;
+  try {
+    const blob = await (await fetch(endPhotoUrl)).blob();
+    const file = new File([blob], 'snapbox.jpg', { type: blob.type || 'image/jpeg' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], title: 'SnapBox' });
+      return;
+    }
+  } catch (err) {
+    /* Web Share nicht verfügbar — Download-Fallback */
+  }
+  const link = document.createElement('a');
+  link.href = endPhotoUrl;
+  link.download = 'snapbox.jpg';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  showToast(t('toastDownloaded'));
+}
+
+function printEndPhoto() {
+  if (!endPhotoUrl) return;
+  const win = window.open('', '_blank');
+  if (!win) {
+    showToast(t('toastPrintBlocked'), { error: true });
+    return;
+  }
+  win.document.write('<!doctype html><html><head><title>SnapBox</title><style>'
+    + 'html,body{margin:0;height:100%;background:#fff}'
+    + 'body{display:flex;align-items:center;justify-content:center}'
+    + 'img{max-width:100%;max-height:100vh;object-fit:contain}'
+    + '</style></head><body><img src="' + endPhotoUrl + '" onload="window.print()"></body></html>');
+  win.document.close();
+}
+
+document.querySelectorAll('.endscreen__action').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.end === 'qr') {
+      if (lastPhoto && lastPhoto.id) showQrDialog(lastPhoto.id);
+      else showToast(t('qrNotSaved'), { error: true });
+    } else if (btn.dataset.end === 'insta') {
+      shareEndPhoto();
+    } else if (btn.dataset.end === 'print') {
+      printEndPhoto();
+    }
+  });
+});
+if ($cancelHome) {
+  $cancelHome.addEventListener('click', async () => {
+    if (isCapturing) {
+      cancelCapture();
+      return;
+    }
+    if (!$confirmModal.hidden) return;
+
+    // Vor „Annehmen“ gibt es noch kein bestätigtes Foto. Der Weg zum Start
+    // verwirft es deshalb nicht still, sondern fragt vorher nach.
+    const inReview = $camera.classList.contains('is-reviewing') || $camera.classList.contains('is-stamping');
+    if (inReview && hasPhoto) {
+      const confirmed = await askConfirm({
+        title: t('discardTitle'),
+        text: t('discardText'),
+        ok: t('discardConfirm'),
+        cancel: t('discardCancel')
+      });
+      if (!confirmed) {
+        $cancelHome.focus();
+        return;
+      }
+      discardUnacceptedPhoto();
+    }
+    resetToStartScreen();
+  });
+}
+// Swipe up auf dem Startbildschirm (Touch) plus Klick auf die Affordance.
+let splashGestureStart = null;
+$splash.addEventListener('pointerdown', (e) => {
+  if (e.target.closest('#splashStart')) return;
+  splashGestureStart = { x: e.clientX, y: e.clientY };
+});
+$splash.addEventListener('pointerup', (e) => {
+  if (!splashGestureStart) return;
+  const dy = e.clientY - splashGestureStart.y;
+  const dx = e.clientX - splashGestureStart.x;
+  splashGestureStart = null;
+  if (dy < -60 && Math.abs(dx) < 140) startSession();
+});
+
+// ============================================================
+//  VOLLBILD (Tastatur)
+//  Shift+F schaltet ein und wieder aus. Esc und das Schließen-Symbol des
+//  Browsers bleiben als Sicherheitsausgang erhalten — die Seite kann sie
+//  technisch nicht abschalten.
+// ============================================================
+function toggleFullscreen() {
+  const fail = () => showToast(t('toastFullscreenError'), { error: true });
+  if (document.fullscreenElement) {
+    try {
+      const exit = document.exitFullscreen ? document.exitFullscreen() : null;
+      if (exit && typeof exit.catch === 'function') exit.catch(fail);
+    } catch (err) {
+      fail();
+    }
+    return;
+  }
+  const root = document.documentElement;
+  if (!root.requestFullscreen) {
+    fail();
+    return;
+  }
+  try {
+    const request = root.requestFullscreen();
+    if (request && typeof request.then === 'function') {
+      request.then(() => showToast(t('toastFullscreenOn'))).catch(fail);
+    } else {
+      showToast(t('toastFullscreenOn'));
+    }
+  } catch (err) {
+    fail();
+  }
+}
+
+// ============================================================
 //  INIT
 // ============================================================
 window.addEventListener('load', () => {
   applyLanguage(defaultLang);
+  // Alte Gästeauswahl aus früheren Versionen darf nicht in die erste
+  // Sitzung nach dem Laden hineinreichen.
+  resetGuestCaptureSettings();
   animateSplashIn();
   loadPhotosFromServer();
   loadStreak();
+  updateChallengeCard();
+  renderSplashChain();
+  if (isKioskLayout()) openSideMenu('filter');
 
   // Fetch the shutter recording up front; it is decoded on the first gesture.
   preloadShutterSound();
 
   // keyboard shortcuts
   document.addEventListener('keydown', (e) => {
-    if (currentState === 'camera' && (e.key === ' ' || e.key === 'Enter')) {
+    const target = e.target;
+    if (target && target.closest && target.closest('input, textarea, select, [contenteditable="true"]')) return;
+    const onButton = !!(target && target.closest && target.closest('button, [role="button"]'));
+
+    // Vollbild ein/aus — unabhängig vom aktuellen Screen.
+    if (e.code === 'KeyF' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      e.preventDefault();
+      toggleFullscreen();
+      return;
+    }
+
+    if (e.key === ' ' && currentState === 'splash') {
+      e.preventDefault();
+      startSession();
+      return;
+    }
+
+    if ((e.key === ' ' || e.key === 'Enter') && currentState === 'camera' && !onButton
+      && !$camera.classList.contains('is-reviewing')
+      && !$camera.classList.contains('is-ended')) {
+      e.preventDefault();
       unlockAudio(); // keyboard activation is a gesture too
       runCaptureSequence();
+      return;
     }
+
+    if ((e.key === 'g' || e.key === 'G') && currentState === 'camera'
+      && !$camera.classList.contains('is-reviewing')
+      && !$camera.classList.contains('is-ended')
+      && $qrModal.hidden && $confirmModal.hidden) {
+      e.preventDefault();
+      $galleryBtn.click();
+      return;
+    }
+
     if (e.key === 'Escape') {
+      if (isCapturing) { e.preventDefault(); cancelCapture(); return; }
       if (!$qrModal.hidden) { closeQrDialog(); return; }
       if (!$confirmModal.hidden) { closeConfirm(false); return; }
+      if (!$endScreen.hidden) { returnToIdle(); return; }
+      if ($camera.classList.contains('is-reviewing')) { retakePhoto(); return; }
       if (trashOpen) { toggleTrash(false); return; }
       if (lightbox) { lightbox.remove(); lightbox = null; }
       if (currentState === 'gallery') {
@@ -2333,4 +4000,138 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
+
+// ============================================================
+//  INAKTIVITÄTS-RESET (Kiosk)
+//  Nach dem Foto (Endscreen) 40 s, mitten im Ablauf 75 s. 15 s vor
+//  dem Rücksprung erscheint ein Countdown, den jeder Tipp oder
+//  Tastendruck abbricht.
+// ============================================================
+const $idleWarning = document.getElementById('idleWarning');
+const $idleCount = document.getElementById('idleCount');
+const $idleStay = document.getElementById('idleStay');
+
+const IDLE_WARN_MS = 15000;
+const IDLE_END_MS = 40000;
+const IDLE_PROCESS_MS = 75000;
+
+let idleDeadline = 0;
+let idleWarnUntil = 0;
+let idleWarnVisible = false;
+let idleStateKey = 'splash';
+
+function currentIdleStateKey() {
+  if (currentState === 'splash') return 'splash';
+  if ($qrModal && !$qrModal.hidden) return 'qr';
+  if ($confirmModal && !$confirmModal.hidden) return 'confirm';
+  if (lightbox) return 'lightbox';
+  if (trashOpen) return 'trash';
+  if ($endScreen && !$endScreen.hidden) return 'end';
+  if (currentState === 'gallery') return 'gallery';
+  if ($camera.classList.contains('is-reviewing') || $camera.classList.contains('is-stamping')) return 'review';
+  return 'camera';
+}
+
+function idleTimeoutFor(key) {
+  if (key === 'splash') return 0;
+  return key === 'end' ? IDLE_END_MS : IDLE_PROCESS_MS;
+}
+
+function resetIdleDeadline() {
+  const key = currentIdleStateKey();
+  const timeout = idleTimeoutFor(key);
+  idleStateKey = key;
+  idleDeadline = timeout ? Date.now() + timeout : 0;
+}
+
+function hideIdleWarning() {
+  if (!idleWarnVisible) return;
+  idleWarnVisible = false;
+  if ($idleWarning) $idleWarning.hidden = true;
+}
+
+function showIdleWarning() {
+  if (!$idleWarning) return;
+  idleWarnVisible = true;
+  idleWarnUntil = Date.now() + IDLE_WARN_MS;
+  if ($idleCount) $idleCount.textContent = String(Math.round(IDLE_WARN_MS / 1000));
+  $idleWarning.hidden = false;
+  gsap.fromTo(
+    $idleWarning.querySelector('.idle-warning__card'),
+    { y: 16, opacity: 0, scale: 0.96 },
+    { y: 0, opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out', clearProps: 'all' }
+  );
+}
+
+function resetToStartScreen() {
+  hideIdleWarning();
+  if ($qrModal && !$qrModal.hidden) closeQrDialog();
+  if ($confirmModal && !$confirmModal.hidden) closeConfirm(false);
+  if (lightbox) { lightbox.remove(); lightbox = null; }
+  if (trashOpen) toggleTrash(false);
+  returnToIdle();
+  idleStateKey = 'splash';
+  idleDeadline = 0;
+}
+
+// Jede echte Eingabe zählt als Aktivität. Während der Warnung wird die
+// Eingabe geschluckt, damit sie nicht zusätzlich eine App-Aktion auslöst.
+function noteIdleActivity(e) {
+  if (idleWarnVisible) {
+    if (e && e.type === 'keydown') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    hideIdleWarning();
+  }
+  resetIdleDeadline();
+}
+
+window.addEventListener('pointerdown', noteIdleActivity, true);
+window.addEventListener('keydown', noteIdleActivity, true);
+window.addEventListener('wheel', noteIdleActivity, { capture: true, passive: true });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) resetIdleDeadline();
+});
+
+if ($idleStay) {
+  $idleStay.addEventListener('click', () => {
+    hideIdleWarning();
+    resetIdleDeadline();
+  });
+}
+
+resetIdleDeadline();
+
+setInterval(() => {
+  if (document.hidden) return;
+
+  const key = currentIdleStateKey();
+  if (key !== idleStateKey) {
+    hideIdleWarning();
+    resetIdleDeadline();
+    return;
+  }
+
+  // Während der Aufnahme nicht unterbrechen; die Frist läuft danach weiter.
+  if (isCapturing) {
+    idleDeadline = Date.now() + idleTimeoutFor(key);
+    return;
+  }
+
+  if (!idleDeadline) {
+    if (idleWarnVisible) hideIdleWarning();
+    return;
+  }
+
+  const now = Date.now();
+  if (!idleWarnVisible) {
+    if (now >= idleDeadline) showIdleWarning();
+    return;
+  }
+
+  const left = Math.max(0, Math.ceil((idleWarnUntil - now) / 1000));
+  if ($idleCount && $idleCount.textContent !== String(left)) $idleCount.textContent = String(left);
+  if (now >= idleWarnUntil) resetToStartScreen();
+}, 250);
 

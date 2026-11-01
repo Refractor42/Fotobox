@@ -1,5 +1,6 @@
 {
   "orientation": "landscape",
   "defaultLanguage": "de",
-  "updatedAt": "2026-10-29T07:57:29.698Z"
+  "trashRetentionDays": 7,
+  "updatedAt": "2026-11-01T05:44:26.774Z"
 }

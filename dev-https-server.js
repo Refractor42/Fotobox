@@ -15,6 +15,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const crypto = require('crypto');
 
 const selfsigned = require('selfsigned');
 
@@ -33,6 +34,23 @@ const DIST_DIR = __dirname;
 })();
 
 const PORT = process.env.PORT || 8443;
+
+// ---- Admin-PIN / Session ----
+// Der PIN wird NUR serverseitig geprüft. In der .env lässt er sich über
+// ADMIN_PIN ändern (4–8 Ziffern). Ohne eigenen PIN ist der Standard-PIN
+// 1234 aktiv; die Login-Seite und die Admin-Seite weisen darauf hin.
+const DEFAULT_ADMIN_PIN = '1234';
+const rawAdminPin = String(process.env.ADMIN_PIN || '').trim();
+const ADMIN_PIN = /^\d{4,8}$/.test(rawAdminPin) ? rawAdminPin : DEFAULT_ADMIN_PIN;
+const ADMIN_COOKIE = 'snapbox_admin';
+const ADMIN_SESSION_MS = 15 * 60 * 1000; // 15 Minuten
+const ADMIN_SESSION_SECRET = crypto.randomBytes(32);
+if (!/^\d{4,8}$/.test(rawAdminPin)) {
+  console.warn('');
+  console.warn(`  ⚠ ADMIN_PIN ${rawAdminPin ? 'ist ungültig (4–8 Ziffern)' : 'ist nicht gesetzt'} — Standard-PIN 1234 aktiv.`);
+  console.warn('    Bitte ADMIN_PIN in .env setzen.');
+  console.warn('');
+}
 
 // Map file extensions to MIME types
 const MIME = {
@@ -206,12 +224,6 @@ const TRASH_NAME_RE = new RegExp(`^(\\d{10,})-(${PHOTO_NAME})$`);
 const PURGE_INTERVAL_MS = 60 * 60 * 1000; // purge expired trash hourly
 const QR_URL_TTL_SECONDS = 24 * 60 * 60; // QR-Download-Links: 24h gültig
 
-function getTrashRetentionDays(req) {
-  const days = Number(new URL(req.url, 'http://localhost').searchParams.get('days'));
-  if (!Number.isFinite(days)) return 7;
-  return Math.min(90, Math.max(1, Math.round(days)));
-}
-
 function getSupabaseConfig() {
   const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET } = process.env;
   if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY || !SUPABASE_BUCKET) {
@@ -336,6 +348,171 @@ function sendJson(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+// ---- Admin-Authentifizierung (PIN + signierte HttpOnly-Session) ----
+function parseCookies(req) {
+  const out = {};
+  for (const part of String(req.headers.cookie || '').split(';')) {
+    const idx = part.indexOf('=');
+    if (idx < 1) continue;
+    const key = part.slice(0, idx).trim();
+    if (!key) continue;
+    try {
+      out[key] = decodeURIComponent(part.slice(idx + 1).trim());
+    } catch (e) {
+      out[key] = part.slice(idx + 1).trim();
+    }
+  }
+  return out;
+}
+
+function signAdminSession(exp) {
+  return crypto.createHmac('sha256', ADMIN_SESSION_SECRET).update(String(exp)).digest('base64url');
+}
+
+function createAdminSession() {
+  const exp = Date.now() + ADMIN_SESSION_MS;
+  return `${exp}.${signAdminSession(exp)}`;
+}
+
+function verifyAdminSession(token) {
+  if (typeof token !== 'string') return false;
+  const dot = token.indexOf('.');
+  if (dot < 1) return false;
+  const expRaw = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  const exp = Number(expRaw);
+  if (!Number.isFinite(exp) || exp < Date.now()) return false;
+  const expected = signAdminSession(expRaw);
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  return a.length === b.length && crypto.timingSafeEqual(a, b);
+}
+
+function isAdmin(req) {
+  return verifyAdminSession(parseCookies(req)[ADMIN_COOKIE]);
+}
+
+function setAdminCookie(req, res) {
+  const secure = req.socket.encrypted ? '; Secure' : '';
+  res.setHeader(
+    'Set-Cookie',
+    `${ADMIN_COOKIE}=${createAdminSession()}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${Math.floor(ADMIN_SESSION_MS / 1000)}${secure}`
+  );
+}
+
+function clearAdminCookie(req, res) {
+  const secure = req.socket.encrypted ? '; Secure' : '';
+  res.setHeader('Set-Cookie', `${ADMIN_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${secure}`);
+}
+
+function pinsEqual(a, b) {
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ba.length !== bb.length) {
+    crypto.timingSafeEqual(ba, ba);
+    return false;
+  }
+  return crypto.timingSafeEqual(ba, bb);
+}
+
+// Begrenzt PIN-Versuche pro Client: 5 Fehlversuche, danach 5 Minuten Sperre.
+const loginFailures = new Map();
+const LOGIN_WINDOW_MS = 60 * 1000;
+const LOGIN_MAX_FAILURES = 5;
+const LOGIN_LOCK_MS = 5 * 60 * 1000;
+
+function loginRateState(ip) {
+  const now = Date.now();
+  let state = loginFailures.get(ip);
+  if (!state) {
+    state = { count: 0, windowStart: now, lockedUntil: 0 };
+    loginFailures.set(ip, state);
+  }
+  if (state.lockedUntil && now < state.lockedUntil) {
+    return { locked: true, retryAfter: Math.ceil((state.lockedUntil - now) / 1000) };
+  }
+  if (state.lockedUntil && now >= state.lockedUntil) {
+    state.count = 0;
+    state.windowStart = now;
+    state.lockedUntil = 0;
+  }
+  if (now - state.windowStart > LOGIN_WINDOW_MS) {
+    state.count = 0;
+    state.windowStart = now;
+  }
+  return { locked: false };
+}
+
+function recordLoginFailure(ip) {
+  const state = loginFailures.get(ip) || { count: 0, windowStart: Date.now(), lockedUntil: 0 };
+  state.count += 1;
+  if (state.count >= LOGIN_MAX_FAILURES) {
+    state.lockedUntil = Date.now() + LOGIN_LOCK_MS;
+  }
+  loginFailures.set(ip, state);
+}
+
+function clearLoginFailures(ip) {
+  loginFailures.delete(ip);
+}
+
+async function handleAdminLoginApi(req, res) {
+  if (req.method !== 'POST') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  const ip = req.socket.remoteAddress || 'unknown';
+  const rate = loginRateState(ip);
+  if (rate.locked) {
+    return sendJson(res, 429, { error: 'Too many attempts', retryAfter: rate.retryAfter });
+  }
+  try {
+    const body = JSON.parse(await readBody(req, 1024));
+    const pin = body && typeof body.pin === 'string' ? body.pin.trim() : '';
+    if (!/^\d{4,8}$/.test(pin) || !pinsEqual(pin, ADMIN_PIN)) {
+      recordLoginFailure(ip);
+      return sendJson(res, 401, { error: 'Invalid PIN' });
+    }
+    clearLoginFailures(ip);
+    setAdminCookie(req, res);
+    return sendJson(res, 200, { ok: true, expiresIn: Math.floor(ADMIN_SESSION_MS / 1000) });
+  } catch (err) {
+    return sendJson(res, 400, { error: 'Invalid request' });
+  }
+}
+
+function handleAdminLogoutApi(req, res) {
+  if (req.method !== 'POST') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  clearAdminCookie(req, res);
+  return sendJson(res, 200, { ok: true });
+}
+
+function getAdminSessionExpiresAt(req) {
+  const token = parseCookies(req)[ADMIN_COOKIE];
+  if (typeof token !== 'string') return 0;
+  const dot = token.indexOf('.');
+  if (dot < 1) return 0;
+  const exp = Number(token.slice(0, dot));
+  return Number.isFinite(exp) ? exp : 0;
+}
+
+function handleAdminSessionApi(req, res) {
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  const authenticated = isAdmin(req);
+  const expiresIn = authenticated
+    ? Math.max(0, Math.floor((getAdminSessionExpiresAt(req) - Date.now()) / 1000))
+    : 0;
+  return sendJson(res, 200, {
+    authenticated,
+    // Nur eingeloggte Admins erfahren, ob der Standard-PIN aktiv ist.
+    pinIsDefault: authenticated && ADMIN_PIN === DEFAULT_ADMIN_PIN,
+    expiresIn
+  });
+}
+
 async function handlePhotosApi(req, res) {
   try {
     const cfg = getSupabaseConfig();
@@ -363,12 +540,45 @@ async function handlePhotosApi(req, res) {
     }
 
     if (req.method === 'GET') {
+      const url = new URL(req.url, 'http://localhost');
       const names = await listJpgNames(cfg, PHOTO_PREFIX);
-      const items = await Promise.all(names.map(async (name) => ({
+
+      // Ohne limit bleibt die alte Vollliste erhalten (Abwärtskompatibilität).
+      if (!url.searchParams.has('limit')) {
+        const items = await Promise.all(names.map(async (name) => ({
+          id: PHOTO_PREFIX + name,
+          image: await objectToDataUrl(cfg, PHOTO_PREFIX + name)
+        })));
+        return sendJson(res, 200, items);
+      }
+
+      const requestedLimit = Number.parseInt(url.searchParams.get('limit'), 10);
+      const limit = Number.isFinite(requestedLimit)
+        ? Math.min(50, Math.max(1, requestedLimit))
+        : 12;
+      const before = url.searchParams.get('before') || '';
+      if (before && !new RegExp(`^${PHOTO_NAME}$`).test(before)) {
+        return sendJson(res, 400, { error: 'Invalid cursor' });
+      }
+
+      // Neueste zuerst; der Cursor ist der letzte Name der vorherigen Seite.
+      const sorted = names.slice().sort().reverse();
+      const eligible = before ? sorted.filter((name) => name < before) : sorted;
+      const pageNames = eligible.slice(0, limit);
+      const items = await Promise.all(pageNames.map(async (name) => ({
         id: PHOTO_PREFIX + name,
         image: await objectToDataUrl(cfg, PHOTO_PREFIX + name)
       })));
-      return sendJson(res, 200, items);
+
+      return sendJson(res, 200, {
+        items,
+        // Alle IDs ohne Bilddaten: Challenge-Zähler und Gesamtzahl bleiben
+        // korrekt, auch wenn nur eine Seite mit Bildern geladen ist.
+        allIds: sorted.map((name) => PHOTO_PREFIX + name),
+        total: sorted.length,
+        hasMore: eligible.length > pageNames.length,
+        nextCursor: pageNames.length ? pageNames[pageNames.length - 1] : null
+      });
     }
 
     if (req.method === 'POST') {
@@ -415,12 +625,19 @@ async function handlePhotosApi(req, res) {
     if (req.method === 'DELETE') {
       const params = new URL(req.url, 'http://localhost').searchParams;
       const id = params.get('id') || '';
-      // Only photo objects inside the photos/ prefix may be trashed.
+      // Only photo objects inside the photos/ prefix may be deleted.
       if (!new RegExp(`^${PHOTO_PREFIX}(${PHOTO_NAME})$`).test(id)) {
         return sendJson(res, 400, { error: 'Invalid id' });
       }
+      // purge=1: endgültig löschen (verworfene, nie angenommene Aufnahme).
+      if (params.get('purge') === '1') {
+        await supabaseFetch(cfg, `/object/${encodeURIComponent(cfg.bucket)}/${id}`, { method: 'DELETE' });
+        return sendJson(res, 200, { ok: true, purged: true });
+      }
       const name = id.slice(PHOTO_PREFIX.length);
-      const expiresAt = Math.floor(Date.now() / 1000) + getTrashRetentionDays(req) * 86400;
+      // Die Aufbewahrungsdauer ist eine Admin-Einstellung und wird nicht mehr
+      // vom Client (Query-Parameter) bestimmt.
+      const expiresAt = Math.floor(Date.now() / 1000) + readSettings().trashRetentionDays * 86400;
       const trashId = `${TRASH_PREFIX}${expiresAt}-${name}`;
       await moveObject(cfg, id, trashId);
       return sendJson(res, 200, { ok: true, trashId });
@@ -511,25 +728,27 @@ function readSettings() {
   try {
     if (fs.existsSync(SETTINGS_FILE)) {
       const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
+      const retention = Number(data.trashRetentionDays);
       return {
         orientation: data.orientation === 'landscape' ? 'landscape' : 'portrait',
         defaultLanguage: data.defaultLanguage === 'en' ? 'en' : 'de',
+        trashRetentionDays: [7, 14, 30].includes(retention) ? retention : 7,
         updatedAt: data.updatedAt || null
       };
     }
   } catch (err) {
     console.warn('Could not read settings.json:', err.message);
   }
-  return { orientation: 'portrait', defaultLanguage: 'de', updatedAt: null };
+  return { orientation: 'portrait', defaultLanguage: 'de', trashRetentionDays: 7, updatedAt: null };
 }
 
 function saveSettings(patch) {
   const current = readSettings();
+  const retention = Number(patch.trashRetentionDays);
   const next = {
-    ...current,
-    ...patch,
     orientation: patch.orientation !== undefined ? (patch.orientation === 'landscape' ? 'landscape' : 'portrait') : current.orientation,
     defaultLanguage: patch.defaultLanguage !== undefined ? (patch.defaultLanguage === 'en' ? 'en' : 'de') : current.defaultLanguage,
+    trashRetentionDays: [7, 14, 30].includes(retention) ? retention : current.trashRetentionDays,
     updatedAt: new Date().toISOString()
   };
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), 'utf8');
@@ -551,8 +770,20 @@ async function handleSettingsApi(req, res) {
     });
   }
   if (req.method === 'POST') {
+    if (!isAdmin(req)) {
+      return sendJson(res, 401, { error: 'Admin PIN required' });
+    }
     try {
       const body = JSON.parse(await readBody(req, 64 * 1024));
+      if (!body || typeof body !== 'object' || Array.isArray(body)) {
+        return sendJson(res, 400, { error: 'Invalid JSON or settings' });
+      }
+      if (body.trashRetentionDays !== undefined) {
+        const days = Number(body.trashRetentionDays);
+        if (![7, 14, 30].includes(days)) {
+          return sendJson(res, 400, { error: 'Invalid retention' });
+        }
+      }
       const saved = saveSettings(body);
       return sendJson(res, 200, { ok: true, settings: saved });
     } catch (err) {
@@ -560,6 +791,30 @@ async function handleSettingsApi(req, res) {
     }
   }
   return sendJson(res, 405, { error: 'Method not allowed' });
+}
+
+// Nur Dateien ausliefern, die die Fotobox wirklich braucht. Insbesondere
+// dürfen .env, settings.json und der Servercode nicht über HTTP abrufbar sein.
+const BLOCKED_STATIC_FILES = new Set([
+  '/.env',
+  '/.env.example',
+  '/.env.local',
+  '/dev-https-server.js',
+  '/settings.json',
+  '/package.json',
+  '/package-lock.json',
+  '/Fotobox-Kiosk.cmd'
+]);
+const BLOCKED_STATIC_DIRS = ['/.git', '/.tmp', '/node_modules', '/supabase'];
+
+function isBlockedStaticPath(urlPath) {
+  // Backslashes sind unter Windows Pfadtrenner und könnten die Segmentprüfung
+  // umgehen (z. B. /foo%5c..%5c.env). NUL-Bytes lehnen wir ebenfalls ab.
+  if (urlPath.includes('\\') || urlPath.includes('\0')) return true;
+  if (BLOCKED_STATIC_FILES.has(urlPath)) return true;
+  if (BLOCKED_STATIC_DIRS.some((dir) => urlPath === dir || urlPath.startsWith(dir + '/'))) return true;
+  // Keine versteckten Dateien/Ordner (z. B. .env, .git, .tmp).
+  return urlPath.split('/').some((segment) => segment.startsWith('.'));
 }
 
 const requestHandler = (req, res) => {
@@ -579,16 +834,40 @@ const requestHandler = (req, res) => {
   if (route === '/api/settings') {
     return handleSettingsApi(req, res);
   }
+  if (route === '/api/admin/login') {
+    return handleAdminLoginApi(req, res);
+  }
+  if (route === '/api/admin/logout') {
+    return handleAdminLogoutApi(req, res);
+  }
+  if (route === '/api/admin/session') {
+    return handleAdminSessionApi(req, res);
+  }
 
   let urlPath = decodeURIComponent(req.url.split('?')[0]);
   if (urlPath === '/' || urlPath === '') urlPath = '/index.html';
-  if (urlPath === '/admin' || urlPath === '/admin/') urlPath = '/admin.html';
+
+  if (isBlockedStaticPath(urlPath)) {
+    res.writeHead(404);
+    return res.end('Not Found');
+  }
+
+  const admin = isAdmin(req);
+  if (urlPath === '/admin' || urlPath === '/admin/' || urlPath === '/admin.html') {
+    // Ohne gültige Session immer die PIN-Seite ausliefern. Der Hash
+    // (#retention) bleibt dabei im Browser erhalten.
+    urlPath = admin ? '/admin.html' : '/admin-login.html';
+  } else if (urlPath === '/admin-login.html' && admin) {
+    res.writeHead(302, { Location: '/admin' });
+    return res.end();
+  }
 
   const filePath = path.join(DIST_DIR, urlPath);
   const ext = path.extname(filePath).toLowerCase();
 
-  // Prevent path traversal
-  if (!filePath.startsWith(DIST_DIR)) {
+  // Prevent path traversal (auch auf Windows mit Laufwerks-/Backslash-Fällen)
+  const relativePath = path.relative(DIST_DIR, filePath);
+  if (!relativePath || relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
     res.writeHead(403);
     return res.end('Forbidden');
   }

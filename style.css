@@ -308,10 +308,21 @@ section.active { display: block; opacity: 1; }
   stroke: var(--c-text-2);
   opacity: 0.6;
 }
+.permission__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
 .permission__text {
   font-size: 0.95rem;
   color: var(--c-text-2);
   letter-spacing: -0.005em;
+  line-height: 1.5;
+}
+.permission__hint {
+  max-width: 36ch;
+  font-size: 0.82rem;
+  color: var(--c-text-3);
   line-height: 1.5;
 }
 
@@ -441,8 +452,8 @@ section.active { display: block; opacity: 1; }
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 54px;
-  height: 44px;
+  width: 96px;
+  height: 74px;
   padding: 0;
   border: 1px solid rgba(255 255 255 / 0.15);
   border-radius: var(--radius-sm);
@@ -455,9 +466,9 @@ section.active { display: block; opacity: 1; }
     box-shadow var(--transition), transform 0.15s ease;
 }
 .lang-switch__btn svg {
-  width: 32px;
-  height: 21px;
-  border-radius: 3px;
+  width: 82px;
+  height: 54px;
+  border-radius: 5px;
 }
 .lang-switch__btn:hover { opacity: 0.9; }
 .lang-switch__btn:active { transform: scale(0.92); }
@@ -468,8 +479,8 @@ section.active { display: block; opacity: 1; }
 }
 .lang-switch__btn:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
 @media (max-width: 420px) {
-  .lang-switch__btn { width: 48px; height: 44px; }
-  .lang-switch__btn svg { width: 27px; height: 18px; }
+  .lang-switch__btn { width: 76px; height: 60px; }
+  .lang-switch__btn svg { width: 64px; height: 43px; }
 }
 
 /* Post-shot editor — sits below the photo so the image stays untouched */
@@ -787,15 +798,17 @@ section.active { display: block; opacity: 1; }
    ============================================================ */
 .gallery { position: relative; }
 .gallery__header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 }
 .gallery__title {
+  grid-column: 2;
+  justify-self: center;
   font-size: 1.25rem;
   font-weight: 600;
-  flex: 1;
   min-width: 0;
   text-align: center;
   white-space: nowrap;
@@ -803,9 +816,14 @@ section.active { display: block; opacity: 1; }
   text-overflow: ellipsis;
 }
 .gallery__back {
+  justify-self: start;
   padding: 0.5rem 1.1rem;
   font-size: 0.875rem;
 }
+/* Touch-Ziele im Galerie-Kopf: mindestens 44 px hoch. */
+.gallery__back,
+.gallery__trash-toggle { min-height: 44px; }
+.gallery__trash-toggle { justify-self: end; }
 .gallery__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -827,6 +845,12 @@ section.active { display: block; opacity: 1; }
   opacity: 0.3;
 }
 .gallery__empty p { font-size: 0.9rem; }
+.gallery__load-more {
+  display: flex;
+  justify-content: center;
+  margin: 1.5rem 0 0.5rem;
+}
+.gallery__load-more-btn { min-width: 180px; min-height: 44px; }
 
 /* gallery card */
 .gallery__card {
@@ -884,6 +908,11 @@ section.active { display: block; opacity: 1; }
   align-items: center;
   justify-content: center;
   transition: background var(--transition), transform 0.15s ease, border-color var(--transition);
+}
+.gallery__delete svg {
+  width: 20px;
+  height: 20px;
+  pointer-events: none;
 }
 .gallery__delete:hover {
   background: rgba(220, 38, 38, 0.95);
@@ -1150,20 +1179,8 @@ section.active { display: block; opacity: 1; }
   gap: 0.35rem;
   line-height: 1.5;
 }
-.trash__retention {
-  background: var(--c-surface-2);
-  color: var(--c-text);
-  border: 1px solid rgba(255 255 255 / 0.15);
-  border-radius: 9999px;
-  padding: 0.25rem 0.7rem;
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-.trash__retention:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
-/* Die native Optionsliste hat sonst weißen Hintergrund (Windows/Chrome)
-   und erbt die weiße Schrift — Optionen deshalb explizit dunkel stylen. */
-.trash__retention option { background: #161616; color: var(--c-text); }
+/* Die Aufbewahrungsdauer ist eine Admin-Einstellung. Im Gäste-Papierkorb
+   steht deshalb nur der aktuelle Wert, ohne Änderungsmöglichkeit. */
 
 .trash__card {
   display: flex;
@@ -1350,16 +1367,6 @@ section.active { display: block; opacity: 1; }
 .btn__capture-landscape { display: none; }
 .lang-switch__unit { display: flex; flex-direction: column; align-items: center; }
 .lang-switch__label { display: none; }
-
-/* Admin button in gallery header */
-.gallery__admin-btn {
-  padding: 0.5rem 0.9rem;
-  font-size: 0.85rem;
-  color: var(--c-text-2);
-}
-.gallery__admin-btn:hover {
-  color: var(--c-accent);
-}
 
 /* ============================================================
    QUERFORMAT (LANDSCAPE MODE) — MATCHING DESIGN PREVIEW
@@ -1805,7 +1812,8 @@ body.orientation-landscape section.gallery {
   max-width: 1200px;
   width: 94%;
   margin: 0 auto;
-  padding: 2.5rem 1.5rem 4rem;
+  /* 7rem unten: die letzte Reihe bleibt frei vom großen Home-Button. */
+  padding: 2.5rem 1.5rem 7rem;
   /* Der Body ist im Querformat auf 100vh fixiert und darf nicht scrollen.
      Galerie und Papierkorb brauchen deshalb einen eigenen Scrollbereich. */
   height: 100dvh;
@@ -1840,3 +1848,57 @@ body.orientation-landscape .gallery__grid {
     max-width: 320px;
   }
 }
+
+/* ============================================================
+   INAKTIVITÄTS-WARNUNG (Kiosk)
+   15-Sekunden-Countdown vor dem Rücksprung zum Startbildschirm.
+   Jeder Tipp oder Tastendruck bricht ab.
+   ============================================================ */
+.idle-warning {
+  position: fixed;
+  inset: 0;
+  z-index: 10003;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 5, 7, 0.62);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.idle-warning[hidden] { display: none; }
+.idle-warning__card {
+  width: min(92vw, 430px);
+  padding: clamp(24px, 3vw, 36px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  background: rgba(18, 19, 24, 0.96);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+.idle-warning__title {
+  color: #fff;
+  font-size: clamp(1.3rem, 2vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.idle-warning__text {
+  margin-top: 8px;
+  color: #c9ccd6;
+  font-size: clamp(0.95rem, 1.2vw, 1.1rem);
+}
+.idle-warning__count {
+  margin: 10px 0 18px;
+  color: #facc15;
+  font-size: clamp(3rem, 6vw, 4.4rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.idle-warning__unit {
+  margin-left: 4px;
+  color: #c9ccd6;
+  font-size: 0.45em;
+  font-weight: 700;
+}
+.idle-warning__btn { min-width: 190px; }

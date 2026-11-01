@@ -5,18 +5,55 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SnapBox — Minimalist Photobox</title>
   <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="kiosk.css" />
 </head>
 <body>
-  <!-- Landing / Splash -->
+  <!-- Landing / Idle: Foto-Kette, Swipe-up und Monats-Challenge -->
   <section class="splash" id="splash">
     <div class="splash__bg">
       <div class="splash__gradient"></div>
     </div>
-    <div class="splash__content">
+    <div class="splash__chain" id="splashChain" aria-hidden="true"></div>
+    <p class="splash__brand">SnapBox</p>
+
+    <div class="splash__content splash__content--portrait">
       <h1 class="splash__title">SnapBox</h1>
       <p class="splash__subtitle" data-i18n="splashSubtitle">Knipsen. Animieren. Erinnern.</p>
       <button class="btn btn--primary splash__cta" data-action="start" data-i18n="splashCta">Fotobox starten</button>
     </div>
+
+    <div class="splash__content splash__content--kiosk">
+      <button class="splash__start" id="splashStart" data-action="start" type="button" aria-label="Fotobox starten" aria-describedby="splashStartHint" data-i18n-aria="splashCta">
+        <span class="splash__start-copy">
+          <span class="splash__start-label" data-i18n="splashCta">Fotobox starten</span>
+          <span class="splash__start-hint" id="splashStartHint" data-i18n="splashTap">Zum Starten tippen</span>
+        </span>
+        <span class="splash__tap" aria-hidden="true">
+          <span class="splash__tap-ring"></span>
+          <span class="splash__tap-dot"></span>
+        </span>
+      </button>
+    </div>
+
+    <aside class="challenge-card" id="challengeCard" aria-live="polite">
+      <p class="challenge-card__title" data-i18n="challengeTitle">Monthly Challenge</p>
+      <p class="challenge-card__progress">
+        <span class="challenge-card__count"><span id="challengeCount">0</span> / <span id="challengeGoal">42</span></span>
+        <span class="challenge-card__unit" id="challengePhotos">Fotos</span>
+        <span class="challenge-card__days" id="challengeDays"></span>
+      </p>
+      <p class="challenge-card__theme" id="challengeTheme">Halloween Motive</p>
+    </aside>
+
+    <button class="splash__sound" id="splashSound" type="button" aria-label="Ton ausschalten">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+        <path class="sound-on" d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+        <path class="sound-on" d="M18.5 5.5a9 9 0 0 1 0 13"></path>
+        <line class="sound-off" x1="16" y1="9" x2="22" y2="15"></line>
+        <line class="sound-off" x1="22" y1="9" x2="16" y2="15"></line>
+      </svg>
+    </button>
   </section>
 
   <!-- Sprachumschaltung DE/EN (HCI: Accessibility/i18n): dezente Flaggen in
@@ -34,6 +71,7 @@
   <!-- Camera -->
   <section class="camera" id="camera">
     <div class="camera__stage">
+      <div class="stage-left">
       <div class="viewfinder">
         <video class="camera__video" id="cameraVideo" autoplay playsinline muted></video>
         <canvas class="filter-canvas" id="filterCanvas" aria-hidden="true"></canvas>
@@ -48,7 +86,7 @@
           <span class="streak__fire" aria-hidden="true">🔥</span>
           <span class="streak__count" id="streakCount">0</span>
         </div>
-        <div class="countdown" id="countdown">3</div>
+        <div class="countdown" id="countdown" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">3</div>
         <div class="flash" id="flash"></div>
         <button class="camera__sound" id="soundToggle" type="button" aria-label="Ton ausschalten" aria-pressed="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -78,11 +116,92 @@
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
-            <p class="permission__text" data-i18n="permissionText">Kamerazugriff für SnapBox erforderlich</p>
+            <div class="permission__copy">
+              <p class="permission__text" data-i18n="permissionText">Kamerazugriff für SnapBox erforderlich</p>
+              <p class="permission__hint" data-i18n="permissionHint">Dauerhaft blockiert? Erlaube die Kamera in den Browser-Einstellungen und lade die Seite neu.</p>
+            </div>
             <button class="btn btn--primary" data-action="retry-camera" data-i18n="permissionBtn">Kamera erlauben</button>
           </div>
         </div>
       </div>
+
+        <!-- Untere Steuerleiste: Countdown, Auslöser und Modus. Der
+             Home-Button sitzt unter dem Seitenmenü. -->
+        <div class="capture-bar" id="captureBar">
+          <div class="capture-switch">
+            <div class="seg" id="kioskTimer" role="group" aria-label="Countdown-Dauer" data-i18n-aria="timerGroupAria">
+              <button class="seg__btn" data-seconds="3" type="button">3s</button>
+              <button class="seg__btn" data-seconds="5" type="button">5s</button>
+              <button class="seg__btn" data-seconds="10" type="button">10s</button>
+            </div>
+            <p class="capture-switch__label" data-i18n="captionTimer">COUNTDOWN</p>
+          </div>
+
+          <div class="capture-switch">
+            <div class="seg" id="modeChips" role="group" aria-label="Aufnahmemodus" data-i18n-aria="modeGroupAria">
+              <button class="seg__btn" data-mode="single" type="button" data-i18n="modeSingle">Einzelfoto</button>
+              <button class="seg__btn" data-mode="strip" type="button" data-i18n="modeStrip">Fotostreifen</button>
+            </div>
+            <p class="capture-switch__label" data-i18n="captionMode">MODUS</p>
+          </div>
+
+          <button class="kiosk-shutter" id="landscapeCaptureBtn" type="button" data-action="capture" aria-label="Foto aufnehmen" data-i18n-aria="captureAria" aria-keyshortcuts="Space">
+            <span class="kiosk-shutter__disc" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
+              </svg>
+            </span>
+            <span class="kiosk-shutter__label" data-i18n="shutterLabel">AUSLÖSER</span>
+          </button>
+        </div>
+
+        <!-- Review-Aktionen direkt unter dem Foto -->
+        <div class="review-actions" id="reviewActions" hidden>
+          <button class="round-action" id="landscapeRetake" type="button" aria-label="Foto neu aufnehmen" data-i18n-aria="retakeAria">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"></path><path d="M3.5 15a9 9 0 1 0 2-9.4L1 10"></path></svg></span>
+            <span class="round-action__label" data-i18n="btnRetake">Neu aufnehmen</span>
+          </button>
+          <button class="round-action round-action--accept" id="landscapeKeep" type="button" aria-label="Foto annehmen" data-i18n-aria="acceptAria">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12.5 9.5 18 20 6.5"></path></svg></span>
+            <span class="round-action__label" data-i18n="btnAccept">Annehmen</span>
+          </button>
+          <button class="round-action" id="landscapeStamp" type="button" aria-label="Sticker auswählen" data-i18n-aria="stampOpenAria">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><circle cx="9" cy="10" r="1"></circle><circle cx="15" cy="10" r="1"></circle><path d="M8.5 14.5c1.2 1.4 5.8 1.4 7 0"></path></svg></span>
+            <span class="round-action__label" data-i18n="btnStamp">Sticker</span>
+          </button>
+        </div>
+
+        <!-- Sticker-Modus: dieselbe Position, andere Aktionen -->
+        <div class="review-actions" id="stampActions" hidden>
+          <button class="round-action round-action--cancel" id="stampCancel" type="button">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
+            <span class="round-action__label" data-i18n="stampCancel">Abbrechen</span>
+          </button>
+          <button class="round-action round-action--accept" id="stampDone" type="button">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12.5 9.5 18 20 6.5"></path></svg></span>
+            <span class="round-action__label" data-i18n="stampDone">Fertig</span>
+          </button>
+          <button class="round-action" id="stampDelete" type="button">
+            <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></span>
+            <span class="round-action__label" data-i18n="stampDelete">Sticker löschen</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Kontextmenü rechts: Filter, Overlays oder Sticker -->
+      <aside class="side-menu" id="sideMenu" data-context="filter" aria-label="Filter und Effekte">
+        <div class="side-menu__head" id="sideMenuHead">Filter</div>
+        <p class="side-menu__subhead" id="sideMenuSubhead" hidden></p>
+        <div class="side-menu__tabs" id="sideMenuTabs" role="tablist"></div>
+        <div class="side-menu__viewport">
+          <div class="side-menu__list" id="sideMenuList" role="listbox" aria-label="Auswahl"></div>
+        </div>
+        <div class="side-menu__hints">
+          <button class="side-menu__arrow" id="sideScrollUp" type="button" aria-label="Nach oben scrollen" data-i18n-aria="scrollUpAria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 15l6-6 6 6"></path></svg></button>
+          <span class="side-menu__hint" data-i18n="scrollHint">scroll</span>
+          <button class="side-menu__arrow" id="sideScrollDown" type="button" aria-label="Nach unten scrollen" data-i18n-aria="scrollDownAria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"></path></svg></button>
+        </div>
+      </aside>
     </div>
 
     <!-- Post-shot editor: everything sits below the photo, never over it -->
@@ -189,7 +308,7 @@
         <span class="btn__badge" id="galleryBadge">0</span>
       </button>
 
-      <button class="btn btn--capture" id="captureBtn" data-action="capture" aria-label="Foto aufnehmen">
+      <button class="btn btn--capture" id="captureBtn" data-action="capture" aria-label="Foto aufnehmen" data-i18n-aria="captureAria">
         <span class="btn__inner"></span>
         <span class="btn__capture-landscape" aria-hidden="true">
           <svg class="btn__camera-icon" viewBox="0 0 24 24" fill="currentColor">
@@ -209,7 +328,73 @@
         </button>
       </div>
     </div>
+
+    <!-- Endscreen: fertiges Foto + QR / Instagram / Drucken -->
+    <div class="endscreen" id="endScreen" hidden>
+      <div class="endscreen__inner">
+        <div class="endscreen__photo" id="endPhoto"></div>
+        <div class="endscreen__actions">
+          <button class="endscreen__action" type="button" data-end="qr">
+            <span class="endscreen__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M3 9V6a3 3 0 0 1 3-3h3"></path>
+                <path d="M15 3h3a3 3 0 0 1 3 3v3"></path>
+                <path d="M21 15v3a3 3 0 0 1-3 3h-3"></path>
+                <path d="M9 21H6a3 3 0 0 1-3-3v-3"></path>
+                <rect x="6.5" y="6.5" width="4" height="4"></rect>
+                <rect x="13.5" y="6.5" width="4" height="4"></rect>
+                <rect x="6.5" y="13.5" width="4" height="4"></rect>
+                <rect x="14" y="14" width="1.6" height="1.6" fill="currentColor" stroke="none"></rect>
+                <rect x="17.2" y="17.2" width="1.6" height="1.6" fill="currentColor" stroke="none"></rect>
+                <rect x="14" y="18" width="1.2" height="1.2" fill="currentColor" stroke="none"></rect>
+              </svg>
+            </span>
+            <span class="endscreen__label" data-i18n="endQr">QR-Code</span>
+          </button>
+          <button class="endscreen__action" type="button" data-end="insta">
+            <span class="endscreen__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <rect x="3" y="3" width="18" height="18" rx="5"></rect>
+                <circle cx="12" cy="12" r="4"></circle>
+                <circle cx="17.3" cy="6.7" r="1.1" fill="currentColor" stroke="none"></circle>
+              </svg>
+            </span>
+            <span class="endscreen__label" data-i18n="endInsta">Instagram</span>
+          </button>
+          <button class="endscreen__action" type="button" data-end="print">
+            <span class="endscreen__icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <rect x="6" y="3" width="12" height="5" rx="1"></rect>
+                <rect x="3" y="8" width="18" height="8" rx="2" fill="#fff"></rect>
+                <rect x="7" y="13" width="10" height="8" rx="1" fill="#fff"></rect>
+                <path d="M9 16.5h6M9 18.5h6"></path>
+                <circle cx="17.4" cy="10.6" r="0.9" fill="currentColor" stroke="none"></circle>
+              </svg>
+            </span>
+            <span class="endscreen__label" data-i18n="endPrint">Drucken</span>
+          </button>
+        </div>
+      </div>
+    </div>
   </section>
+
+  <!-- Globaler Start-/Exit-Button: auf jedem Screen außer dem Startbildschirm
+       an derselben Stelle unten rechts. Auf dem Endscreen wird er zur
+       Abschlussaktion „Fertig“, während der Aufnahme zu „Abbrechen“. -->
+  <button class="cancel-home" id="cancelHome" type="button" aria-label="Zum Startbildschirm" data-i18n-aria="startHomeAria" hidden>
+    <span class="cancel-home__disc" aria-hidden="true">
+      <svg class="cancel-home__icon cancel-home__icon--home" viewBox="0 0 24 24" focusable="false">
+        <path fill="currentColor" d="M12 3.1 2.5 11.4h2.6v9.5h5.2v-5.7h3.4v5.7h5.2v-9.5h2.6z"></path>
+      </svg>
+      <svg class="cancel-home__icon cancel-home__icon--cancel" viewBox="0 0 24 24" focusable="false">
+        <path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"></path>
+      </svg>
+      <svg class="cancel-home__icon cancel-home__icon--done" viewBox="0 0 24 24" focusable="false">
+        <path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M4 12.5l5 5L20 6.5"></path>
+      </svg>
+    </span>
+    <span class="cancel-home__label" data-i18n="startHomeLabel">Start</span>
+  </button>
 
   <!-- Gallery -->
   <section class="gallery" id="gallery">
@@ -218,18 +403,9 @@
         <span class="btn__icon btn__icon--left">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
         </span>
-        <span data-i18n="galleryBack">Zurück</span>
+        <span id="galleryBackLabel" data-i18n="galleryBack">Zurück</span>
       </button>
-      <h2 class="gallery__title" data-i18n="galleryTitle">Deine Fotos</h2>
-      <a href="/admin" class="btn btn--ghost gallery__admin-btn" title="Admin Panel" aria-label="Admin Panel">
-        <span class="btn__icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-          </svg>
-        </span>
-        <span>Admin</span>
-      </a>
+      <h2 class="gallery__title" id="galleryTitle" data-i18n="galleryTitle">Deine Fotos</h2>
       <button class="btn btn--ghost gallery__trash-toggle" data-action="toggle-trash" id="trashToggle">
         <span class="btn__icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"></path></svg>
@@ -239,6 +415,9 @@
       </button>
     </div>
     <div class="gallery__grid" id="galleryGrid"></div>
+    <div class="gallery__load-more" id="galleryLoadMoreWrap" hidden>
+      <button class="btn btn--ghost gallery__load-more-btn" id="galleryLoadMore" type="button" data-i18n="galleryLoadMore">Mehr laden</button>
+    </div>
     <div class="gallery__empty" id="galleryEmpty">
       <svg class="gallery__empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="2" y="3" width="20" height="18" rx="2.75" ry="2.75"></rect>
@@ -251,13 +430,9 @@
     <!-- Papierkorb (trash view) -->
     <div class="trash" id="trashView" hidden>
       <div class="trash__bar">
-        <p class="trash__hint"><span data-i18n="trashHintBefore">Gelöschte Fotos werden nach</span>
-          <select class="trash__retention" id="trashRetention" aria-label="Aufbewahrungsdauer" data-i18n-aria="retentionAria">
-            <option value="7" data-i18n="trashOpt7">7 Tagen</option>
-            <option value="14" data-i18n="trashOpt14">14 Tagen</option>
-            <option value="30" data-i18n="trashOpt30">30 Tagen</option>
-          </select>
-          <span data-i18n="trashHintAfter">endgültig gelöscht.</span></p>
+        <p class="trash__hint">
+          <span id="trashRetentionText">Neu gelöschte Fotos werden nach 7 Tagen endgültig gelöscht.</span>
+        </p>
       </div>
       <div class="gallery__grid" id="trashGrid"></div>
       <div class="gallery__empty" id="trashEmpty">
@@ -297,6 +472,16 @@
       </div>
       <p class="qr-modal__hint" data-i18n="qrHint">QR-Code mit der Handy-Kamera scannen — das Foto öffnet sich im Browser.</p>
       <p class="qr-modal__ttl" id="qrTtl"></p>
+    </div>
+  </div>
+
+  <!-- Inaktivitäts-Warnung: 15 s Countdown, jeder Tipp bricht ab -->
+  <div class="idle-warning" id="idleWarning" hidden>
+    <div class="idle-warning__card" role="alertdialog" aria-modal="true" aria-labelledby="idleWarningTitle" aria-describedby="idleWarningText">
+      <p class="idle-warning__title" id="idleWarningTitle" data-i18n="idleResetTitle">Noch da?</p>
+      <p class="idle-warning__text" id="idleWarningText" data-i18n="idleResetText">Zurück zum Start in</p>
+      <p class="idle-warning__count"><span id="idleCount">15</span><span class="idle-warning__unit">s</span></p>
+      <button class="btn btn--primary idle-warning__btn" id="idleStay" type="button" data-i18n="idleResetStay">Hier bleiben</button>
     </div>
   </div>
 
