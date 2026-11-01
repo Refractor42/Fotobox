@@ -11,7 +11,17 @@ function proxy(req, res) {
     headers: Object.assign({}, req.headers, { host: 'localhost:8443' }),
     rejectUnauthorized: false
   }, (up) => {
-    res.writeHead(up.statusCode || 502, up.headers);
+    // Der Upstream spricht HTTPS und setzt das Admin-Cookie deshalb mit
+    // "Secure". Die Vorschau läuft aber auf http://127.0.0.1:8123 — ohne
+    // diesen Kniff würde der Browser das Cookie verwerfen und der Login
+    // käme nach dem Redirect sofort wieder auf die PIN-Seite zurück.
+    const headers = Object.assign({}, up.headers);
+    if (headers['set-cookie']) {
+      headers['set-cookie'] = headers['set-cookie'].map((cookie) =>
+        cookie.replace(/;\s*Secure/gi, '')
+      );
+    }
+    res.writeHead(up.statusCode || 502, headers);
     up.pipe(res);
   });
   upstream.on('error', () => { res.writeHead(502); res.end('proxy error'); });
@@ -19,8 +29,10 @@ function proxy(req, res) {
 }
 
 http.createServer((req, res) => {
-  if ((req.url || '').startsWith('/api/')) { proxy(req, res); return; }
-  let p = decodeURIComponent((req.url || '/').split('?')[0]);
+  const requestPath = decodeURIComponent((req.url || '/').split('?')[0]);
+  const adminRoute = ['/admin', '/admin/', '/admin.html', '/admin-login.html'].includes(requestPath);
+  if ((req.url || '').startsWith('/api/') || adminRoute) { proxy(req, res); return; }
+  let p = requestPath;
   if (p === '/') p = '/index.html';
   const file = path.join(root, p);
   if (!file.startsWith(root)) { res.writeHead(403); res.end('no'); return; }
