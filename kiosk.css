@@ -1,6 +1,6 @@
 /* ============================================================
    KIOSK-UI NACH UX-SKIZZEN (PDF) — nur Querformat
-   Idle mit Foto-Kette, Aufnahme mit Seitenmenü, Review/Stempel
+   Idle mit Foto-Kette, Aufnahme mit Seitenmenü, Review/Sticker
    mit runden Aktionen, Endscreen mit QR/Insta/Print.
    Das Hochformat bleibt unverändert.
    ============================================================ */
@@ -390,7 +390,7 @@ body.orientation-landscape .capture-bar {
 .abort-btn:hover { background: rgba(239, 68, 68, 0.12); transform: scale(1.06); }
 .abort-btn:active { transform: scale(0.95); }
 
-/* --- Runde Review-/Stempel-Aktionen ------------------------------- */
+/* --- Runde Review-/Sticker-Aktionen ------------------------------ */
 body.orientation-landscape .review-actions {
   display: flex;
   align-items: flex-start;
@@ -673,7 +673,7 @@ body.orientation-landscape .endscreen {
 /* hidden muss auch gegen die Layout-Regeln oben gewinnen */
 [hidden] { display: none !important; }
 
-/* Emoji-Stempel: dieselbe Drag-Logik wie die SVG-Sticker */
+/* Emoji-Sticker: dieselbe Drag-Logik wie die SVG-Sticker */
 .sticker--emoji {
   display: flex;
   align-items: center;

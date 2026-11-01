@@ -72,15 +72,15 @@ const I18N = {
     abortAria: 'Aufnahme abbrechen',
     acceptAria: 'Foto annehmen',
     btnAccept: 'Annehmen',
-    btnStamp: 'Stempel',
-    stampOpenAria: 'Stempel auswählen',
-    stampCancel: 'Stempeln abbrechen',
-    stampDone: 'Stempeln fertig',
-    stampDelete: 'Stempel löschen',
+    btnStamp: 'Sticker',
+    stampOpenAria: 'Sticker auswählen',
+    stampCancel: 'Abbrechen',
+    stampDone: 'Fertig',
+    stampDelete: 'Sticker löschen',
     btnDone: 'Fertig',
     sideFilter: 'Filter',
     sideOverlay: 'Overlays',
-    sideStamp: 'Stempel',
+    sideStamp: 'Sticker',
     tabFace: 'Gesicht',
     tabAll: 'Komplett',
     tabStandard: 'Standard',
@@ -99,6 +99,9 @@ const I18N = {
     toastFullscreenOn: 'Vollbild an — Shift+F zum Verlassen',
     toastFullscreenError: 'Vollbild konnte nicht geöffnet werden.',
     processing: 'Foto wird verarbeitet…',
+    idleResetTitle: 'Noch da?',
+    idleResetText: 'Zurück zum Start in',
+    idleResetStay: 'Hier bleiben',
     permissionText: 'Kamerazugriff für SnapBox erforderlich',
     permissionBtn: 'Kamera erlauben',
     captionFace: 'GESICHTSFILTER',
@@ -221,15 +224,15 @@ const I18N = {
     abortAria: 'Cancel capture',
     acceptAria: 'Accept photo',
     btnAccept: 'Accept',
-    btnStamp: 'Stamp',
-    stampOpenAria: 'Choose stamp',
-    stampCancel: 'Cancel stamping',
-    stampDone: 'Finish stamping',
-    stampDelete: 'Delete stamp',
+    btnStamp: 'Sticker',
+    stampOpenAria: 'Choose sticker',
+    stampCancel: 'Cancel',
+    stampDone: 'Done',
+    stampDelete: 'Delete sticker',
     btnDone: 'Done',
     sideFilter: 'Filters',
     sideOverlay: 'Overlays',
-    sideStamp: 'Stamps',
+    sideStamp: 'Stickers',
     tabFace: 'Face',
     tabAll: 'Full image',
     tabStandard: 'Standard',
@@ -248,6 +251,9 @@ const I18N = {
     toastFullscreenOn: 'Fullscreen on — Shift+F to exit',
     toastFullscreenError: 'Fullscreen could not be opened.',
     processing: 'Processing photo…',
+    idleResetTitle: 'Still there?',
+    idleResetText: 'Returning to start in',
+    idleResetStay: 'Stay here',
     permissionText: 'Camera access required for SnapBox',
     permissionBtn: 'Allow Camera',
     captionFace: 'FACE FILTERS',
@@ -913,7 +919,7 @@ async function keepPhoto() {
   const photoUrl = stagePhoto ? stagePhoto.src : null;
   const hasEdits = activeStickers.length || currentFilter !== 'standard' || !!currentOverlay;
 
-  // Farbe, Stempel oder Overlay gewählt: Foto neu komponieren und serverseitig
+  // Farbe, Sticker oder Overlay gewählt: Foto neu komponieren und serverseitig
   // überschreiben. Im Kiosk endet der Flow danach auf dem Endscreen.
   if (hasEdits) {
     await saveEditedPhoto({ endScreen: isKioskLayout() });
@@ -1238,6 +1244,9 @@ function addSticker(kind) {
   activeStickers.push(st);
 
   el.addEventListener('pointerdown', (e) => {
+    // Tippen auf die Größen-/Löschen-Buttons darf keinen Drag starten:
+    // sonst springt der Sticker beim Touch-Tap auf die Button-Position.
+    if (e.target.closest('.sticker__ctrl')) return;
     e.preventDefault();
     e.stopPropagation();
     selectSticker(st);
@@ -1252,9 +1261,11 @@ function addSticker(kind) {
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   });
 
   selectSticker(st);
@@ -2646,7 +2657,7 @@ document.querySelectorAll('[data-action]').forEach((el) => {
 
 
 // ============================================================
-//  KIOSK-FLOW (UX-SKIZZEN): Seitenmenü, Overlays, Stempel, Endscreen
+//  KIOSK-FLOW (UX-SKIZZEN): Seitenmenü, Overlays, Sticker, Endscreen
 // ============================================================
 const $sideMenu = document.getElementById('sideMenu');
 const $sideMenuHead = document.getElementById('sideMenuHead');
@@ -3044,7 +3055,7 @@ function addEmojiStamp(glyph) {
   span.setAttribute('aria-hidden', 'true');
   el.appendChild(span);
 
-  // Neue Stempel leicht versetzt platzieren, damit sie nicht exakt stapeln.
+  // Neue Sticker leicht versetzt platzieren, damit sie nicht exakt stapeln.
   const step = (activeStickers.length % 3) - 1;
   const st = { el, x: 50 + step * 9, y: 38 + step * 8, w: 12, emoji: glyph };
   positionSticker(st);
@@ -3052,6 +3063,9 @@ function addEmojiStamp(glyph) {
   activeStickers.push(st);
 
   el.addEventListener('pointerdown', (e) => {
+    // Tippen auf die Größen-/Löschen-Buttons darf keinen Drag starten:
+    // sonst springt der Sticker beim Touch-Tap auf die Button-Position.
+    if (e.target.closest('.sticker__ctrl')) return;
     e.preventDefault();
     e.stopPropagation();
     selectSticker(st);
@@ -3066,9 +3080,11 @@ function addEmojiStamp(glyph) {
     const up = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
     };
     window.addEventListener('pointermove', move);
     window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
   });
 
   selectSticker(st);
@@ -3363,4 +3379,138 @@ style.textContent = `
   }
 `;
 document.head.appendChild(style);
+
+// ============================================================
+//  INAKTIVITÄTS-RESET (Kiosk)
+//  Nach dem Foto (Endscreen) 40 s, mitten im Ablauf 75 s. 15 s vor
+//  dem Rücksprung erscheint ein Countdown, den jeder Tipp oder
+//  Tastendruck abbricht.
+// ============================================================
+const $idleWarning = document.getElementById('idleWarning');
+const $idleCount = document.getElementById('idleCount');
+const $idleStay = document.getElementById('idleStay');
+
+const IDLE_WARN_MS = 15000;
+const IDLE_END_MS = 40000;
+const IDLE_PROCESS_MS = 75000;
+
+let idleDeadline = 0;
+let idleWarnUntil = 0;
+let idleWarnVisible = false;
+let idleStateKey = 'splash';
+
+function currentIdleStateKey() {
+  if (currentState === 'splash') return 'splash';
+  if ($qrModal && !$qrModal.hidden) return 'qr';
+  if ($confirmModal && !$confirmModal.hidden) return 'confirm';
+  if (lightbox) return 'lightbox';
+  if (trashOpen) return 'trash';
+  if ($endScreen && !$endScreen.hidden) return 'end';
+  if (currentState === 'gallery') return 'gallery';
+  if ($camera.classList.contains('is-reviewing') || $camera.classList.contains('is-stamping')) return 'review';
+  return 'camera';
+}
+
+function idleTimeoutFor(key) {
+  if (key === 'splash') return 0;
+  return key === 'end' ? IDLE_END_MS : IDLE_PROCESS_MS;
+}
+
+function resetIdleDeadline() {
+  const key = currentIdleStateKey();
+  const timeout = idleTimeoutFor(key);
+  idleStateKey = key;
+  idleDeadline = timeout ? Date.now() + timeout : 0;
+}
+
+function hideIdleWarning() {
+  if (!idleWarnVisible) return;
+  idleWarnVisible = false;
+  if ($idleWarning) $idleWarning.hidden = true;
+}
+
+function showIdleWarning() {
+  if (!$idleWarning) return;
+  idleWarnVisible = true;
+  idleWarnUntil = Date.now() + IDLE_WARN_MS;
+  if ($idleCount) $idleCount.textContent = String(Math.round(IDLE_WARN_MS / 1000));
+  $idleWarning.hidden = false;
+  gsap.fromTo(
+    $idleWarning.querySelector('.idle-warning__card'),
+    { y: 16, opacity: 0, scale: 0.96 },
+    { y: 0, opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out', clearProps: 'all' }
+  );
+}
+
+function resetToStartScreen() {
+  hideIdleWarning();
+  if ($qrModal && !$qrModal.hidden) closeQrDialog();
+  if ($confirmModal && !$confirmModal.hidden) closeConfirm(false);
+  if (lightbox) { lightbox.remove(); lightbox = null; }
+  if (trashOpen) toggleTrash(false);
+  returnToIdle();
+  idleStateKey = 'splash';
+  idleDeadline = 0;
+}
+
+// Jede echte Eingabe zählt als Aktivität. Während der Warnung wird die
+// Eingabe geschluckt, damit sie nicht zusätzlich eine App-Aktion auslöst.
+function noteIdleActivity(e) {
+  if (idleWarnVisible) {
+    if (e && e.type === 'keydown') {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    hideIdleWarning();
+  }
+  resetIdleDeadline();
+}
+
+window.addEventListener('pointerdown', noteIdleActivity, true);
+window.addEventListener('keydown', noteIdleActivity, true);
+window.addEventListener('wheel', noteIdleActivity, { capture: true, passive: true });
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) resetIdleDeadline();
+});
+
+if ($idleStay) {
+  $idleStay.addEventListener('click', () => {
+    hideIdleWarning();
+    resetIdleDeadline();
+  });
+}
+
+resetIdleDeadline();
+
+setInterval(() => {
+  if (document.hidden) return;
+
+  const key = currentIdleStateKey();
+  if (key !== idleStateKey) {
+    hideIdleWarning();
+    resetIdleDeadline();
+    return;
+  }
+
+  // Während der Aufnahme nicht unterbrechen; die Frist läuft danach weiter.
+  if (isCapturing) {
+    idleDeadline = Date.now() + idleTimeoutFor(key);
+    return;
+  }
+
+  if (!idleDeadline) {
+    if (idleWarnVisible) hideIdleWarning();
+    return;
+  }
+
+  const now = Date.now();
+  if (!idleWarnVisible) {
+    if (now >= idleDeadline) showIdleWarning();
+    return;
+  }
+
+  const left = Math.max(0, Math.ceil((idleWarnUntil - now) / 1000));
+  if ($idleCount && $idleCount.textContent !== String(left)) $idleCount.textContent = String(left);
+  if (now >= idleWarnUntil) resetToStartScreen();
+}, 250);
 

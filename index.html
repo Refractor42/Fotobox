@@ -158,30 +158,30 @@
             <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12.5 9.5 18 20 6.5"></path></svg></span>
             <span class="round-action__label" data-i18n="btnAccept">Annehmen</span>
           </button>
-          <button class="round-action" id="landscapeStamp" type="button" aria-label="Stempel auswählen" data-i18n-aria="stampOpenAria">
+          <button class="round-action" id="landscapeStamp" type="button" aria-label="Sticker auswählen" data-i18n-aria="stampOpenAria">
             <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><circle cx="9" cy="10" r="1"></circle><circle cx="15" cy="10" r="1"></circle><path d="M8.5 14.5c1.2 1.4 5.8 1.4 7 0"></path></svg></span>
-            <span class="round-action__label" data-i18n="btnStamp">Stempel</span>
+            <span class="round-action__label" data-i18n="btnStamp">Sticker</span>
           </button>
         </div>
 
-        <!-- Stempel-Modus: dieselbe Position, andere Aktionen -->
+        <!-- Sticker-Modus: dieselbe Position, andere Aktionen -->
         <div class="review-actions" id="stampActions" hidden>
           <button class="round-action round-action--cancel" id="stampCancel" type="button">
             <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6 6 18"></path></svg></span>
-            <span class="round-action__label" data-i18n="stampCancel">Stempeln abbrechen</span>
+            <span class="round-action__label" data-i18n="stampCancel">Abbrechen</span>
           </button>
           <button class="round-action round-action--accept" id="stampDone" type="button">
             <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12.5 9.5 18 20 6.5"></path></svg></span>
-            <span class="round-action__label" data-i18n="stampDone">Stempeln fertig</span>
+            <span class="round-action__label" data-i18n="stampDone">Fertig</span>
           </button>
           <button class="round-action" id="stampDelete" type="button">
             <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg></span>
-            <span class="round-action__label" data-i18n="stampDelete">Stempel löschen</span>
+            <span class="round-action__label" data-i18n="stampDelete">Sticker löschen</span>
           </button>
         </div>
       </div>
 
-      <!-- Kontextmenü rechts: Filter, Overlays oder Stempel -->
+      <!-- Kontextmenü rechts: Filter, Overlays oder Sticker -->
       <aside class="side-menu" id="sideMenu" data-context="filter" aria-label="Filter und Effekte">
         <div class="side-menu__head" id="sideMenuHead">Filter</div>
         <div class="side-menu__tabs" id="sideMenuTabs" role="tablist"></div>
@@ -421,6 +421,16 @@
       </div>
       <p class="qr-modal__hint" data-i18n="qrHint">QR-Code mit der Handy-Kamera scannen — das Foto öffnet sich im Browser.</p>
       <p class="qr-modal__ttl" id="qrTtl"></p>
+    </div>
+  </div>
+
+  <!-- Inaktivitäts-Warnung: 15 s Countdown, jeder Tipp bricht ab -->
+  <div class="idle-warning" id="idleWarning" hidden>
+    <div class="idle-warning__card" role="alertdialog" aria-modal="true" aria-labelledby="idleWarningTitle" aria-describedby="idleWarningText">
+      <p class="idle-warning__title" id="idleWarningTitle" data-i18n="idleResetTitle">Noch da?</p>
+      <p class="idle-warning__text" id="idleWarningText" data-i18n="idleResetText">Zurück zum Start in</p>
+      <p class="idle-warning__count"><span id="idleCount">15</span><span class="idle-warning__unit">s</span></p>
+      <button class="btn btn--primary idle-warning__btn" id="idleStay" type="button" data-i18n="idleResetStay">Hier bleiben</button>
     </div>
   </div>
 

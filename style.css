@@ -1840,3 +1840,57 @@ body.orientation-landscape .gallery__grid {
     max-width: 320px;
   }
 }
+
+/* ============================================================
+   INAKTIVITÄTS-WARNUNG (Kiosk)
+   15-Sekunden-Countdown vor dem Rücksprung zum Startbildschirm.
+   Jeder Tipp oder Tastendruck bricht ab.
+   ============================================================ */
+.idle-warning {
+  position: fixed;
+  inset: 0;
+  z-index: 10003;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(4, 5, 7, 0.62);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+}
+.idle-warning[hidden] { display: none; }
+.idle-warning__card {
+  width: min(92vw, 430px);
+  padding: clamp(24px, 3vw, 36px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  background: rgba(18, 19, 24, 0.96);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+  text-align: center;
+}
+.idle-warning__title {
+  color: #fff;
+  font-size: clamp(1.3rem, 2vw, 1.8rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.idle-warning__text {
+  margin-top: 8px;
+  color: #c9ccd6;
+  font-size: clamp(0.95rem, 1.2vw, 1.1rem);
+}
+.idle-warning__count {
+  margin: 10px 0 18px;
+  color: #facc15;
+  font-size: clamp(3rem, 6vw, 4.4rem);
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.idle-warning__unit {
+  margin-left: 4px;
+  color: #c9ccd6;
+  font-size: 0.45em;
+  font-weight: 700;
+}
+.idle-warning__btn { min-width: 190px; }
