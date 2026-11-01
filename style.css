@@ -1150,20 +1150,8 @@ section.active { display: block; opacity: 1; }
   gap: 0.35rem;
   line-height: 1.5;
 }
-.trash__retention {
-  background: var(--c-surface-2);
-  color: var(--c-text);
-  border: 1px solid rgba(255 255 255 / 0.15);
-  border-radius: 9999px;
-  padding: 0.25rem 0.7rem;
-  font: inherit;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-.trash__retention:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(255 215 0 / 0.5); }
-/* Die native Optionsliste hat sonst weißen Hintergrund (Windows/Chrome)
-   und erbt die weiße Schrift — Optionen deshalb explizit dunkel stylen. */
-.trash__retention option { background: #161616; color: var(--c-text); }
+/* Die Aufbewahrungsdauer ist eine Admin-Einstellung. Im Gäste-Papierkorb
+   steht deshalb nur der aktuelle Wert, ohne Änderungsmöglichkeit. */
 
 .trash__card {
   display: flex;
@@ -1350,16 +1338,6 @@ section.active { display: block; opacity: 1; }
 .btn__capture-landscape { display: none; }
 .lang-switch__unit { display: flex; flex-direction: column; align-items: center; }
 .lang-switch__label { display: none; }
-
-/* Admin button in gallery header */
-.gallery__admin-btn {
-  padding: 0.5rem 0.9rem;
-  font-size: 0.85rem;
-  color: var(--c-text-2);
-}
-.gallery__admin-btn:hover {
-  color: var(--c-accent);
-}
 
 /* ============================================================
    QUERFORMAT (LANDSCAPE MODE) — MATCHING DESIGN PREVIEW
@@ -1805,7 +1783,8 @@ body.orientation-landscape section.gallery {
   max-width: 1200px;
   width: 94%;
   margin: 0 auto;
-  padding: 2.5rem 1.5rem 4rem;
+  /* 7rem unten: die letzte Reihe bleibt frei vom großen Home-Button. */
+  padding: 2.5rem 1.5rem 7rem;
   /* Der Body ist im Querformat auf 100vh fixiert und darf nicht scrollen.
      Galerie und Papierkorb brauchen deshalb einen eigenen Scrollbereich. */
   height: 100dvh;

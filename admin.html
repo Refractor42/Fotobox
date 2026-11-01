@@ -92,6 +92,8 @@
     .header-actions {
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
       gap: 0.75rem;
     }
 
@@ -120,6 +122,54 @@
       0%, 100% { opacity: 1; transform: scale(1); }
       50% { opacity: 0.5; transform: scale(0.85); }
     }
+
+    /* Kompakter Sitzungsstatus statt eines großen Abmelden-Buttons. */
+    .admin-session {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.3rem 0.4rem 0.3rem 0.65rem;
+      border: 1px solid var(--c-border);
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--c-text-muted);
+      font-size: 0.78rem;
+      white-space: nowrap;
+    }
+
+    .admin-session__dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--c-success);
+      box-shadow: 0 0 7px var(--c-success);
+      flex: 0 0 auto;
+    }
+
+    .admin-session.is-expiring .admin-session__dot {
+      background: var(--c-danger);
+      box-shadow: 0 0 7px var(--c-danger);
+    }
+
+    .admin-session__label {
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.01em;
+    }
+
+    .admin-session__logout {
+      border: 0;
+      border-radius: 9999px;
+      background: transparent;
+      color: var(--c-accent);
+      font: inherit;
+      font-weight: 600;
+      padding: 0.3rem 0.5rem;
+      cursor: pointer;
+    }
+
+    .admin-session__logout:hover { background: rgba(250, 204, 21, 0.12); }
+    .admin-session__logout:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+    .admin-session__logout:disabled { opacity: 0.55; cursor: progress; }
 
     .btn {
       display: inline-flex;
@@ -216,6 +266,75 @@
     .section-header__desc {
       font-size: 0.9rem;
       color: var(--c-text-muted);
+    }
+
+    /* Hinweis auf den Standard-PIN (nur sichtbar, solange kein eigener PIN
+       in .env gesetzt ist). */
+    .admin-alert {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+      padding: 0.9rem 1rem;
+      border: 1px solid rgba(250, 204, 21, 0.35);
+      border-radius: var(--radius-md);
+      background: rgba(250, 204, 21, 0.08);
+      color: #fde68a;
+      font-size: 0.85rem;
+    }
+    .admin-alert[hidden] { display: none; }
+    .admin-alert svg { flex: 0 0 auto; margin-top: 1px; }
+    .admin-alert code {
+      background: rgba(255, 255, 255, 0.09);
+      padding: 0.1rem 0.35rem;
+      border-radius: 4px;
+      color: #fff;
+      font-size: 0.8rem;
+    }
+
+    /* Papierkorb-Aufbewahrung: kompakte Auswahl statt eigener Karten. */
+    .retention-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+    }
+    .retention-option {
+      min-width: 112px;
+      min-height: 48px;
+      padding: 0 1.25rem;
+      border: 1px solid var(--c-border);
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--c-text);
+      font: inherit;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .retention-option:hover {
+      background: var(--c-surface-hover);
+      border-color: rgba(250, 204, 21, 0.4);
+      transform: translateY(-1px);
+    }
+    .retention-option:focus-visible {
+      outline: none;
+      border-color: var(--c-accent);
+      box-shadow: 0 0 0 3px var(--c-accent-glow);
+    }
+    .retention-option[aria-checked="true"] {
+      background: var(--c-accent);
+      border-color: var(--c-accent);
+      color: #0b0c10;
+      box-shadow: 0 4px 16px var(--c-accent-glow);
+    }
+    .retention-note {
+      font-size: 0.82rem;
+      color: var(--c-text-muted);
+    }
+    #retentionSection.is-highlighted {
+      outline: 2px solid rgba(250, 204, 21, 0.65);
+      outline-offset: 5px;
+      transition: outline-color 0.3s ease;
     }
 
     /* Orientation Grid */
@@ -566,7 +685,59 @@
       transform: translateY(0);
     }
 
+    /* Idle-Warnung vor dem automatischen Abmelden. */
+    .idle-modal {
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background: rgba(0, 0, 0, 0.72);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+    }
+
+    .idle-modal[hidden] { display: none; }
+
+    .idle-modal__card {
+      width: min(420px, 100%);
+      padding: 28px 24px 24px;
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-lg);
+      background: var(--c-surface);
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.6);
+      text-align: center;
+    }
+
+    .idle-modal__title {
+      margin-bottom: 8px;
+      font-size: 1.3rem;
+      font-weight: 750;
+      letter-spacing: -0.02em;
+    }
+
+    .idle-modal__text {
+      margin-bottom: 20px;
+      color: var(--c-text-muted);
+      font-size: 0.92rem;
+    }
+
+    .idle-modal__count {
+      color: var(--c-accent);
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .idle-modal__btn {
+      width: 100%;
+      min-height: 48px;
+    }
+
     @media (max-width: 640px) {
+      .admin-session__label { display: none; }
+      .admin-session { padding-right: 0.35rem; }
+      .header-actions { justify-content: flex-start; }
       .admin-header__inner { flex-direction: column; align-items: stretch; }
       .header-actions { justify-content: space-between; }
       .orientation-grid { grid-template-columns: 1fr; }
@@ -579,17 +750,22 @@
   <!-- Top Header -->
   <header class="admin-header">
     <div class="admin-header__inner">
-      <a href="/admin" class="brand">
+      <div class="brand">
         <span class="brand__logo">SnapBox</span>
         <span class="brand__badge">Admin</span>
-      </a>
+      </div>
 
       <div class="header-actions">
         <div class="server-status" id="serverStatusBadge">
           <span class="status-dot"></span>
           <span id="serverStatusText">Online</span>
         </div>
-        <a href="/" class="btn btn--primary" id="openPhotoboxBtn" target="_blank" rel="noopener">
+        <div class="admin-session" id="adminSession" title="Admin-Sitzung · Beim Verlassen oder Neuladen wird abgemeldet">
+          <span class="admin-session__dot" aria-hidden="true"></span>
+          <span class="admin-session__label" id="adminSessionLabel">Admin · 15:00</span>
+          <button class="admin-session__logout" id="adminLogout" type="button">Abmelden</button>
+        </div>
+        <a href="/" class="btn btn--primary" id="openPhotoboxBtn" data-leave-admin title="Öffnet die Fotobox und meldet die Admin-Sitzung ab.">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
             <path d="M4 4h3l2-2h6l2 2h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm8 3a5 5 0 1 0 0 10 5 5 0 0 0 0-10zm0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"/>
           </svg>
@@ -601,9 +777,17 @@
 
   <!-- Main Content -->
   <main class="admin-main">
+    <div class="admin-alert" id="defaultPinAlert" hidden>
+      <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="4" y="10" width="16" height="11" rx="2.5"></rect>
+        <path d="M8 10V7a4 4 0 0 1 8 0v3"></path>
+      </svg>
+      <span>Standard-PIN aktiv. Bitte in <code>.env</code> unter <code>ADMIN_PIN</code> einen eigenen PIN setzen.</span>
+    </div>
+
     <div>
       <h1 class="hero-title">Fotobox Steuerung</h1>
-      <p class="hero-subtitle">Verwalte die Bildschirm-Ausrichtung und Einstellungen für verbundene Terminals und Bildschirme in Echtzeit.</p>
+      <p class="hero-subtitle">Verwalte die Bildschirm-Ausrichtung und Einstellungen für verbundene Terminals und Bildschirme in Echtzeit. Beim Verlassen oder Neuladen wirst du automatisch abgemeldet.</p>
     </div>
 
     <!-- Section: Orientation -->
@@ -731,6 +915,29 @@
       </div>
     </section>
 
+    <!-- Section: Trash Retention -->
+    <section class="section-card" id="retentionSection">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6h14z"></path>
+            </svg>
+            Papierkorb-Aufbewahrung
+          </h2>
+          <p class="section-header__desc">Wie lange neu gelöschte Fotos im Papierkorb bleiben, bevor sie endgültig entfernt werden. Gilt für alle Geräte; bereits gelöschte Fotos behalten ihren bisherigen Ablauf.</p>
+        </div>
+      </div>
+
+      <div class="retention-grid" role="radiogroup" aria-label="Aufbewahrungsdauer">
+        <button class="retention-option" type="button" role="radio" aria-checked="true" data-days="7">7 Tage</button>
+        <button class="retention-option" type="button" role="radio" aria-checked="false" data-days="14">14 Tage</button>
+        <button class="retention-option" type="button" role="radio" aria-checked="false" data-days="30">30 Tage</button>
+      </div>
+
+      <p class="retention-note">Änderungen werden sofort gespeichert. Nur mit gültiger Admin-PIN erreichbar.</p>
+    </section>
+
     <!-- Section: System & Quick Info -->
     <section class="section-card">
       <div class="section-header">
@@ -782,7 +989,7 @@
           <span id="copyUrlText">Netzwerk-Link kopieren</span>
         </button>
 
-        <a href="/" class="btn btn--ghost">
+        <a href="/" class="btn btn--ghost" data-leave-admin title="Öffnet die Fotobox und meldet die Admin-Sitzung ab.">
           <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
             <polyline points="10 17 15 12 10 7"></polyline>
@@ -796,6 +1003,15 @@
 
   <!-- Notification Toast -->
   <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Idle-Warnung: 15 s vor dem automatischen Abmelden -->
+  <div class="idle-modal" id="idleModal" hidden>
+    <div class="idle-modal__card" role="alertdialog" aria-modal="true" aria-labelledby="idleTitle" aria-describedby="idleText">
+      <p class="idle-modal__title" id="idleTitle">Noch da?</p>
+      <p class="idle-modal__text" id="idleText">Die Admin-Sitzung wird in <strong class="idle-modal__count" id="idleCount">15</strong> Sekunden beendet.</p>
+      <button class="btn btn--primary idle-modal__btn" id="idleStay" type="button">Angemeldet bleiben</button>
+    </div>
+  </div>
 
   <script>
     (function () {
@@ -822,6 +1038,15 @@
       const $copyUrlBtn = document.getElementById('copyUrlBtn');
       const $copyUrlText = document.getElementById('copyUrlText');
       const $toastContainer = document.getElementById('toastContainer');
+      const $defaultPinAlert = document.getElementById('defaultPinAlert');
+      const $adminLogout = document.getElementById('adminLogout');
+      const $adminSession = document.getElementById('adminSession');
+      const $adminSessionLabel = document.getElementById('adminSessionLabel');
+      const $retentionSection = document.getElementById('retentionSection');
+      const $retentionOptions = Array.from(document.querySelectorAll('.retention-option'));
+      const $idleModal = document.getElementById('idleModal');
+      const $idleCount = document.getElementById('idleCount');
+      const $idleStay = document.getElementById('idleStay');
 
       let networkUrl = window.location.origin;
 
@@ -842,6 +1067,170 @@
           setTimeout(() => toast.remove(), 350);
         }, 3200);
       }
+
+      // ---- Admin-Sitzung: Countdown, Auto-Logout und Idle-Timeout ----
+      let sessionEnded = false;
+      let sessionExpiresAt = 0;
+      let sessionTicker = null;
+      let idleTimer = null;
+      let idleWarningTimer = null;
+      let idleCountdownTimer = null;
+      let idleDeadline = 0;
+      let lastActivityAt = 0;
+      let focusBeforeIdle = null;
+      const IDLE_LIMIT_MS = 120000;
+      const IDLE_WARNING_MS = 15000;
+
+      function clearIdleTimers() {
+        clearTimeout(idleTimer);
+        clearTimeout(idleWarningTimer);
+        clearInterval(idleCountdownTimer);
+        idleTimer = null;
+        idleWarningTimer = null;
+        idleCountdownTimer = null;
+      }
+
+      function updateSessionLabel() {
+        if (!sessionExpiresAt) return;
+        const remaining = Math.max(0, Math.ceil((sessionExpiresAt - Date.now()) / 1000));
+        const minutes = Math.floor(remaining / 60);
+        const seconds = String(remaining % 60).padStart(2, '0');
+        $adminSessionLabel.textContent = 'Admin · ' + minutes + ':' + seconds;
+        $adminSession.classList.toggle('is-expiring', remaining <= 60);
+        if (remaining <= 0 && !sessionEnded) {
+          endSession({ redirect: '/admin?loggedout=1' });
+        }
+      }
+
+      function startSessionTicker(expiresIn) {
+        const seconds = Number(expiresIn);
+        // 0 kann direkt vor dem Ablauf auftreten; dann nur noch 1 s anzeigen.
+        const safeSeconds = Number.isFinite(seconds) ? Math.max(1, seconds) : 900;
+        sessionExpiresAt = Date.now() + safeSeconds * 1000;
+        clearInterval(sessionTicker);
+        updateSessionLabel();
+        sessionTicker = setInterval(updateSessionLabel, 1000);
+      }
+
+      async function endSession(options = {}) {
+        if (sessionEnded) return;
+        sessionEnded = true;
+        clearIdleTimers();
+        clearInterval(sessionTicker);
+        $idleModal.hidden = true;
+
+        const redirect = options.redirect || '/admin?loggedout=1';
+        try {
+          await Promise.race([
+            fetch('/api/admin/logout', { method: 'POST' }),
+            new Promise((resolve) => setTimeout(resolve, 800))
+          ]);
+        } catch (e) { /* Server-Session läuft ohnehin ab */ }
+
+        // Beacon als zweiter Weg: überlebt die Navigation zuverlässiger als fetch.
+        try {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/admin/logout', new Blob([], { type: 'application/json' }));
+          }
+        } catch (e) {}
+
+        window.location.href = redirect;
+      }
+
+      function scheduleIdle() {
+        if (sessionEnded) return;
+        clearIdleTimers();
+        idleTimer = setTimeout(showIdleWarning, Math.max(0, IDLE_LIMIT_MS - IDLE_WARNING_MS));
+      }
+
+      function updateIdleCountdown() {
+        const remaining = Math.max(0, Math.ceil((idleDeadline - Date.now()) / 1000));
+        $idleCount.textContent = String(remaining);
+      }
+
+      function showIdleWarning() {
+        if (sessionEnded) return;
+        clearIdleTimers();
+        idleDeadline = Date.now() + IDLE_WARNING_MS;
+        focusBeforeIdle = document.activeElement;
+        $idleModal.hidden = false;
+        updateIdleCountdown();
+        $idleStay.focus();
+        idleCountdownTimer = setInterval(updateIdleCountdown, 250);
+        idleWarningTimer = setTimeout(() => {
+          if (!sessionEnded) endSession({ redirect: '/admin?loggedout=1' });
+        }, IDLE_WARNING_MS);
+      }
+
+      function stayLoggedIn() {
+        if (sessionEnded) return;
+        $idleModal.hidden = true;
+        clearIdleTimers();
+        if (focusBeforeIdle && document.contains(focusBeforeIdle)) {
+          try { focusBeforeIdle.focus(); } catch (e) {}
+        }
+        focusBeforeIdle = null;
+        scheduleIdle();
+      }
+
+      function noteActivity() {
+        if (sessionEnded || !$idleModal.hidden) return;
+        const now = Date.now();
+        if (now - lastActivityAt < 1000) return;
+        lastActivityAt = now;
+        scheduleIdle();
+      }
+
+      ['pointerdown', 'keydown', 'touchstart', 'mousemove'].forEach((eventName) => {
+        document.addEventListener(eventName, noteActivity, { passive: true });
+      });
+      window.addEventListener('scroll', noteActivity, { passive: true });
+
+      $idleStay.addEventListener('click', stayLoggedIn);
+      $idleModal.addEventListener('click', (event) => {
+        if (event.target === $idleModal) stayLoggedIn();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && !$idleModal.hidden) {
+          event.preventDefault();
+          stayLoggedIn();
+        }
+      });
+
+      // Beim Verlassen (Navigation, Tab schließen, Reload) wird die Sitzung
+      // bestmöglich per Beacon beendet. Ein Reload meldet daher ebenfalls ab;
+      // das ist bewusst, weil der Browser Reload und Verlassen nicht trennt.
+      window.addEventListener('pagehide', () => {
+        if (sessionEnded) return;
+        sessionEnded = true;
+        clearIdleTimers();
+        clearInterval(sessionTicker);
+        try {
+          if (navigator.sendBeacon) {
+            navigator.sendBeacon('/api/admin/logout', new Blob([], { type: 'application/json' }));
+          } else {
+            fetch('/api/admin/logout', { method: 'POST', keepalive: true }).catch(() => {});
+          }
+        } catch (e) {}
+      });
+
+      // Zurück aus dem BFCache: prüfen, ob die Sitzung beim Verlassen beendet wurde.
+      window.addEventListener('pageshow', (event) => {
+        if (!event.persisted) return;
+        fetch('/api/admin/session', { cache: 'no-store' })
+          .then((res) => (res.ok ? res.json() : null))
+          .then((data) => {
+            if (!data || !data.authenticated) {
+              window.location.href = '/admin?loggedout=1';
+              return;
+            }
+            sessionEnded = false;
+            $idleModal.hidden = true;
+            startSessionTicker(data.expiresIn);
+            scheduleIdle();
+          })
+          .catch(() => {});
+      });
 
       function updateUI(orientation) {
         currentOrientation = orientation;
@@ -882,13 +1271,17 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ orientation })
           });
+          if (res.status === 401) {
+            window.location.href = '/admin';
+            return;
+          }
           if (res.ok) {
             showToast(orientation === 'landscape' ? 'Querformat aktiviert! Bildschirme synchronisiert.' : 'Hochformat aktiviert! Bildschirme synchronisiert.');
           } else {
-            showToast('Einstellung lokal gespeichert (Server antwortete nicht)');
+            showToast('Einstellung konnte nicht gespeichert werden — bitte erneut versuchen.');
           }
         } catch (err) {
-          showToast('Einstellung lokal gespeichert');
+          showToast('Einstellung konnte nicht gespeichert werden — Verbindung prüfen.');
         }
       }
 
@@ -943,13 +1336,17 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ defaultLanguage: lang })
           });
+          if (res.status === 401) {
+            window.location.href = '/admin';
+            return;
+          }
           if (res.ok) {
             showToast(lang === 'en' ? 'Standardsprache auf English gesetzt!' : 'Standardsprache auf Deutsch gesetzt!');
           } else {
-            showToast('Sprache lokal gespeichert');
+            showToast('Sprache konnte nicht gespeichert werden — bitte erneut versuchen.');
           }
         } catch (err) {
-          showToast('Sprache lokal gespeichert');
+          showToast('Sprache konnte nicht gespeichert werden — Verbindung prüfen.');
         }
       }
 
@@ -962,6 +1359,70 @@
       $cardLangEn.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setDefaultLanguage('en'); }
       });
+
+      // ---- Papierkorb-Aufbewahrung ----
+      let currentRetentionDays = 7;
+
+      function updateRetentionUI(days) {
+        const value = [7, 14, 30].includes(Number(days)) ? Number(days) : 7;
+        currentRetentionDays = value;
+        $retentionOptions.forEach((btn) => {
+          const active = Number(btn.dataset.days) === value;
+          btn.classList.toggle('is-active', active);
+          btn.setAttribute('aria-checked', String(active));
+        });
+      }
+
+      async function setRetentionDays(days) {
+        const value = [7, 14, 30].includes(Number(days)) ? Number(days) : 7;
+        if (value === currentRetentionDays) return;
+        const previous = currentRetentionDays;
+        updateRetentionUI(value);
+
+        try {
+          const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ trashRetentionDays: value })
+          });
+          if (res.status === 401) {
+            window.location.href = '/admin';
+            return;
+          }
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          if (broadcastChannel) {
+            try { broadcastChannel.postMessage({ type: 'retention_change', trashRetentionDays: value }); } catch (e) {}
+          }
+          showToast('Papierkorb-Aufbewahrung: ' + value + ' Tage.');
+        } catch (err) {
+          updateRetentionUI(previous);
+          showToast('Aufbewahrung konnte nicht gespeichert werden.');
+        }
+      }
+
+      $retentionOptions.forEach((btn) => {
+        btn.addEventListener('click', () => setRetentionDays(btn.dataset.days));
+        btn.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            setRetentionDays(btn.dataset.days);
+          }
+        });
+      });
+
+      let retentionHighlightTimer = null;
+
+      function scrollToRetentionHash() {
+        if (window.location.hash !== '#retention' || !$retentionSection) return;
+        const reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        $retentionSection.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+        $retentionSection.classList.add('is-highlighted');
+        clearTimeout(retentionHighlightTimer);
+        retentionHighlightTimer = setTimeout(() => $retentionSection.classList.remove('is-highlighted'), 2400);
+      }
+
+      window.addEventListener('load', () => setTimeout(scrollToRetentionHash, 120));
+      window.addEventListener('hashchange', scrollToRetentionHash);
 
       async function loadSettings() {
         try {
@@ -982,6 +1443,9 @@
             if (data.orientation) {
               updateUI(data.orientation);
               localStorage.setItem('snapbox_orientation', data.orientation);
+            }
+            if (typeof data.trashRetentionDays === 'number') {
+              updateRetentionUI(data.trashRetentionDays);
             }
             if (data.server && data.server.networkUrl) {
               networkUrl = data.server.networkUrl;
@@ -1017,6 +1481,8 @@
         }).catch(() => {
           $statStreak.textContent = '0 🔥';
         });
+
+        setTimeout(scrollToRetentionHash, 250);
       }
 
       $copyUrlBtn.addEventListener('click', async () => {
@@ -1029,7 +1495,38 @@
         }
       });
 
+      $adminLogout.addEventListener('click', () => {
+        $adminLogout.disabled = true;
+        $adminLogout.textContent = 'Abmelden…';
+        endSession({ redirect: '/admin?loggedout=1' });
+      });
+
+      // Jeder Weg zurück zur Fotobox beendet die Admin-Sitzung.
+      document.querySelectorAll('[data-leave-admin]').forEach((link) => {
+        link.addEventListener('click', (event) => {
+          if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+          event.preventDefault();
+          endSession({ redirect: link.getAttribute('href') || '/' });
+        });
+      });
+
+      async function loadAdminSession() {
+        try {
+          const res = await fetch('/api/admin/session', { cache: 'no-store' });
+          if (!res.ok) return;
+          const data = await res.json();
+          if (!data.authenticated) {
+            window.location.href = '/admin?loggedout=1';
+            return;
+          }
+          if (data.pinIsDefault) $defaultPinAlert.hidden = false;
+          startSessionTicker(data.expiresIn);
+        } catch (e) { /* POSTs sind serverseitig geschützt */ }
+      }
+
+      loadAdminSession();
       loadSettings();
+      scheduleIdle();
     })();
   </script>
 </body>

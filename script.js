@@ -39,6 +39,9 @@ let photoCount = 0;
 let videoPlaying = false;
 let viewfinderVisible = false;
 let isCapturing = false;
+let captureRunId = 0;
+let captureCommitted = false;
+let countdownState = null;
 
 // ============================================================
 //  I18N — Sprachumschaltung DE/EN (HCI: Accessibility/i18n)
@@ -69,7 +72,10 @@ const I18N = {
     modeGroupAria: 'Aufnahmemodus',
     modeSingle: 'Einzelfoto',
     modeStrip: 'Fotostreifen',
-    abortAria: 'Aufnahme abbrechen',
+    startHomeAria: 'Zum Startbildschirm',
+    startHomeLabel: 'Start',
+    captureCancel: 'Abbrechen',
+    captureCancelAria: 'Aufnahme abbrechen',
     acceptAria: 'Foto annehmen',
     btnAccept: 'Annehmen',
     btnStamp: 'Sticker',
@@ -78,6 +84,9 @@ const I18N = {
     stampDone: 'Fertig',
     stampDelete: 'Sticker löschen',
     btnDone: 'Fertig',
+    endQr: 'QR-Code',
+    endInsta: 'Instagram',
+    endPrint: 'Drucken',
     sideFilter: 'Filter',
     sideOverlay: 'Overlays',
     sideStamp: 'Sticker',
@@ -88,6 +97,7 @@ const I18N = {
     tabEmoji: 'Emojis',
     tabUni: 'Hochschule',
     scrollHint: 'scroll',
+    overlayNone: 'Kein Rahmen',
     overlayColorFrame: 'Farbrahmen',
     overlayWhiteFrame: 'Weißer Rahmen',
     overlayStripesH: 'Horizontale Streifen',
@@ -107,6 +117,7 @@ const I18N = {
     captionFace: 'GESICHTSFILTER',
     captionTimer: 'COUNTDOWN',
     shutterLabel: 'AUSLÖSER',
+    captureAria: 'Foto aufnehmen',
     timerGroupAria: 'Countdown-Dauer',
     faceGroupAria: 'Gesichtsfilter',
     trayColor: 'Farbe',
@@ -134,16 +145,16 @@ const I18N = {
     galleryTitle: 'Deine Fotos',
     galleryTrash: 'Papierkorb',
     galleryEmpty: 'Noch keine Fotos — mach dein erstes Foto!',
-    trashHintBefore: 'Gelöschte Fotos werden nach',
-    trashHintAfter: 'endgültig gelöscht.',
-    trashOpt7: '7 Tagen',
-    trashOpt14: '14 Tagen',
-    trashOpt30: '30 Tagen',
+    trashRetentionText: 'Neu gelöschte Fotos werden nach {n} Tagen endgültig gelöscht.',
     trashEmpty: 'Der Papierkorb ist leer.',
     confirmTitle: 'Endgültig löschen?',
     confirmText: 'Das Foto wird für immer gelöscht und kann nicht wiederhergestellt werden.',
     confirmCancel: 'Abbrechen',
     confirmOk: 'Endgültig löschen',
+    discardTitle: 'Foto verwerfen?',
+    discardText: 'Das Foto wurde noch nicht angenommen und wird endgültig gelöscht.',
+    discardCancel: 'Weiter bearbeiten',
+    discardConfirm: 'Verwerfen',
     qrTitle: 'Foto aufs Handy',
     qrCloseAria: 'QR-Dialog schließen',
     qrLoading: 'Link wird erstellt…',
@@ -156,6 +167,7 @@ const I18N = {
     qrNotSaved: 'Foto ist noch nicht gespeichert.',
     qrSvgAria: 'QR-Code zum Herunterladen des Fotos',
     toastSaved: 'Foto gespeichert.',
+    toastCaptureCancelled: 'Aufnahme abgebrochen.',
     toastSaveError: 'Foto konnte nicht gespeichert werden — Verbindung prüfen.',
     toastEditError: 'Änderungen konnten nicht gespeichert werden.',
     toastEditErrorKeep: 'Änderungen konnten nicht gespeichert werden — Foto bleibt unverändert.',
@@ -168,7 +180,6 @@ const I18N = {
     toastRestoreError2: 'Foto konnte nicht wiederhergestellt werden.',
     toastLoadError: 'Gespeicherte Fotos konnten nicht geladen werden.',
     trashLoadError: 'Papierkorb konnte nicht geladen werden.',
-    trashRetentionSaved: 'Papierkorb wird nach {n} Tagen geleert.',
     toastPurged: 'Foto endgültig gelöscht.',
     toastPurgeError: 'Foto konnte nicht endgültig gelöscht werden.',
     trashRestoreBtn: 'Wiederherstellen',
@@ -179,7 +190,6 @@ const I18N = {
     capturedPhotoAlt: 'Aufgenommenes Foto',
     photoPreviewAlt: 'Foto-Vorschau',
     deletePhotoAria: 'Foto löschen',
-    retentionAria: 'Aufbewahrungsdauer',
     langGroupAria: 'Sprache wählen',
     soundOn: 'Ton ausschalten',
     soundOff: 'Ton einschalten',
@@ -221,7 +231,10 @@ const I18N = {
     modeGroupAria: 'Capture mode',
     modeSingle: 'Single photo',
     modeStrip: 'Photo strip',
-    abortAria: 'Cancel capture',
+    startHomeAria: 'Home — go to start screen',
+    startHomeLabel: 'Home',
+    captureCancel: 'Cancel',
+    captureCancelAria: 'Cancel capture',
     acceptAria: 'Accept photo',
     btnAccept: 'Accept',
     btnStamp: 'Sticker',
@@ -230,6 +243,9 @@ const I18N = {
     stampDone: 'Done',
     stampDelete: 'Delete sticker',
     btnDone: 'Done',
+    endQr: 'QR Code',
+    endInsta: 'Instagram',
+    endPrint: 'Print',
     sideFilter: 'Filters',
     sideOverlay: 'Overlays',
     sideStamp: 'Stickers',
@@ -240,6 +256,7 @@ const I18N = {
     tabEmoji: 'Emojis',
     tabUni: 'University',
     scrollHint: 'scroll',
+    overlayNone: 'No frame',
     overlayColorFrame: 'Color frame',
     overlayWhiteFrame: 'White frame',
     overlayStripesH: 'Horizontal stripes',
@@ -259,6 +276,7 @@ const I18N = {
     captionFace: 'FACE FILTERS',
     captionTimer: 'COUNTDOWN',
     shutterLabel: 'CAPTURE',
+    captureAria: 'Take photo',
     timerGroupAria: 'Countdown duration',
     faceGroupAria: 'Face filters',
     trayColor: 'Color',
@@ -286,16 +304,16 @@ const I18N = {
     galleryTitle: 'Your Photos',
     galleryTrash: 'Trash',
     galleryEmpty: 'No photos yet. Capture your first memory!',
-    trashHintBefore: 'Deleted photos are permanently removed after',
-    trashHintAfter: '',
-    trashOpt7: '7 days',
-    trashOpt14: '14 days',
-    trashOpt30: '30 days',
+    trashRetentionText: 'Newly deleted photos are permanently removed after {n} days.',
     trashEmpty: 'The trash is empty.',
     confirmTitle: 'Delete permanently?',
     confirmText: 'This photo will be deleted forever and cannot be recovered.',
     confirmCancel: 'Cancel',
     confirmOk: 'Delete permanently',
+    discardTitle: 'Discard photo?',
+    discardText: 'The photo has not been accepted yet and will be deleted permanently.',
+    discardCancel: 'Keep editing',
+    discardConfirm: 'Discard',
     qrTitle: 'Photo to your phone',
     qrCloseAria: 'Close QR dialog',
     qrLoading: 'Creating link…',
@@ -308,6 +326,7 @@ const I18N = {
     qrNotSaved: 'Photo is not saved yet.',
     qrSvgAria: 'QR code for downloading the photo',
     toastSaved: 'Photo saved.',
+    toastCaptureCancelled: 'Capture cancelled.',
     toastSaveError: 'Photo could not be saved — check the connection.',
     toastEditError: 'Changes could not be saved.',
     toastEditErrorKeep: 'Changes could not be saved — the photo stays unchanged.',
@@ -320,7 +339,6 @@ const I18N = {
     toastRestoreError2: 'Photo could not be restored.',
     toastLoadError: 'Saved photos could not be loaded.',
     trashLoadError: 'Trash could not be loaded.',
-    trashRetentionSaved: 'Trash will be emptied after {n} days.',
     toastPurged: 'Photo deleted permanently.',
     toastPurgeError: 'Photo could not be deleted permanently.',
     trashRestoreBtn: 'Restore',
@@ -331,7 +349,6 @@ const I18N = {
     capturedPhotoAlt: 'Captured photo',
     photoPreviewAlt: 'Photo preview',
     deletePhotoAria: 'Delete photo',
-    retentionAria: 'Retention period',
     langGroupAria: 'Choose language',
     soundOn: 'Mute sound',
     soundOff: 'Turn sound on',
@@ -389,6 +406,7 @@ function applyLanguage(lang) {
     unit.classList.toggle('is-selected', btn.dataset.lang === currentLang);
   });
   applySoundState(); // Beschriftung des Ton-Buttons in der aktiven Sprache
+  renderTrashRetention(); // dynamische Aufbewahrungsdauer (Serverwert)
   // Beschriftungen der Gesichtsfilter-Chips in der aktiven Sprache nachziehen
   if ($filterBar && window.SnapBoxFilters) {
     $filterBar.querySelectorAll('.timer__chip').forEach((chip) => {
@@ -434,6 +452,14 @@ function applyOrientation(orientation) {
   } catch (e) {}
 }
 
+// Aufbewahrungsdauer aus den Server-Einstellungen (Admin-geschützt).
+let serverRetentionDays = 7;
+
+function renderTrashRetention() {
+  const el = document.getElementById('trashRetentionText');
+  if (el) el.textContent = t('trashRetentionText', { n: serverRetentionDays });
+}
+
 // Sofort initial anwenden
 applyOrientation(currentOrientation);
 
@@ -450,6 +476,13 @@ if ('BroadcastChannel' in window) {
         defaultLang = event.data.defaultLanguage === 'en' ? 'en' : 'de';
         try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
         applyLanguage(defaultLang);
+      }
+      if (event.data.type === 'retention_change') {
+        const retention = Number(event.data.trashRetentionDays);
+        if ([7, 14, 30].includes(retention)) {
+          serverRetentionDays = retention;
+          renderTrashRetention();
+        }
       }
     };
   } catch (e) {}
@@ -484,6 +517,11 @@ async function syncSettingsFromServer() {
               applyLanguage(defaultLang);
             }
           }
+        }
+        const retention = Number(data.trashRetentionDays);
+        if ([7, 14, 30].includes(retention) && retention !== serverRetentionDays) {
+          serverRetentionDays = retention;
+          renderTrashRetention();
         }
       }
     }
@@ -704,7 +742,7 @@ function startSession() {
 //  ANIMATIONS: Camera enter
 // ============================================================
 function animateCameraIn() {
-  const tl = timeline({ onStart: () => { $camera.style.display = 'block'; } });
+  const tl = timeline({ onStart: () => { $camera.style.display = 'block'; syncCancelHome(); } });
   tl.to($camera, { opacity: 1, duration: 0.01 })
     .from($camera.querySelector('.camera__stage'), {
       y: 60, opacity: 0, duration: 0.9, ease: 'power3.out'
@@ -754,11 +792,17 @@ const $stickerToggle = document.getElementById('stickerToggle');
 const $filterToggle = document.getElementById('filterToggle');
 const $timerChips = document.getElementById('timerChips');
 
-// Countdown-Dauer (Selbstauslöser) — sichtbar gewählt, pro Gerät gemerkt.
+// Gäste-Einstellungen gelten nur für die aktuelle Sitzung. Beim Verlassen
+// des Startbildschirms werden sie auf diese neutralen Werte zurückgesetzt,
+// damit der nächste Gast nicht die Wahl des Vorgängers erbt.
+const DEFAULT_CAPTURE_MODE = 'single';
+const DEFAULT_COUNTDOWN_SECONDS = 5;
+
+// Countdown-Dauer (Selbstauslöser) — sichtbar gewählt, pro Sitzung gemerkt.
 // Default 5s: Standard bei echten Fotoboxen und genug Zeit, um sich zu
 // positionieren; 3s bleibt als Schnell-Option wählbar.
 let countdownSeconds = Number(localStorage.getItem('countdownSeconds'));
-if (![3, 5, 10].includes(countdownSeconds)) countdownSeconds = 5;
+if (![3, 5, 10].includes(countdownSeconds)) countdownSeconds = DEFAULT_COUNTDOWN_SECONDS;
 
 function applyTimerSelection() {
   // Hochformat-Dock und Kiosk-Leiste teilen sich denselben Zustand.
@@ -779,7 +823,7 @@ document.addEventListener('click', (e) => {
 });
 
 // Aufnahmemodus: Einzelfoto oder vierteiliger Fotostreifen.
-let captureMode = localStorage.getItem('snapbox_capture_mode') === 'strip' ? 'strip' : 'single';
+let captureMode = localStorage.getItem('snapbox_capture_mode') === 'strip' ? 'strip' : DEFAULT_CAPTURE_MODE;
 
 function applyModeSelection() {
   document.querySelectorAll('[data-mode]').forEach((btn) => {
@@ -798,18 +842,70 @@ document.addEventListener('click', (e) => {
   applyModeSelection();
 });
 
+function syncFaceFilterSelection() {
+  if (!filterEngine || !$filterBar) return;
+  const active = filterEngine.getFilter();
+  $filterBar.querySelectorAll('.timer__chip').forEach((chip) => {
+    const isActive = chip.dataset.filter === active;
+    chip.classList.toggle('is-selected', isActive);
+    chip.setAttribute('aria-pressed', String(isActive));
+  });
+}
+
+// Setzt alle gastbezogenen Aufnahme-Einstellungen auf den neutralen Zustand.
+// Betreiber-Einstellungen (Ausrichtung, Standardsprache, Aufbewahrung) bleiben
+// davon unberührt, weil sie nicht in dieser Funktion liegen.
+function resetGuestCaptureSettings() {
+  captureMode = DEFAULT_CAPTURE_MODE;
+  countdownSeconds = DEFAULT_COUNTDOWN_SECONDS;
+  currentFilter = 'standard';
+  currentOverlay = null;
+  soundEnabled = true;
+
+  // Keine Gästeauswahl im Gerät behalten: Beim nächsten Laden gilt der
+  // Standard, nicht die letzte Wahl eines fremden Gastes.
+  try {
+    localStorage.removeItem('snapbox_capture_mode');
+    localStorage.removeItem('countdownSeconds');
+    localStorage.removeItem('soundEnabled');
+  } catch (err) {}
+
+  if (filterEngine) filterEngine.setFilter('none');
+  applyModeSelection();
+  applyTimerSelection();
+  applyFilterSelection();
+  syncFaceFilterSelection();
+  applySoundState();
+}
+
 // Während der Aufnahmesequenz (Countdown → Verarbeitung) sind Gallery, Timer
 // gesperrt: Fehlklicks können die Sequenz nicht mehr abreißen
 // (Fehlervermeidung) — Kontrolle kommt danach über Behalten/Neu aufnehmen.
 function setControlsLocked(locked) {
+  // Alles, was die Aufnahme verändern oder verlassen kann, wird wirklich
+  // deaktiviert — nicht nur per pointer-events ausgeblendet. So verhalten
+  // sich Maus, Tastatur und Screenreader gleich (HCI: Consistency).
   $galleryBtn.classList.toggle('is-locked', locked);
+  $galleryBtn.disabled = locked;
   $timerChips.classList.toggle('is-locked', locked);
+  $timerChips.querySelectorAll('button').forEach((btn) => { btn.disabled = locked; });
   ['kioskTimer', 'modeChips'].forEach((id) => {
     const el = document.getElementById(id);
-    if (el) el.classList.toggle('is-locked', locked);
+    if (!el) return;
+    el.classList.toggle('is-locked', locked);
+    el.querySelectorAll('button').forEach((btn) => { btn.disabled = locked; });
+    const switchEl = el.closest('.capture-switch');
+    if (switchEl) switchEl.classList.toggle('is-locked', locked);
   });
-  const rail = document.getElementById('shutterRail');
-  if (rail) rail.disabled = locked;
+  const kioskShutter = document.getElementById('landscapeCaptureBtn');
+  if (kioskShutter) kioskShutter.disabled = locked;
+  const sideMenu = document.getElementById('sideMenu');
+  if (sideMenu) {
+    sideMenu.classList.toggle('is-locked', locked);
+    sideMenu.inert = locked;
+    if (locked) sideMenu.setAttribute('aria-disabled', 'true');
+    else sideMenu.removeAttribute('aria-disabled');
+  }
 }
 
 // Das Review-Panel bleibt während der Bearbeitung sichtbar: „Save“ ist
@@ -818,8 +914,64 @@ function isKioskLayout() {
   return document.body.classList.contains('orientation-landscape');
 }
 
+// Der globale Start-Button ist auf jedem Screen sichtbar. Auf Kamera
+// und Review sitzt er mittig unter dem scrollbaren Seitenmenü, auf Galerie
+// und Endscreen in der Ecke rechts unten. Seine Bottom-Position bleibt
+// zustandsunabhängig gleich, damit er beim Review-Wechsel nicht springt.
+function syncCancelHome() {
+  if (!$cancelHome) return;
+  const ended = $camera.classList.contains('is-ended');
+  $cancelHome.hidden = currentState === 'splash';
+  $cancelHome.classList.toggle('is-under-menu', currentState === 'camera' && !ended);
+}
+
+// Während der Aufnahme wird der globale Start-Button zum klaren Ausweg:
+// Er bricht den Countdown bzw. die Verarbeitung ab, ohne ein Foto zu speichern.
+function setHomeCancelMode(active) {
+  if (!$cancelHome) return;
+  $cancelHome.classList.toggle('is-cancelling', active);
+  const label = $cancelHome.querySelector('.cancel-home__label');
+  const labelKey = active ? 'captureCancel' : 'startHomeLabel';
+  const ariaKey = active ? 'captureCancelAria' : 'startHomeAria';
+  if (label) {
+    label.dataset.i18n = labelKey;
+    label.textContent = t(labelKey);
+  }
+  $cancelHome.dataset.i18nAria = ariaKey;
+  $cancelHome.setAttribute('aria-label', t(ariaKey));
+}
+
+function cancelCapture() {
+  if (!isCapturing || captureCommitted) return;
+  // Laufende asynchrone Schritte (Countdown, Verarbeitung) invalidieren.
+  captureRunId += 1;
+  finishCountdown(false);
+  hideStripProgress();
+  gsap.killTweensOf($countdown);
+  gsap.set($countdown, { scale: 1, opacity: 0 });
+  $countdown.style.opacity = '0';
+  $countdown.setAttribute('aria-hidden', 'true');
+  gsap.killTweensOf([...$corners, $viewfinderFrame]);
+  gsap.killTweensOf($processing);
+  gsap.killTweensOf($flash);
+  gsap.set($processing, { opacity: 0 });
+  gsap.set($flash, { opacity: 0 });
+  $processingFill.style.width = '0%';
+  $processingFill.style.transition = 'none';
+  isCapturing = false;
+  $captureBtn.disabled = false;
+  currentState = 'camera';
+  setHomeCancelMode(false);
+  setControlsLocked(false);
+  resetCameraView();
+  syncCancelHome();
+  showToast(t('toastCaptureCancelled'));
+  if ($cancelHome) $cancelHome.focus({ preventScroll: true });
+}
+
 function showReview() {
   $camera.classList.add('is-reviewing');
+  syncCancelHome();
   closeReviewTools();
   // Ausgangszustand: ungefiltertes Foto, Auswahl auf „Standard“.
   applyFilterSelection();
@@ -853,6 +1005,7 @@ function hideReview() {
   if (actions) actions.hidden = true;
   if (stamps) stamps.hidden = true;
   $camera.classList.remove('is-reviewing', 'is-stamping');
+  syncCancelHome();
   closeReviewTools();
 }
 
@@ -903,6 +1056,16 @@ function discardCurrentPhoto() {
     });
   } else {
     resetCameraView();
+  }
+}
+
+// Home-Abbruch vor „Annehmen“: Die Aufnahme wurde nie bestätigt und wird
+// deshalb endgültig verworfen statt in den Papierkorb zu wandern.
+function discardUnacceptedPhoto() {
+  if (!hasPhoto) return;
+  if (lastPhoto) {
+    deletePhoto(lastPhoto.card, lastPhoto.id, { permanent: true });
+    lastPhoto = null;
   }
 }
 
@@ -1506,13 +1669,15 @@ function flashCapture() {
   });
 }
 
-async function runSingleCapture() {
+async function runSingleCapture(runId) {
   lastStripLayout = null;
   // 1. countdown with tick sounds
-  await runCountdown();
+  if (!(await runCountdown(runId))) return false;
+  if (runId !== captureRunId) return false;
 
   // 2. hide viewfinder + placeholder
   await hideViewfinder();
+  if (runId !== captureRunId) return false;
   gsap.to($placeholder, { opacity: 0, duration: 0.2, ease: 'power2.in' });
 
   // 3. flash + shutter sound
@@ -1528,36 +1693,50 @@ async function runSingleCapture() {
   }
   showProcessing();
   await sleep(200);
+  if (runId !== captureRunId) return false;
   $video.pause();
   const photoUrl = await captureFromVideo();
+  if (runId !== captureRunId) return false;
   if (isKioskLayout()) {
     currentFilter = 'standard';
     applyFilterSelection();
   }
 
   // 5. reveal photo in stage
-  await showCaptureResult(photoUrl);
+  if (!(await showCaptureResult(photoUrl, runId))) return false;
 
   // 6. add to gallery + ask for the keep/retake decision
+  if (runId !== captureRunId) return false;
+  captureCommitted = true;
   addToGallery(photoUrl);
+  return true;
 }
 
-async function runStripCapture() {
+async function runStripCapture(runId) {
   const frames = [];
   const total = 4;
 
   await hideViewfinder();
+  if (runId !== captureRunId) return false;
   gsap.to($placeholder, { opacity: 0, duration: 0.2, ease: 'power2.in' });
 
   for (let i = 0; i < total; i++) {
+    if (runId !== captureRunId) return false;
     showStripProgress(i + 1, total);
-    await runCountdown();
+    if (!(await runCountdown(runId))) {
+      hideStripProgress();
+      return false;
+    }
+    if (runId !== captureRunId) return false;
     playShutterSound();
     flashCapture();
     await sleep(120);
+    if (runId !== captureRunId) return false;
     frames.push(await captureFromVideo());
+    if (runId !== captureRunId) return false;
     await sleep(550);
   }
+  if (runId !== captureRunId) return false;
   hideStripProgress();
 
   if (isKioskLayout()) {
@@ -1566,10 +1745,16 @@ async function runStripCapture() {
   }
   showProcessing();
   await sleep(250);
+  if (runId !== captureRunId) return false;
   $video.pause();
   const stripUrl = await composeStrip(frames);
-  await showCaptureResult(stripUrl);
+  if (runId !== captureRunId) return false;
+  if (!(await showCaptureResult(stripUrl, runId))) return false;
+
+  if (runId !== captureRunId) return false;
+  captureCommitted = true;
   addToGallery(stripUrl);
+  return true;
 }
 
 async function runCaptureSequence() {
@@ -1579,24 +1764,31 @@ async function runCaptureSequence() {
     showPermissionPrompt();
     return;
   }
+  const runId = ++captureRunId;
+  captureCommitted = false;
   isCapturing = true;
   $captureBtn.disabled = true;
   setControlsLocked(true);
+  setHomeCancelMode(true);
+  if ($cancelHome) $cancelHome.focus({ preventScroll: true });
 
   // unlock / resume audio while we still have the user gesture
   unlockAudio();
 
   try {
-    if (captureMode === 'strip') {
-      await runStripCapture();
-    } else {
-      await runSingleCapture();
-    }
+    const completed = captureMode === 'strip'
+      ? await runStripCapture(runId)
+      : await runSingleCapture(runId);
+    if (!completed || runId !== captureRunId) return;
     showReview();
   } finally {
+    // Ein abgebrochener Lauf darf einen bereits gestarteten neuen Lauf
+    // nicht mehr zurücksetzen.
+    if (runId !== captureRunId) return;
     isCapturing = false;
     $captureBtn.disabled = false;
     currentState = 'camera';
+    setHomeCancelMode(false);
     // während des Reviews bleiben die übrigen Buttons gesperrt
     if ($review.hidden) setControlsLocked(false);
   }
@@ -1645,15 +1837,37 @@ async function composeStrip(frames) {
   return canvas.toDataURL('image/jpeg', 0.92);
 }
 
-function runCountdown() {
+function finishCountdown(completed) {
+  if (!countdownState) return;
+  const state = countdownState;
+  countdownState = null;
+  state.timers.forEach((id) => clearTimeout(id));
+  $countdown.setAttribute('aria-hidden', 'true');
+  state.resolve(completed);
+}
+
+function runCountdown(runId) {
+  if (countdownState) finishCountdown(false);
   return new Promise((resolve) => {
     let count = countdownSeconds;
     const STEP_MS = 900;
+    const state = { resolve, timers: [] };
+    countdownState = state;
+
+    const schedule = (fn, ms) => {
+      const id = setTimeout(fn, ms);
+      state.timers.push(id);
+    };
 
     gsap.killTweensOf($countdown);
     $countdown.style.opacity = '1';
+    $countdown.setAttribute('aria-hidden', 'false');
 
     const showTick = () => {
+      if (runId !== captureRunId) {
+        finishCountdown(false);
+        return;
+      }
       $countdown.textContent = String(count);
       playCountdownTick(count === 1);
 
@@ -1665,7 +1879,7 @@ function runCountdown() {
 
       // Fade the digit out near the end of the step, but keep the timing
       // logic independent of GSAP so a throttled tab can't stall the capture.
-      setTimeout(() => {
+      schedule(() => {
         gsap.to($countdown, {
           scale: 0.8,
           opacity: 0,
@@ -1674,13 +1888,13 @@ function runCountdown() {
         });
       }, STEP_MS - 220);
 
-      setTimeout(() => {
+      schedule(() => {
         count--;
         if (count >= 1) {
           showTick();
         } else {
           gsap.set($countdown, { opacity: 0 });
-          resolve();
+          finishCountdown(true);
         }
       }, STEP_MS);
     };
@@ -1695,7 +1909,8 @@ function showProcessing() {
   $processingFill.style.width = '100%';
 }
 
-async function showCaptureResult(photoUrl) {
+async function showCaptureResult(photoUrl, runId = captureRunId) {
+  if (runId !== captureRunId) return false;
   gsap.to($placeholder, { opacity: 0, duration: 0.001 });
 
   const img = document.createElement('img');
@@ -1715,11 +1930,13 @@ async function showCaptureResult(photoUrl) {
   const tl = timeline({ defaults: { ease: 'power2.out' } });
   await tl.to($flash, { opacity: 0.9, duration: 0.01 })
     .to($flash, { opacity: 0, duration: 0.3 }, '+=0.05');
+  if (runId !== captureRunId) { img.remove(); return false; }
 
   gsap.to(img, { opacity: 1, duration: 0.5 });
   await gsap.to(img, {
     filter: 'grayscale(0%) contrast(1)', duration: 0.7, delay: 0.2
   });
+  if (runId !== captureRunId) { img.remove(); return false; }
 
   gsap.to($processing, { opacity: 0, duration: 0.3, delay: 0.5 });
   $processingFill.style.width = '0%';
@@ -1732,7 +1949,13 @@ async function showCaptureResult(photoUrl) {
   `;
   // a photo is now shown in the stage
   hasPhoto = true;
-  return new Promise((r) => setTimeout(r, 300));
+  await new Promise((r) => setTimeout(r, 300));
+  if (runId !== captureRunId) {
+    img.remove();
+    hasPhoto = false;
+    return false;
+  }
+  return true;
 }
 
 function resetCameraView() {
@@ -1807,25 +2030,34 @@ function savePhotoToServer(photoUrl) {
 }
 
 // Moves a photo to the trash (Papierkorb) on the server, removes its card and
-// offers an undo toast. Without a server id the photo was never saved, so only
-// the card is removed.
-async function deletePhoto(card, photoId) {
+// offers an undo toast. With options.permanent the object is deleted for good
+// (unaccepted captures aborted via the Home button). Without a server id the
+// photo was never saved, so only the card is removed.
+async function deletePhoto(card, photoId, options = {}) {
+  const permanent = options.permanent === true;
   if (!photoId) {
+    // Noch kein Server-Objekt: Die ID kommt ggf. erst nach dem Upload. Merken,
+    // damit der Save-Callback die Datei dann endgültig löscht.
+    if (permanent && card) card.dataset.discardPermanent = '1';
     removeCard(card);
     return;
   }
-  const key = 'trash:' + photoId;
+  const key = (permanent ? 'purge:' : 'trash:') + photoId;
   if (pendingOps.has(key)) return;
   pendingOps.add(key);
   const image = card.querySelector('img') ? card.querySelector('img').src : null;
   try {
-    const res = await fetch('/api/photos?id=' + encodeURIComponent(photoId) + '&days=' + getRetentionDays(), {
+    // Die Aufbewahrungsdauer setzt der Server aus den Admin-Einstellungen.
+    const query = 'id=' + encodeURIComponent(photoId) + (permanent ? '&purge=1' : '');
+    const res = await fetch('/api/photos?' + query, {
       method: 'DELETE'
     });
-    // 404 = bereits verschoben (Doppelklick-Race) — gilt ebenfalls als Erfolg
+    // 404 = bereits gelöscht/verschoben (Doppelklick-Race) — gilt als Erfolg
     if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
     const data = res.status === 404 ? {} : await res.json();
     removeCard(card);
+    // Verworfene, nie angenommene Fotos landen nicht im Papierkorb.
+    if (permanent) return;
     refreshTrashCount();
     if (data.trashId) {
       showToast(t('toastTrashed'), {
@@ -1867,10 +2099,20 @@ async function restoreFromTrash(trashId, image) {
 function removeCard(card) {
   if (!card.isConnected) return;
   if (lastPhoto && lastPhoto.card === card) lastPhoto = null;
+  // Auch den Datensatz entfernen, sonst taucht das gelöschte Foto weiter in
+  // Challenge-Zähler und Splash-Kette auf.
+  if (card._photoRecord) {
+    const recordIndex = photoRecords.indexOf(card._photoRecord);
+    if (recordIndex !== -1) photoRecords.splice(recordIndex, 1);
+    const urlIndex = photos.indexOf(card._photoRecord.url);
+    if (urlIndex !== -1) photos.splice(urlIndex, 1);
+  }
   card.remove();
   photoCount = Math.max(0, photoCount - 1);
   $galleryBadge.textContent = String(photoCount);
   if (!$galleryGrid.querySelector('.gallery__card')) $galleryEmpty.style.display = '';
+  updateChallengeCard();
+  renderSplashChain();
 }
 
 // Adds a delete button to a gallery card.
@@ -1916,7 +2158,9 @@ function addToGallery(photoUrl, save = true, photoId = null) {
         // Keine Bestätigung hier: Der Gast entscheidet erst im Review
         // zwischen „Neu aufnehmen“ und „Speichern“.
       } else {
-        deletePhoto(card, id); // discarded before the save finished
+        // Vor dem Speichern verworfen: endgültig löschen, wenn es ein
+        // Home-Abbruch war; sonst wie bisher in den Papierkorb.
+        deletePhoto(card, id, { permanent: card.dataset.discardPermanent === '1' });
       }
       if (lastPhoto && lastPhoto.card === card) lastPhoto.id = id;
       record.id = id;
@@ -1954,6 +2198,7 @@ function addToGallery(photoUrl, save = true, photoId = null) {
   photos.push(photoUrl);
   const record = { id: photoId || null, url: photoUrl };
   photoRecords.push(record);
+  card._photoRecord = record;
   if (save) lastPhoto = { card, id: null, savePromise };
 
   // update badge
@@ -2032,6 +2277,7 @@ function goTo(sectionName) {
   gsap.to(target, { opacity: 1, duration: 0.3, ease: 'power2.out' });
 
   currentState = sectionName;
+  syncCancelHome();
 
   // Der Splash-Schalter (fest unten rechts) gehört zum Startbildschirm und
   // verschwindet danach — in der Kameraansicht sitzt der zweite Schalter in
@@ -2097,14 +2343,22 @@ function showToast(message, options = {}) {
 //  CONFIRM MODAL (nur für endgültiges, unwiederbringliches Löschen)
 // ============================================================
 const $confirmModal = document.getElementById('confirmModal');
+const $confirmTitle = document.getElementById('confirmTitle');
+const $confirmText = document.getElementById('confirmText');
 const $confirmOk = document.getElementById('confirmOk');
 const $confirmCancel = document.getElementById('confirmCancel');
 let confirmResolve = null;
 
 // Löst mit true (bestätigt) oder false (abgebrochen).
-function askConfirm() {
+// Optionaler Text, damit derselbe Dialog auch das Verwerfen eines noch nicht
+// angenommenen Fotos absichern kann.
+function askConfirm(options = {}) {
   return new Promise((resolve) => {
     confirmResolve = resolve;
+    $confirmTitle.textContent = options.title || t('confirmTitle');
+    $confirmText.textContent = options.text || t('confirmText');
+    $confirmOk.textContent = options.ok || t('confirmOk');
+    $confirmCancel.textContent = options.cancel || t('confirmCancel');
     $confirmModal.hidden = false;
     gsap.from($confirmModal.querySelector('.modal__card'), {
       y: 24, opacity: 0, scale: 0.96, duration: 0.3, ease: 'power2.out', clearProps: 'all'
@@ -2133,17 +2387,10 @@ const $trashBadge = document.getElementById('trashBadge');
 const $trashView = document.getElementById('trashView');
 const $trashGrid = document.getElementById('trashGrid');
 const $trashEmpty = document.getElementById('trashEmpty');
-const $trashRetention = document.getElementById('trashRetention');
-const RETENTION_KEY = 'trashRetentionDays';
 
 let trashOpen = false;
 let trashItems = []; // { id, image, expiresAt }
 let trashVersion = 0; // lokale Änderungen invalidieren noch laufende loadTrash-Antworten
-
-function getRetentionDays() {
-  const v = Number(localStorage.getItem(RETENTION_KEY));
-  return [7, 14, 30].includes(v) ? v : 7;
-}
 
 // Mülleimer-Zähler am Galerie-Header — erst ab 1 sichtbar (0 = Rauschen).
 // Zählt serverseitig ohne die Bilder selbst zu laden.
@@ -2159,12 +2406,6 @@ function refreshTrashCount() {
     })
     .catch(() => { /* Zähler ist optional — still ignorieren */ });
 }
-
-$trashRetention.value = String(getRetentionDays());
-$trashRetention.addEventListener('change', () => {
-  localStorage.setItem(RETENTION_KEY, $trashRetention.value);
-  showToast(t('trashRetentionSaved', { n: $trashRetention.value }));
-});
 
 function toggleTrash(force = !trashOpen) {
   trashOpen = force;
@@ -2666,8 +2907,7 @@ const $sideMenuList = document.getElementById('sideMenuList');
 const $sideScrollUp = document.getElementById('sideScrollUp');
 const $sideScrollDown = document.getElementById('sideScrollDown');
 const $endScreen = document.getElementById('endScreen');
-const $shutterRail = document.getElementById('shutterRail');
-const $abortBtn = document.getElementById('abortBtn');
+const $cancelHome = document.getElementById('cancelHome');
 
 const SIDE_CONFIG = {
   filter: {
@@ -2699,6 +2939,15 @@ let endPhotoUrl = null;
 // Bild-Overlays im 16:9-Format (1280×720, transparente Bildmitte). Sie liegen
 // deckungsgleich über dem Foto und werden beim Speichern mit eingebrannt.
 const OVERLAY_DIR = 'assets/overlays/';
+const NO_OVERLAY_ID = 'none';
+// Leeres, durchgestrichenes 16:9-Feld als Vorschau für „Kein Rahmen“.
+const NO_OVERLAY_THUMB = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 36">'
+  + '<rect x="2" y="2" width="60" height="32" rx="4" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2" stroke-dasharray="5 4"/>'
+  + '<path d="M18 27 46 9" stroke="#fff" stroke-opacity=".8" stroke-width="3" stroke-linecap="round"/>'
+  + '</svg>'
+);
+const NO_OVERLAY_OPTION = { id: NO_OVERLAY_ID, labelKey: 'overlayNone', src: NO_OVERLAY_THUMB };
 const OVERLAYS = {
   standard: [
     { id: 'color-frame', labelKey: 'overlayColorFrame', src: OVERLAY_DIR + 'standard-farbrahmen.png' },
@@ -2884,13 +3133,14 @@ function renderSideMenu() {
       $sideMenuList.appendChild(btn);
     });
   } else if (sideContext === 'overlay') {
-    (OVERLAYS[sideTab] || []).forEach((overlay) => {
+    [NO_OVERLAY_OPTION, ...(OVERLAYS[sideTab] || [])].forEach((overlay) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'side-menu__item side-menu__item--overlay';
       btn.dataset.value = overlay.id;
       btn.setAttribute('role', 'option');
-      const active = !!currentOverlay && currentOverlay.id === overlay.id;
+      const isNone = overlay.id === NO_OVERLAY_ID;
+      const active = isNone ? !currentOverlay : (!!currentOverlay && currentOverlay.id === overlay.id);
       btn.classList.toggle('is-selected', active);
       btn.setAttribute('aria-selected', String(active));
       const thumb = document.createElement('span');
@@ -2936,7 +3186,7 @@ function updateSideSelection() {
     } else if (sideContext === 'filter') {
       active = currentFilter === value;
     } else if (sideContext === 'overlay') {
-      active = !!currentOverlay && currentOverlay.id === value;
+      active = value === NO_OVERLAY_ID ? !currentOverlay : (!!currentOverlay && currentOverlay.id === value);
     }
     el.classList.toggle('is-selected', active);
     el.setAttribute('aria-selected', String(active));
@@ -2977,6 +3227,12 @@ function findOverlay(id) {
 }
 
 function setOverlay(id) {
+  if (id === NO_OVERLAY_ID) {
+    currentOverlay = null;
+    renderOverlayPreview();
+    updateSideSelection();
+    return;
+  }
   const found = findOverlay(id);
   currentOverlay = currentOverlay && currentOverlay.id === id ? null : (found || null);
   renderOverlayPreview();
@@ -3145,11 +3401,13 @@ function showEndScreen(url) {
   if ($endScreen) $endScreen.hidden = false;
   $camera.classList.add('is-ended');
   $camera.classList.remove('is-reviewing', 'is-stamping');
+  syncCancelHome();
   const done = document.getElementById('endDone');
   if (done) done.focus();
 }
 
 function returnToIdle() {
+  resetGuestCaptureSettings();
   if ($endScreen) $endScreen.hidden = true;
   $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping');
   clearStickers();
@@ -3166,6 +3424,7 @@ function returnToIdle() {
   gsap.fromTo($splash, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
   gsap.fromTo('.splash__content--kiosk', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out', delay: 0.1, clearProps: 'all' });
   currentState = 'splash';
+  syncCancelHome();
   if ($splashLang) $splashLang.hidden = false;
   applyLanguage(defaultLang);
   updateChallengeCard();
@@ -3208,7 +3467,7 @@ function printEndPhoto() {
   win.document.close();
 }
 
-document.querySelectorAll('.endscreen__btn').forEach((btn) => {
+document.querySelectorAll('.endscreen__action').forEach((btn) => {
   btn.addEventListener('click', () => {
     if (btn.dataset.end === 'qr') {
       if (lastPhoto && lastPhoto.id) showQrDialog(lastPhoto.id);
@@ -3223,17 +3482,33 @@ document.querySelectorAll('.endscreen__btn').forEach((btn) => {
 const $endDone = document.getElementById('endDone');
 if ($endDone) $endDone.addEventListener('click', returnToIdle);
 
-if ($abortBtn) {
-  $abortBtn.addEventListener('click', () => {
-    if (isCapturing) return;
-    if ($camera.classList.contains('is-reviewing')) { retakePhoto(); return; }
-    returnToIdle();
+if ($cancelHome) {
+  $cancelHome.addEventListener('click', async () => {
+    if (isCapturing) {
+      cancelCapture();
+      return;
+    }
+    if (!$confirmModal.hidden) return;
+
+    // Vor „Annehmen“ gibt es noch kein bestätigtes Foto. Der Weg zum Start
+    // verwirft es deshalb nicht still, sondern fragt vorher nach.
+    const inReview = $camera.classList.contains('is-reviewing') || $camera.classList.contains('is-stamping');
+    if (inReview && hasPhoto) {
+      const confirmed = await askConfirm({
+        title: t('discardTitle'),
+        text: t('discardText'),
+        ok: t('discardConfirm'),
+        cancel: t('discardCancel')
+      });
+      if (!confirmed) {
+        $cancelHome.focus();
+        return;
+      }
+      discardUnacceptedPhoto();
+    }
+    resetToStartScreen();
   });
 }
-if ($shutterRail) {
-  $shutterRail.addEventListener('click', () => runCaptureSequence());
-}
-
 // Swipe up auf dem Startbildschirm (Touch) plus Klick auf die Affordance.
 let splashGestureStart = null;
 $splash.addEventListener('pointerdown', (e) => {
@@ -3287,6 +3562,9 @@ function toggleFullscreen() {
 // ============================================================
 window.addEventListener('load', () => {
   applyLanguage(defaultLang);
+  // Alte Gästeauswahl aus früheren Versionen darf nicht in die erste
+  // Sitzung nach dem Laden hineinreichen.
+  resetGuestCaptureSettings();
   animateSplashIn();
   loadPhotosFromServer();
   loadStreak();
@@ -3335,6 +3613,7 @@ window.addEventListener('load', () => {
     }
 
     if (e.key === 'Escape') {
+      if (isCapturing) { e.preventDefault(); cancelCapture(); return; }
       if (!$qrModal.hidden) { closeQrDialog(); return; }
       if (!$confirmModal.hidden) { closeConfirm(false); return; }
       if (!$endScreen.hidden) { returnToIdle(); return; }
