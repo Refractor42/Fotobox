@@ -19,6 +19,8 @@ const $viewfinderFrame = $camera.querySelector('.viewfinder__frame');
 const $corners       = $camera.querySelectorAll('.viewfinder__corner');
 const $galleryGrid   = document.getElementById('galleryGrid');
 const $galleryEmpty  = document.getElementById('galleryEmpty');
+const $galleryLoadMoreWrap = document.getElementById('galleryLoadMoreWrap');
+const $galleryLoadMore = document.getElementById('galleryLoadMore');
 const $video         = document.getElementById('cameraVideo');
 const $permission    = document.getElementById('permission');
 const $galleryBadge  = document.getElementById('galleryBadge');
@@ -29,8 +31,11 @@ let currentStreak = 0;
 let lastPhotoTimestamp = null;
 
 const photos = [];
-// Wie photos, aber mit Server-ID — für Challenge-Zähler und Foto-Kette.
+// Wie photos, aber mit Server-ID — für Splash-Kette und Galerie.
 const photoRecords = [];
+// Alle Server-IDs ohne Bilddaten: hält Gesamtzahl und Challenge-Zähler
+// korrekt, auch wenn nur eine Fotoseite geladen ist.
+const photoIndexIds = [];
 
 // --- State ---
 let currentState = 'splash';
@@ -116,6 +121,7 @@ const I18N = {
     idleResetText: 'Zurück zum Start in',
     idleResetStay: 'Hier bleiben',
     permissionText: 'Kamerazugriff für SnapBox erforderlich',
+    permissionHint: 'Dauerhaft blockiert? Erlaube die Kamera in den Browser-Einstellungen und lade die Seite neu.',
     permissionBtn: 'Kamera erlauben',
     captionFace: 'GESICHTSFILTER',
     captionTimer: 'COUNTDOWN',
@@ -147,6 +153,8 @@ const I18N = {
     galleryBtn: 'Galerie',
     galleryBack: 'Zurück',
     galleryTitle: 'Deine Fotos',
+    galleryLoadMore: 'Mehr laden',
+    galleryLoading: 'Wird geladen…',
     galleryTrash: 'Papierkorb',
     trashBackShort: 'Fotos',
     trashBackToPhotos: 'Zurück zu deinen Fotos',
@@ -281,6 +289,7 @@ const I18N = {
     idleResetText: 'Returning to start in',
     idleResetStay: 'Stay here',
     permissionText: 'Camera access required for SnapBox',
+    permissionHint: 'Blocked permanently? Allow the camera in your browser settings, then reload the page.',
     permissionBtn: 'Allow Camera',
     captionFace: 'FACE FILTERS',
     captionTimer: 'COUNTDOWN',
@@ -312,6 +321,8 @@ const I18N = {
     galleryBtn: 'Gallery',
     galleryBack: 'Back',
     galleryTitle: 'Your Photos',
+    galleryLoadMore: 'Load more',
+    galleryLoading: 'Loading…',
     galleryTrash: 'Trash',
     trashBackShort: 'Photos',
     trashBackToPhotos: 'Back to your photos',
@@ -2248,14 +2259,15 @@ function removeCard(card) {
   // Auch den Datensatz entfernen, sonst taucht das gelöschte Foto weiter in
   // Challenge-Zähler und Splash-Kette auf.
   if (card._photoRecord) {
-    const recordIndex = photoRecords.indexOf(card._photoRecord);
+    const record = card._photoRecord;
+    if (record.id) removePhotoIndexId(record.id);
+    const recordIndex = photoRecords.indexOf(record);
     if (recordIndex !== -1) photoRecords.splice(recordIndex, 1);
-    const urlIndex = photos.indexOf(card._photoRecord.url);
+    const urlIndex = photos.indexOf(record.url);
     if (urlIndex !== -1) photos.splice(urlIndex, 1);
   }
   card.remove();
-  photoCount = Math.max(0, photoCount - 1);
-  $galleryBadge.textContent = String(photoCount);
+  setPhotoCount(photoCount - 1);
   if (!$galleryGrid.querySelector('.gallery__card')) $galleryEmpty.style.display = '';
   updateChallengeCard();
   renderSplashChain();
@@ -2267,7 +2279,9 @@ function attachDelete(card, photoId) {
   btn.className = 'gallery__delete';
   btn.type = 'button';
   btn.setAttribute('aria-label', t('deletePhotoAria'));
-  btn.textContent = '×';
+  btn.title = t('deletePhotoAria');
+  // Papierkorb statt ×: Die Aktion löscht, sie schließt nichts.
+  btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     deletePhoto(card, photoId);
@@ -2275,25 +2289,114 @@ function attachDelete(card, photoId) {
   card.appendChild(btn);
 }
 
-// Loads all stored photos from the database when the page starts.
-function loadPhotosFromServer() {
-  return fetch('/api/photos', { cache: 'no-store' })
-    .then((res) => {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-    .then((items) => {
-      items.forEach((item) => addToGallery(item.image, false, item.id));
-      updateChallengeCard();
-      renderSplashChain();
-    })
-    .catch((err) => {
-      console.warn('Photos could not be loaded from database:', err);
-      showToast(t('toastLoadError'), { error: true });
-    });
+const PHOTO_PAGE_SIZE = 12;
+let photoCursor = null;
+let photoHasMore = false;
+let photoPageLoading = false;
+
+function setPhotoCount(count) {
+  photoCount = Math.max(0, Number(count) || 0);
+  $galleryBadge.textContent = String(photoCount);
 }
 
-function addToGallery(photoUrl, save = true, photoId = null) {
+function setLoadMoreBusy(busy) {
+  if (!$galleryLoadMore) return;
+  const key = busy ? 'galleryLoading' : 'galleryLoadMore';
+  $galleryLoadMore.disabled = busy;
+  $galleryLoadMore.dataset.i18n = key;
+  $galleryLoadMore.textContent = t(key);
+}
+
+function updateGalleryLoadMore() {
+  if (!$galleryLoadMoreWrap || !$galleryLoadMore) return;
+  const hasCards = !!$galleryGrid.querySelector('.gallery__card');
+  $galleryLoadMoreWrap.hidden = trashOpen
+    || !hasCards
+    || (!photoHasMore && !photoPageLoading);
+  $galleryLoadMore.disabled = photoPageLoading;
+}
+
+function resetGalleryFeed() {
+  $galleryGrid.innerHTML = '';
+  photos.length = 0;
+  photoRecords.length = 0;
+  photoIndexIds.length = 0;
+  photoCursor = null;
+  photoHasMore = false;
+  photoPageLoading = false;
+  setPhotoCount(0);
+  $galleryEmpty.style.display = trashOpen ? 'none' : '';
+  setLoadMoreBusy(false);
+  updateGalleryLoadMore();
+  updateChallengeCard();
+  renderSplashChain();
+}
+
+async function loadPhotoPage() {
+  if (photoPageLoading) return;
+  photoPageLoading = true;
+  setLoadMoreBusy(true);
+  updateGalleryLoadMore();
+  try {
+    const params = new URLSearchParams({ limit: String(PHOTO_PAGE_SIZE) });
+    if (photoCursor) params.set('before', photoCursor);
+    const res = await fetch('/api/photos?' + params.toString(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    // Ältere Server ohne Pagination liefern weiterhin ein Array.
+    const legacy = Array.isArray(data);
+    const items = legacy ? data : (Array.isArray(data.items) ? data.items : []);
+    // Die alte Vollliste war aufsteigend; für die Galerie neueste zuerst.
+    const pageItems = legacy ? items.slice().reverse() : items;
+    pageItems.forEach((item) => addToGallery(item.image, false, item.id, {
+      prepend: false,
+      count: false
+    }));
+
+    if (legacy) {
+      photoHasMore = false;
+      photoCursor = null;
+      setPhotoCount(items.length);
+      setPhotoIndexIds(items.map((item) => item.id));
+    } else {
+      const total = Number(data.total);
+      setPhotoCount(Number.isFinite(total) ? total : photoCount + items.length);
+      setPhotoIndexIds(Array.isArray(data.allIds) ? data.allIds : items.map((item) => item.id));
+      photoHasMore = data.hasMore === true;
+      photoCursor = data.nextCursor || null;
+    }
+
+    if ($galleryGrid.querySelector('.gallery__card')) {
+      $galleryEmpty.style.display = 'none';
+    }
+    updateChallengeCard();
+    renderSplashChain();
+  } catch (err) {
+    console.warn('Photos could not be loaded from database:', err);
+    showToast(t('toastLoadError'), { error: true });
+  } finally {
+    photoPageLoading = false;
+    setLoadMoreBusy(false);
+    updateGalleryLoadMore();
+  }
+}
+
+// Startet die Galerie mit der neuesten Seite statt mit allen Bildern.
+function loadPhotosFromServer() {
+  if (photoPageLoading) return Promise.resolve();
+  resetGalleryFeed();
+  return loadPhotoPage();
+}
+
+if ($galleryLoadMore) {
+  $galleryLoadMore.addEventListener('click', () => loadPhotoPage());
+}
+
+function addToGallery(photoUrl, save = true, photoId = null, options = {}) {
+  // Neue Aufnahmen kommen oben dazu; ältere Server-Seiten werden angehängt.
+  const prepend = options.prepend === true || (options.prepend !== false && save);
+  const countNew = options.count !== false;
   let savePromise = null;
   if (save) {
     savePromise = savePhotoToServer(photoUrl).then((id) => {
@@ -2310,6 +2413,7 @@ function addToGallery(photoUrl, save = true, photoId = null) {
       }
       if (lastPhoto && lastPhoto.card === card) lastPhoto.id = id;
       record.id = id;
+      addPhotoIndexId(id);
       updateChallengeCard();
       renderSplashChain();
     });
@@ -2328,7 +2432,8 @@ function addToGallery(photoUrl, save = true, photoId = null) {
     attachDelete(card, photoId);
   }
 
-  $galleryGrid.appendChild(card);
+  if (prepend) $galleryGrid.prepend(card);
+  else $galleryGrid.appendChild(card);
   $galleryEmpty.style.display = 'none';
 
   // staggered entrance
@@ -2341,17 +2446,24 @@ function addToGallery(photoUrl, save = true, photoId = null) {
   // Beim Klick die AKTUELLE Bildquelle lesen — nach dem Sticker-Überschreiben
   // wäre die ursprüngliche photoUrl aus dem Closure veraltet.
   card.addEventListener('click', () => openLightbox(card.querySelector('img').src, card.dataset.id || null));
-  photos.push(photoUrl);
+  if (prepend) {
+    photos.unshift(photoUrl);
+  } else {
+    photos.push(photoUrl);
+  }
   const record = { id: photoId || null, url: photoUrl };
-  photoRecords.push(record);
+  if (prepend) photoRecords.unshift(record);
+  else photoRecords.push(record);
   card._photoRecord = record;
   if (save) lastPhoto = { card, id: null, savePromise };
 
-  // update badge
-  photoCount++;
-  $galleryBadge.textContent = String(photoCount);
-  $galleryBadge.classList.add('has-new');
-  setTimeout(() => $galleryBadge.classList.remove('has-new'), 600);
+  if (countNew) {
+    if (photoId) addPhotoIndexId(photoId);
+    setPhotoCount(photoCount + 1);
+    updateChallengeCard();
+    $galleryBadge.classList.add('has-new');
+    setTimeout(() => $galleryBadge.classList.remove('has-new'), 600);
+  }
 
   // success animation on gallery button
   gsap.from($galleryBtn, {
@@ -2581,6 +2693,7 @@ function toggleTrash(force = !trashOpen) {
   $galleryEmpty.style.display = trashOpen
     ? 'none'
     : ($galleryGrid.querySelector('.gallery__card') ? 'none' : '');
+  updateGalleryLoadMore();
   syncGalleryContext();
   if (moveFocus && $galleryBack) $galleryBack.focus({ preventScroll: true });
   if (trashOpen) loadTrash();
@@ -3158,6 +3271,30 @@ function photoTimestamp(id) {
   return match ? Number(match[1]) : null;
 }
 
+function photoIsCurrentMonth(id) {
+  const ts = photoTimestamp(id);
+  if (!ts) return false;
+  const now = new Date();
+  const date = new Date(ts);
+  return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
+}
+
+function setPhotoIndexIds(ids) {
+  photoIndexIds.length = 0;
+  (ids || []).forEach((id) => {
+    if (id && !photoIndexIds.includes(id)) photoIndexIds.push(id);
+  });
+}
+
+function addPhotoIndexId(id) {
+  if (id && !photoIndexIds.includes(id)) photoIndexIds.unshift(id);
+}
+
+function removePhotoIndexId(id) {
+  const index = photoIndexIds.indexOf(id);
+  if (index !== -1) photoIndexIds.splice(index, 1);
+}
+
 function themeKeyForNow() {
   const month = new Date().getMonth();
   if (month === 9) return 'themeHalloween';
@@ -3169,12 +3306,10 @@ function updateChallengeCard() {
   const countEl = document.getElementById('challengeCount');
   if (!countEl) return;
   const now = new Date();
-  const count = photoRecords.filter((record) => {
-    const ts = photoTimestamp(record.id);
-    if (!ts) return false;
-    const date = new Date(ts);
-    return date.getMonth() === now.getMonth() && date.getFullYear() === now.getFullYear();
-  }).length;
+  const ids = photoIndexIds.length
+    ? photoIndexIds
+    : photoRecords.map((record) => record.id).filter(Boolean);
+  const count = ids.filter(photoIsCurrentMonth).length;
   const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
   countEl.textContent = String(count);
   const goal = document.getElementById('challengeGoal');
@@ -3194,7 +3329,8 @@ function updateChallengeCard() {
 function renderSplashChain() {
   const chain = document.getElementById('splashChain');
   if (!chain) return;
-  const urls = photoRecords.slice(-10).map((record) => record.url).filter(Boolean);
+  // Neueste zuerst: die erste Seite enthält die aktuellsten Fotos.
+  const urls = photoRecords.slice(0, 10).map((record) => record.url).filter(Boolean);
   chain.innerHTML = '';
   if (!urls.length) return;
   const track = document.createElement('div');

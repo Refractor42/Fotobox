@@ -116,7 +116,10 @@
               <line x1="12" y1="8" x2="12" y2="12"></line>
               <line x1="12" y1="16" x2="12.01" y2="16"></line>
             </svg>
-            <p class="permission__text" data-i18n="permissionText">Kamerazugriff für SnapBox erforderlich</p>
+            <div class="permission__copy">
+              <p class="permission__text" data-i18n="permissionText">Kamerazugriff für SnapBox erforderlich</p>
+              <p class="permission__hint" data-i18n="permissionHint">Dauerhaft blockiert? Erlaube die Kamera in den Browser-Einstellungen und lade die Seite neu.</p>
+            </div>
             <button class="btn btn--primary" data-action="retry-camera" data-i18n="permissionBtn">Kamera erlauben</button>
           </div>
         </div>
@@ -412,6 +415,9 @@
       </button>
     </div>
     <div class="gallery__grid" id="galleryGrid"></div>
+    <div class="gallery__load-more" id="galleryLoadMoreWrap" hidden>
+      <button class="btn btn--ghost gallery__load-more-btn" id="galleryLoadMore" type="button" data-i18n="galleryLoadMore">Mehr laden</button>
+    </div>
     <div class="gallery__empty" id="galleryEmpty">
       <svg class="gallery__empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <rect x="2" y="3" width="20" height="18" rx="2.75" ry="2.75"></rect>

@@ -540,12 +540,45 @@ async function handlePhotosApi(req, res) {
     }
 
     if (req.method === 'GET') {
+      const url = new URL(req.url, 'http://localhost');
       const names = await listJpgNames(cfg, PHOTO_PREFIX);
-      const items = await Promise.all(names.map(async (name) => ({
+
+      // Ohne limit bleibt die alte Vollliste erhalten (Abwärtskompatibilität).
+      if (!url.searchParams.has('limit')) {
+        const items = await Promise.all(names.map(async (name) => ({
+          id: PHOTO_PREFIX + name,
+          image: await objectToDataUrl(cfg, PHOTO_PREFIX + name)
+        })));
+        return sendJson(res, 200, items);
+      }
+
+      const requestedLimit = Number.parseInt(url.searchParams.get('limit'), 10);
+      const limit = Number.isFinite(requestedLimit)
+        ? Math.min(50, Math.max(1, requestedLimit))
+        : 12;
+      const before = url.searchParams.get('before') || '';
+      if (before && !new RegExp(`^${PHOTO_NAME}$`).test(before)) {
+        return sendJson(res, 400, { error: 'Invalid cursor' });
+      }
+
+      // Neueste zuerst; der Cursor ist der letzte Name der vorherigen Seite.
+      const sorted = names.slice().sort().reverse();
+      const eligible = before ? sorted.filter((name) => name < before) : sorted;
+      const pageNames = eligible.slice(0, limit);
+      const items = await Promise.all(pageNames.map(async (name) => ({
         id: PHOTO_PREFIX + name,
         image: await objectToDataUrl(cfg, PHOTO_PREFIX + name)
       })));
-      return sendJson(res, 200, items);
+
+      return sendJson(res, 200, {
+        items,
+        // Alle IDs ohne Bilddaten: Challenge-Zähler und Gesamtzahl bleiben
+        // korrekt, auch wenn nur eine Seite mit Bildern geladen ist.
+        allIds: sorted.map((name) => PHOTO_PREFIX + name),
+        total: sorted.length,
+        hasMore: eligible.length > pageNames.length,
+        nextCursor: pageNames.length ? pageNames[pageNames.length - 1] : null
+      });
     }
 
     if (req.method === 'POST') {
