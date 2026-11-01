@@ -566,6 +566,19 @@ body.orientation-landscape .side-menu.is-locked {
 .side-menu[data-context="overlay"] .side-menu__head { background: #7f1d1d; }
 .side-menu[data-context="stamp"] .side-menu__head { background: #7c2d12; }
 
+/* Kurzer Bedienhinweis, nur im Sticker-Modus sichtbar. */
+.side-menu__subhead {
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 8px clamp(10px, 1.1vw, 16px);
+  background: rgba(124, 45, 18, 0.5);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fed7aa;
+  font-size: clamp(12px, 0.95vw, 14px);
+  line-height: 1.35;
+  text-align: center;
+}
+
 .side-menu__tabs {
   display: flex;
   gap: 8px;
@@ -661,20 +674,24 @@ body.orientation-landscape .side-menu.is-locked {
 }
 .side-menu__hint { font-size: clamp(11px, 0.85vw, 13px); letter-spacing: 0.02em; }
 .side-menu__arrow {
-  width: 30px;
-  height: 26px;
+  width: 44px;
+  height: 44px;
   padding: 0;
   border: 0;
+  border-radius: 10px;
   background: transparent;
   color: inherit;
   cursor: pointer;
+  display: grid;
+  place-items: center;
   opacity: 0.28;
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  touch-action: manipulation;
 }
-.side-menu__arrow svg { width: 100%; height: 100%; }
-.side-menu__arrow:hover { transform: scale(1.12); }
+.side-menu__arrow svg { width: 22px; height: 22px; }
+.side-menu__arrow:hover { transform: scale(1.06); background: rgba(255, 255, 255, 0.06); }
 .side-menu__arrow.is-enabled { opacity: 1; }
-.side-menu__arrow:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.6); border-radius: 6px; }
+.side-menu__arrow:focus-visible { outline: none; box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.6); border-radius: 10px; }
 
 /* Bild-Overlays auf dem Foto (16:9, transparente Bildmitte) */
 .photo-overlay {

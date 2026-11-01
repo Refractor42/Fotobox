@@ -97,7 +97,9 @@ const I18N = {
     tabEvent: 'Event',
     tabEmoji: 'Emojis',
     tabUni: 'Hochschule',
-    scrollHint: 'scroll',
+    scrollHint: 'scrollen',
+    scrollUpAria: 'Nach oben scrollen',
+    scrollDownAria: 'Nach unten scrollen',
     overlayNone: 'Kein Rahmen',
     overlayColorFrame: 'Farbrahmen',
     overlayWhiteFrame: 'Weißer Rahmen',
@@ -127,7 +129,8 @@ const I18N = {
     stickerGroupAria: 'Sticker hinzufügen',
     filterSw: 'Schwarzweiß',
     filterKnackig: 'Knackig',
-    reviewHint: 'Sticker antippen und aufs Foto ziehen.',
+    reviewHint: 'Sticker antippen, ziehen und mit +/− in der Größe ändern.',
+    stickerDragHint: 'Sticker ziehen · +/− für Größe',
     btnRetake: 'Neu aufnehmen',
     retakeAria: 'Foto neu aufnehmen',
     stickerToggleAria: 'Sticker auswählen',
@@ -145,6 +148,8 @@ const I18N = {
     galleryBack: 'Zurück',
     galleryTitle: 'Deine Fotos',
     galleryTrash: 'Papierkorb',
+    trashBackShort: 'Fotos',
+    trashBackToPhotos: 'Zurück zu deinen Fotos',
     galleryEmpty: 'Noch keine Fotos — mach dein erstes Foto!',
     trashRetentionText: 'Neu gelöschte Fotos werden nach {n} Tagen endgültig gelöscht.',
     trashEmpty: 'Der Papierkorb ist leer.',
@@ -258,6 +263,8 @@ const I18N = {
     tabEmoji: 'Emojis',
     tabUni: 'University',
     scrollHint: 'scroll',
+    scrollUpAria: 'Scroll up',
+    scrollDownAria: 'Scroll down',
     overlayNone: 'No frame',
     overlayColorFrame: 'Color frame',
     overlayWhiteFrame: 'White frame',
@@ -287,7 +294,8 @@ const I18N = {
     stickerGroupAria: 'Add stickers',
     filterSw: 'Black & White',
     filterKnackig: 'Vivid',
-    reviewHint: 'Tap a sticker, then drag it on the photo.',
+    reviewHint: 'Tap a sticker, drag it, and resize with +/−.',
+    stickerDragHint: 'Drag stickers · +/− to resize',
     btnRetake: 'Retake',
     retakeAria: 'Retake photo',
     stickerToggleAria: 'Choose stickers',
@@ -305,6 +313,8 @@ const I18N = {
     galleryBack: 'Back',
     galleryTitle: 'Your Photos',
     galleryTrash: 'Trash',
+    trashBackShort: 'Photos',
+    trashBackToPhotos: 'Back to your photos',
     galleryEmpty: 'No photos yet. Capture your first memory!',
     trashRetentionText: 'Newly deleted photos are permanently removed after {n} days.',
     trashEmpty: 'The trash is empty.',
@@ -422,10 +432,12 @@ function applyLanguage(lang) {
   // Kiosk-Menü und Challenge-Karte in der neuen Sprache nachziehen.
   if (document.getElementById('sideMenu')) {
     if ($sideMenuHead) $sideMenuHead.textContent = t(sideConfig().head);
+    syncSideMenuHint();
     renderSideTabs();
     renderSideMenu();
     updateChallengeCard();
   }
+  syncGalleryContext();
 }
 
 document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
@@ -2517,6 +2529,7 @@ $confirmModal.addEventListener('click', (e) => { if (e.target === $confirmModal)
 //  PAPIERKORB (trash view)
 // ============================================================
 const $trashToggle = document.getElementById('trashToggle');
+const $galleryBack = document.querySelector('.gallery__back');
 const $trashBadge = document.getElementById('trashBadge');
 const $trashView = document.getElementById('trashView');
 const $trashGrid = document.getElementById('trashGrid');
@@ -2525,6 +2538,22 @@ const $trashEmpty = document.getElementById('trashEmpty');
 let trashOpen = false;
 let trashItems = []; // { id, image, expiresAt }
 let trashVersion = 0; // lokale Änderungen invalidieren noch laufende loadTrash-Antworten
+
+// Der Papierkorb ist eine eigene Ansicht: Titel und Rückweg müssen ihn
+// benennen, sonst bleibt oben weiter „Deine Fotos“ stehen.
+function syncGalleryContext() {
+  const title = document.getElementById('galleryTitle');
+  const back = document.getElementById('galleryBackLabel');
+  const toggle = document.getElementById('trashToggle');
+  if (title) title.textContent = t(trashOpen ? 'galleryTrash' : 'galleryTitle');
+  if (back) {
+    back.textContent = t(trashOpen ? 'trashBackShort' : 'galleryBack');
+    const btn = back.closest('button');
+    if (btn) btn.setAttribute('aria-label', t(trashOpen ? 'trashBackToPhotos' : 'galleryBack'));
+  }
+  // Im Papierkorb ist der Umschalter doppelt; der Zurück-Weg übernimmt.
+  if (toggle) toggle.hidden = trashOpen;
+}
 
 // Mülleimer-Zähler am Galerie-Header — erst ab 1 sichtbar (0 = Rauschen).
 // Zählt serverseitig ohne die Bilder selbst zu laden.
@@ -2542,6 +2571,9 @@ function refreshTrashCount() {
 }
 
 function toggleTrash(force = !trashOpen) {
+  // Der Umschalter verschwindet im Papierkorb. Tastaturfokus auf den
+  // sichtbaren Zurück-Weg legen, damit er nicht ins Leere fällt.
+  const moveFocus = !!force && document.activeElement === $trashToggle;
   trashOpen = force;
   $trashToggle.classList.toggle('active', trashOpen);
   $trashView.hidden = !trashOpen;
@@ -2549,6 +2581,8 @@ function toggleTrash(force = !trashOpen) {
   $galleryEmpty.style.display = trashOpen
     ? 'none'
     : ($galleryGrid.querySelector('.gallery__card') ? 'none' : '');
+  syncGalleryContext();
+  if (moveFocus && $galleryBack) $galleryBack.focus({ preventScroll: true });
   if (trashOpen) loadTrash();
 }
 
@@ -3036,6 +3070,7 @@ document.querySelectorAll('[data-action]').forEach((el) => {
 // ============================================================
 const $sideMenu = document.getElementById('sideMenu');
 const $sideMenuHead = document.getElementById('sideMenuHead');
+const $sideMenuSubhead = document.getElementById('sideMenuSubhead');
 const $sideMenuTabs = document.getElementById('sideMenuTabs');
 const $sideMenuList = document.getElementById('sideMenuList');
 const $sideScrollUp = document.getElementById('sideScrollUp');
@@ -3182,6 +3217,13 @@ function sideConfig() {
   return SIDE_CONFIG[sideContext] || SIDE_CONFIG.filter;
 }
 
+function syncSideMenuHint() {
+  if (!$sideMenuSubhead) return;
+  const show = sideContext === 'stamp';
+  $sideMenuSubhead.textContent = show ? t('stickerDragHint') : '';
+  $sideMenuSubhead.hidden = !show;
+}
+
 function openSideMenu(context, tab) {
   if (!SIDE_CONFIG[context] || !$sideMenu) return;
   sideContext = context;
@@ -3190,6 +3232,7 @@ function openSideMenu(context, tab) {
   sideTab = config.tabs.some((pair) => pair[0] === wanted) ? wanted : config.defaultTab;
   $sideMenu.dataset.context = context;
   $sideMenuHead.textContent = t(config.head);
+  syncSideMenuHint();
   renderSideTabs();
   renderSideMenu();
 }
