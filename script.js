@@ -914,15 +914,13 @@ function isKioskLayout() {
   return document.body.classList.contains('orientation-landscape');
 }
 
-// Der globale Start-Button ist auf jedem Screen sichtbar. Auf Kamera
-// und Review sitzt er mittig unter dem scrollbaren Seitenmenü, auf Galerie
-// und Endscreen in der Ecke rechts unten. Seine Bottom-Position bleibt
-// zustandsunabhängig gleich, damit er beim Review-Wechsel nicht springt.
+// Der globale Start-Button sitzt auf jedem Screen an derselben Stelle:
+// unten rechts, bündig mit der rechten Kante des Seitenmenüs. Damit springt
+// er weder beim Review-Wechsel noch beim Wechsel in Galerie, Papierkorb oder
+// Endscreen.
 function syncCancelHome() {
   if (!$cancelHome) return;
-  const ended = $camera.classList.contains('is-ended');
   $cancelHome.hidden = currentState === 'splash';
-  $cancelHome.classList.toggle('is-under-menu', currentState === 'camera' && !ended);
 }
 
 // Während der Aufnahme wird der globale Start-Button zum klaren Ausweg:

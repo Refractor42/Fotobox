@@ -399,7 +399,7 @@ body.orientation-landscape .capture-bar > .capture-switch:last-of-type { grid-co
 }
 .cancel-home {
   position: fixed;
-  right: clamp(14px, 1.5vw, 20px);
+  right: var(--stage-pad);
   bottom: var(--stage-pad);
   z-index: 10001;
   display: none;
@@ -414,10 +414,6 @@ body.orientation-landscape .capture-bar > .capture-switch:last-of-type { grid-co
   cursor: pointer;
 }
 body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
-/* Kamera/Review: mittig unter der Scrollspalte des Seitenmenüs. */
-.cancel-home.is-under-menu {
-  right: calc(var(--stage-pad) + var(--menu-w) / 2 - var(--home-size) / 2);
-}
 .cancel-home__disc {
   width: var(--home-size);
   height: var(--home-size);
