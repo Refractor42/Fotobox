@@ -1410,9 +1410,9 @@ function addSticker(kind) {
   el.appendChild(img);
 
   const st = { el, x: 50, y: 35, w: 26 };
-  positionSticker(st);
   $camera.querySelector('.viewfinder').appendChild(el);
   activeStickers.push(st);
+  positionSticker(st);
 
   el.addEventListener('pointerdown', (e) => {
     // Tippen auf die Größen-/Löschen-Buttons darf keinen Drag starten:
@@ -1421,12 +1421,10 @@ function addSticker(kind) {
     e.preventDefault();
     e.stopPropagation();
     selectSticker(st);
-    const rect = $camera.querySelector('.viewfinder').getBoundingClientRect();
+    const frame = photoStageRect();
     const move = (ev) => {
-      st.x = ((ev.clientX - rect.left) / rect.width) * 100;
-      st.y = ((ev.clientY - rect.top) / rect.height) * 100;
-      st.x = Math.min(100, Math.max(0, st.x));
-      st.y = Math.min(100, Math.max(0, st.y));
+      st.x = ((ev.clientX - frame.left) / frame.width) * 100;
+      st.y = ((ev.clientY - frame.top) / frame.height) * 100;
       positionSticker(st);
     };
     const up = () => {
@@ -1442,16 +1440,170 @@ function addSticker(kind) {
   selectSticker(st);
 }
 
-function positionSticker(st) {
-  st.el.style.width = st.w + '%';
-  st.el.style.left = st.x + '%';
-  st.el.style.top = st.y + '%';
-  st.el.style.transform = 'translate(-50%, -50%)';
-  if (st.emoji) {
-    const stage = $camera.querySelector('.viewfinder');
-    const stageWidth = stage ? stage.clientWidth : 600;
-    st.el.style.fontSize = Math.round((st.w / 100) * stageWidth * 0.9) + 'px';
+// Sichtbarer Fotobereich innerhalb der Bühne. Ohne Overlay füllt das Foto
+// die Bühne (cover, wird beschnitten); mit Overlay wird das ganze Foto
+// gezeigt (contain). Sticker-Prozente beziehen sich immer auf genau diese
+// Fläche, damit sie nie in den schwarzen Rand oder über den Rahmen laufen.
+function photoStageRect() {
+  const viewfinder = $camera.querySelector('.viewfinder');
+  if (!viewfinder) return { left: 0, top: 0, width: 1, height: 1, right: 1, bottom: 1 };
+  const vf = viewfinder.getBoundingClientRect();
+  const stage = viewfinder.querySelector('img.stage-photo');
+  const nw = stage ? stage.naturalWidth : 0;
+  const nh = stage ? stage.naturalHeight : 0;
+  const fit = stage
+    ? (stage.style.objectFit || getComputedStyle(stage).objectFit || 'cover').toLowerCase()
+    : 'cover';
+  if (!nw || !nh || fit !== 'contain') return vf;
+  const scale = Math.min(vf.width / nw, vf.height / nh);
+  const width = nw * scale;
+  const height = nh * scale;
+  return {
+    left: vf.left + (vf.width - width) / 2,
+    top: vf.top + (vf.height - height) / 2,
+    width,
+    height,
+    right: vf.left + (vf.width + width) / 2,
+    bottom: vf.top + (vf.height + height) / 2
+  };
+}
+
+// Rahmen-Overlays haben einen transparenten Innenbereich. Die Ränder werden
+// aus dem Alphakanal des Overlays gemessen, damit Sticker nicht auf dem
+// dekorativen Rahmen landen. Bis die Messung vorliegt, gilt ein ruhiger
+// Standardrand; „Kein Rahmen“ hat keinen Rand.
+const DEFAULT_OVERLAY_INSET = 5;
+const NO_INSET = { left: 0, right: 0, top: 0, bottom: 0 };
+
+function overlaySafeInsets(overlay) {
+  if (!overlay) return NO_INSET;
+  return overlay.safeInsets || {
+    left: DEFAULT_OVERLAY_INSET,
+    right: DEFAULT_OVERLAY_INSET,
+    top: DEFAULT_OVERLAY_INSET,
+    bottom: DEFAULT_OVERLAY_INSET
+  };
+}
+
+function measureOverlaySafeArea(overlay) {
+  if (!overlay || overlay.safeInsets || overlay.safeMeasure) return;
+  overlay.safeMeasure = true;
+  const img = new Image();
+  img.onload = () => {
+    overlay.safeMeasure = false;
+    try {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.naturalWidth;
+      canvas.height = img.naturalHeight;
+      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      ctx.drawImage(img, 0, 0);
+      const W = canvas.width;
+      const H = canvas.height;
+      const data = ctx.getImageData(0, 0, W, H).data;
+      const alphaAt = (x, y) => data[(y * W + x) * 4 + 3];
+      const cx = W >> 1;
+      const cy = H >> 1;
+      let left = cx;
+      let right = cx;
+      let top = cy;
+      let bottom = cy;
+      if (alphaAt(cx, cy) < 10) {
+        while (left > 0 && alphaAt(left - 1, cy) < 10) left--;
+        while (right < W - 1 && alphaAt(right + 1, cy) < 10) right++;
+        while (top > 0 && alphaAt(cx, top - 1) < 10) top--;
+        while (bottom < H - 1 && alphaAt(cx, bottom + 1) < 10) bottom++;
+        overlay.safeInsets = {
+          left: (left / W) * 100,
+          right: ((W - 1 - right) / W) * 100,
+          top: (top / H) * 100,
+          bottom: ((H - 1 - bottom) / H) * 100
+        };
+        if (currentOverlay === overlay) repositionStickers();
+      } else {
+        overlay.safeInsets = NO_INSET;
+      }
+    } catch (err) {
+      // Bei einem nicht lesbaren Bild bleibt der Standardrand aktiv.
+      console.warn('Overlay-Rahmen konnte nicht gemessen werden:', err);
+    }
+  };
+  img.onerror = () => { overlay.safeMeasure = false; };
+  img.src = overlay.src;
+}
+
+// Fotobereich abzüglich des Overlay-Rahmens: hier dürfen Sticker sitzen.
+function stickerSafeRect() {
+  const photo = photoStageRect();
+  const ins = overlaySafeInsets(currentOverlay);
+  const left = photo.left + (photo.width * ins.left) / 100;
+  const top = photo.top + (photo.height * ins.top) / 100;
+  const right = photo.right - (photo.width * ins.right) / 100;
+  const bottom = photo.bottom - (photo.height * ins.bottom) / 100;
+  return { left, top, right, bottom, width: right - left, height: bottom - top };
+}
+
+// Die +/−/×-Leiste sitzt normalerweise über dem Sticker. Ist dort kein
+// Platz, klappt sie unter den Sticker und wird an den Fotorändern gehalten.
+function positionStickerControls(st) {
+  const ctrl = st.el.querySelector('.sticker__ctrl');
+  if (!ctrl || !ctrl.isConnected) return;
+  const frame = stickerSafeRect();
+  const sr = st.el.getBoundingClientRect();
+  const cw = ctrl.offsetWidth || 148;
+  const ch = ctrl.offsetHeight || 44;
+  const pad = 4;
+  const gap = 8;
+  const minLeft = frame.left + pad;
+  const maxLeft = Math.max(minLeft, frame.right - pad - cw);
+  let left = sr.left + sr.width / 2 - cw / 2;
+  left = Math.min(maxLeft, Math.max(minLeft, left));
+
+  let top = sr.top - ch - gap;
+  if (top < frame.top + pad) top = sr.bottom + gap;
+  if (top + ch > frame.bottom - pad) {
+    top = Math.max(frame.top + pad, frame.bottom - pad - ch);
   }
+
+  ctrl.style.left = (left - sr.left) + 'px';
+  ctrl.style.top = (top - sr.top) + 'px';
+  ctrl.style.transform = 'none';
+}
+
+function positionSticker(st) {
+  const viewfinder = $camera.querySelector('.viewfinder');
+  if (!viewfinder) return;
+  const vf = viewfinder.getBoundingClientRect();
+  const photo = photoStageRect();
+  const safe = stickerSafeRect();
+  const width = Math.max(1, (st.w / 100) * photo.width);
+
+  st.el.style.width = width + 'px';
+  if (st.emoji) {
+    st.el.style.fontSize = Math.max(12, Math.round(width * 0.9)) + 'px';
+  }
+
+  // Sticker samt sichtbarer Fläche innerhalb der sicheren Fotofläche halten.
+  // Das gilt besonders beim Vergrößern direkt am Rand und beim Rahmen.
+  const height = st.el.offsetHeight || width;
+  const halfW = width / 2;
+  const halfH = height / 2;
+  let minX = ((safe.left - photo.left) + halfW) / photo.width * 100;
+  let maxX = ((safe.right - photo.left) - halfW) / photo.width * 100;
+  let minY = ((safe.top - photo.top) + halfH) / photo.height * 100;
+  let maxY = ((safe.bottom - photo.top) - halfH) / photo.height * 100;
+  if (minX > maxX) minX = maxX = 50;
+  if (minY > maxY) minY = maxY = 50;
+  st.x = Math.min(maxX, Math.max(minX, st.x));
+  st.y = Math.min(maxY, Math.max(minY, st.y));
+
+  st.el.style.left = (photo.left - vf.left + (st.x / 100) * photo.width) + 'px';
+  st.el.style.top = (photo.top - vf.top + (st.y / 100) * photo.height) + 'px';
+  st.el.style.transform = 'translate(-50%, -50%)';
+  positionStickerControls(st);
+}
+
+function repositionStickers() {
+  activeStickers.forEach(positionSticker);
 }
 
 function selectSticker(st) {
@@ -1474,6 +1626,7 @@ function selectSticker(st) {
   ctrl.appendChild(mk('+', t('stickerBigger'), () => scaleSticker(st, 1.18)));
   ctrl.appendChild(mk('×', t('stickerRemove'), () => removeSticker(st)));
   st.el.appendChild(ctrl);
+  requestAnimationFrame(() => positionStickerControls(st));
 }
 
 function deselectSticker() {
@@ -1526,42 +1679,6 @@ function loadImg(src) {
   });
 }
 
-// Das Foto wird in der Bühne mit object-fit: cover angezeigt — dabei wird
-// links/rechts oder oben/unten ein Teil des Bildes abgeschnitten. Sticker
-// liegen in Prozent der SICHTBAREN Bühnenfläche, das gespeicherte Bild enthält
-// aber das ganze Foto. Diese Zuordnung rechnet Bühnen-Prozente in
-// Bild-Koordinaten um, damit ein Sticker exakt dort und so groß landet, wie
-// er platziert wurde.
-function stageToImageMapping(stageEl, img) {
-  const rect = stageEl.getBoundingClientRect();
-  const iw = img.naturalWidth || rect.width;
-  const ih = img.naturalHeight || rect.height;
-  const fit = (img.style.objectFit || getComputedStyle(img).objectFit || 'cover').toLowerCase();
-
-  if (fit === 'contain') {
-    // Das ganze Bild ist sichtbar, links/rechts (oder oben/unten) bleibt Rand.
-    const scale = Math.min(rect.width / iw, rect.height / ih);
-    return {
-      rect,
-      scale,
-      contain: true,
-      offsetX: Math.max(0, (rect.width - iw * scale) / 2),
-      offsetY: Math.max(0, (rect.height - ih * scale) / 2)
-    };
-  }
-
-  // cover: das Bild wird so skaliert, dass es die Bühne vollständig füllt
-  const scale = Math.max(rect.width / iw, rect.height / ih);
-  return {
-    rect,
-    scale,
-    contain: false,
-    // abgeschnittener Teil auf jeder Seite, in Bühnen-Pixeln
-    offsetX: Math.max(0, (iw * scale - rect.width) / 2),
-    offsetY: Math.max(0, (ih * scale - rect.height) / 2)
-  };
-}
-
 async function renderEditedPhoto(photoEl) {
   const base = await loadImg(photoEl.src);
   const canvas = document.createElement('canvas');
@@ -1573,16 +1690,25 @@ async function renderEditedPhoto(photoEl) {
   if (filterCss !== 'none') ctx.filter = filterCss;
   ctx.drawImage(base, 0, 0);
   ctx.filter = 'none';
-  const map = stageToImageMapping($camera.querySelector('.viewfinder'), base);
+  // Sticker-Prozente beziehen sich auf die sichtbare Fotofläche. Beim
+  // beschnittenen Cover-Bild wird der abgeschnittene Rand eingerechnet, beim
+  // vollständig gezeigten Foto (Overlay) direkt auf das Bild abgebildet.
+  const viewfinder = $camera.querySelector('.viewfinder');
+  const frame = photoStageRect();
+  const vf = viewfinder.getBoundingClientRect();
+  const fit = (photoEl.style.objectFit || getComputedStyle(photoEl).objectFit || 'cover').toLowerCase();
+  const cropped = fit !== 'contain';
+  const mapScale = cropped
+    ? Math.max(vf.width / base.naturalWidth, vf.height / base.naturalHeight)
+    : frame.width / base.naturalWidth;
+  const offsetX = cropped ? Math.max(0, (base.naturalWidth * mapScale - vf.width) / 2) : 0;
+  const offsetY = cropped ? Math.max(0, (base.naturalHeight * mapScale - vf.height) / 2) : 0;
+
   for (const st of [...activeStickers]) {
     try {
-      // Bühnen-Pixel der Sticker-Mitte, um den abgeschnittenen Rand verschoben,
-      // dann durch den Anzeige-Faktor in Bild-Pixel umgerechnet.
-      const w = ((st.w / 100) * map.rect.width) / map.scale;
-      const stageX = (st.x / 100) * map.rect.width;
-      const stageY = (st.y / 100) * map.rect.height;
-      const x = map.contain ? (stageX - map.offsetX) / map.scale : (stageX + map.offsetX) / map.scale;
-      const y = map.contain ? (stageY - map.offsetY) / map.scale : (stageY + map.offsetY) / map.scale;
+      const w = ((st.w / 100) * frame.width) / mapScale;
+      const x = ((st.x / 100) * frame.width + offsetX) / mapScale;
+      const y = ((st.y / 100) * frame.height + offsetY) / mapScale;
       if (st.emoji) {
         ctx.save();
         ctx.font = (w * 0.92) + 'px "Segoe UI Emoji", "Apple Color Emoji", "Noto Color Emoji", sans-serif';
@@ -3222,7 +3348,10 @@ if ($sideScrollDown) {
 }
 const $sideViewport = document.querySelector('.side-menu__viewport');
 if ($sideViewport) $sideViewport.addEventListener('scroll', updateScrollHints, { passive: true });
-window.addEventListener('resize', updateScrollHints);
+window.addEventListener('resize', () => {
+  updateScrollHints();
+  repositionStickers();
+});
 
 function overlayLabel(overlay) {
   return overlay.labelKey ? t(overlay.labelKey) : overlay.label;
@@ -3239,12 +3368,14 @@ function setOverlay(id) {
     currentOverlay = null;
     renderOverlayPreview();
     updateSideSelection();
+    repositionStickers();
     return;
   }
   const found = findOverlay(id);
   currentOverlay = currentOverlay && currentOverlay.id === id ? null : (found || null);
   renderOverlayPreview();
   updateSideSelection();
+  repositionStickers();
 }
 
 function renderOverlayPreview() {
@@ -3260,6 +3391,24 @@ function renderOverlayPreview() {
     return;
   }
   if (!stage) return;
+  measureOverlaySafeArea(currentOverlay);
+
+  // Ist das Foto noch nicht dekodiert, wären die Maße 0 und das Overlay
+  // würde unsichtbar in der Ecke sitzen. Nach dem Laden neu berechnen.
+  if (!stage.naturalWidth || !stage.naturalHeight) {
+    stage.style.objectFit = 'contain';
+    if (!stage.dataset.overlayLoadHooked) {
+      stage.dataset.overlayLoadHooked = '1';
+      stage.addEventListener('load', () => {
+        delete stage.dataset.overlayLoadHooked;
+        if (currentOverlay) {
+          renderOverlayPreview();
+          repositionStickers();
+        }
+      }, { once: true });
+    }
+    return;
+  }
 
   // Fotostreifen werden vollständig (contain) gezeigt. Das Overlay wird
   // deshalb je Einzelbild platziert, nicht über den ganzen Streifen gezogen.
@@ -3298,8 +3447,8 @@ function renderOverlayPreview() {
   img.className = 'photo-overlay';
   img.src = currentOverlay.src;
   img.alt = '';
-  if (stage.naturalWidth && stage.naturalHeight) {
-    const vf = viewfinder.getBoundingClientRect();
+  const vf = viewfinder.getBoundingClientRect();
+  if (stage.naturalWidth && stage.naturalHeight && vf.width && vf.height) {
     const fit = Math.min(vf.width / stage.naturalWidth, vf.height / stage.naturalHeight);
     const w = stage.naturalWidth * fit;
     const h = stage.naturalHeight * fit;
@@ -3307,6 +3456,16 @@ function renderOverlayPreview() {
     img.style.top = Math.round((vf.height - h) / 2) + 'px';
     img.style.width = Math.round(w) + 'px';
     img.style.height = Math.round(h) + 'px';
+  } else {
+    // Bühne noch nicht vermessen (z. B. direkt nach dem Aufbau): erst die
+    // volle Fläche nutzen und nach dem nächsten Layout neu berechnen.
+    img.style.width = '100%';
+    img.style.height = '100%';
+    requestAnimationFrame(() => {
+      if (!currentOverlay) return;
+      const rect = viewfinder.getBoundingClientRect();
+      if (rect.width && rect.height) renderOverlayPreview();
+    });
   }
   viewfinder.appendChild(img);
 }
@@ -3322,9 +3481,9 @@ function addEmojiStamp(glyph) {
   // Neue Sticker leicht versetzt platzieren, damit sie nicht exakt stapeln.
   const step = (activeStickers.length % 3) - 1;
   const st = { el, x: 50 + step * 9, y: 38 + step * 8, w: 12, emoji: glyph };
-  positionSticker(st);
   $camera.querySelector('.viewfinder').appendChild(el);
   activeStickers.push(st);
+  positionSticker(st);
 
   el.addEventListener('pointerdown', (e) => {
     // Tippen auf die Größen-/Löschen-Buttons darf keinen Drag starten:
@@ -3333,12 +3492,10 @@ function addEmojiStamp(glyph) {
     e.preventDefault();
     e.stopPropagation();
     selectSticker(st);
-    const rect = $camera.querySelector('.viewfinder').getBoundingClientRect();
+    const frame = photoStageRect();
     const move = (ev) => {
-      st.x = ((ev.clientX - rect.left) / rect.width) * 100;
-      st.y = ((ev.clientY - rect.top) / rect.height) * 100;
-      st.x = Math.min(100, Math.max(0, st.x));
-      st.y = Math.min(100, Math.max(0, st.y));
+      st.x = ((ev.clientX - frame.left) / frame.width) * 100;
+      st.y = ((ev.clientY - frame.top) / frame.height) * 100;
       positionSticker(st);
     };
     const up = () => {
