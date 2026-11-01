@@ -2,10 +2,10 @@
    SnapBox — interactive face filters
    ------------------------------------------------------------
    Draws the mirrored camera frame into a canvas and adds funny
-   overlays on top of it. Face positions come from MediaPipe's
-   Face Landmarker; when it cannot load (offline, blocked CDN,
-   old browser) the same filters render at a fixed position so
-   the feature keeps working.
+   overlays on top of it — one overlay per person in frame. Face
+   positions come from MediaPipe's Face Landmarker; when it cannot
+   load (offline, blocked CDN, old browser) the same filters render
+   at a fixed position so the feature keeps working.
 
    Public API: window.SnapBoxFilters = { FILTERS, create }
    ============================================================ */
@@ -37,8 +37,11 @@
   ];
 
   const DETECT_INTERVAL_MS = 80;  // landmark pass ~12x/s; smoothing keeps up
-  const FACE_GRACE_MS = 700;      // keep the last face briefly when detection blinks
+  const FACE_GRACE_MS = 700;      // keep a face briefly when detection blinks
   const SMOOTHING = 0.4;          // lower = smoother, higher = snappier
+  // Groups share one frame, so the landmarker tracks several faces and every
+  // face gets its own smoothing, skin sample and expression state.
+  const MAX_FACES = 4;
 
   // Art props, one transparent PNG per prop (cut from the downloaded sheets).
   // A filter places a prop on the matching landmark instead of pasting a whole
@@ -147,19 +150,16 @@
     sampleCanvas.height = 6;
     const sampleCtx = sampleCanvas.getContext('2d', { willReadFrequently: true });
     const DEFAULT_SKIN = { r: 232, g: 185, b: 143 };
-    let skinTone = null;
-    let skinToneAt = 0;
+    const fallbackSkin = { tone: null, at: 0 };
     let activeFilter = 'none';
     let landmarker = null;
     let trackerState = 'idle'; // idle | loading | ready | unavailable
     let rafId = 0;
     let lastDetectAt = 0;
     let lastVideoTime = -1;
-    let lastFaceAt = 0;
-    let trackedFace = null;
-    let face = null;
-    let trackedExpression = { ...ZERO_EXPR };
-    let expression = { ...ZERO_EXPR };
+    // One track per person in frame: the last detected box, the smoothed box the
+    // overlay follows, the expression weights and this face's own skin sample.
+    let tracks = [];
     let drawWarningShown = false;
 
     // ---------- geometry ----------
@@ -215,10 +215,11 @@
     // (unmirrored) space, so they can be used directly on the video. Patches
     // that are clearly not skin (hair, background, blown highlights) are
     // skipped. Re-sampled a few times per second.
-    function sampleSkinTone(box, now) {
-      if (skinTone && now - skinToneAt < 400) return skinTone;
-      skinToneAt = now;
-      if (!sampleCtx || !video.videoWidth || !video.videoHeight) return skinTone || DEFAULT_SKIN;
+    function sampleSkinTone(box, now, skin) {
+      const cache = skin || fallbackSkin;
+      if (cache.tone && now - cache.at < 400) return cache.tone;
+      cache.at = now;
+      if (!sampleCtx || !video.videoWidth || !video.videoHeight) return cache.tone || DEFAULT_SKIN;
 
       const faceH = Math.abs(box.bottom - box.top) || 0.3;
       const forehead = {
@@ -260,8 +261,8 @@
         }
       }
 
-      if (hits) skinTone = { r: r / hits, g: g / hits, b: b / hits };
-      return skinTone || DEFAULT_SKIN;
+      if (hits) cache.tone = { r: r / hits, g: g / hits, b: b / hits };
+      return cache.tone || DEFAULT_SKIN;
     }
 
     function frameFromLandmarks(points) {
@@ -405,14 +406,64 @@
       };
     }
 
+    function trackCenter(box) {
+      return { x: (box.left + box.right) / 2, y: (box.top + box.bottom) / 2 };
+    }
+
+    function newTrack(box, expr, now) {
+      return {
+        tracked: box,
+        trackedExpr: expr,
+        face: box,
+        expr: { ...expr },
+        lastSeen: now,
+        skin: { tone: null, at: 0 }
+      };
+    }
+
+    // Detection returns unordered faces, so each one is handed to the track whose
+    // last centre is closest. Without this the smoothed boxes would swap owners
+    // between frames and the overlays would slide between people.
+    function claimTrack(box) {
+      const center = trackCenter(box);
+      const width = Math.abs(box.right - box.left);
+      const gate = Math.max(0.1, Math.min(0.3, width * 0.9));
+      let best = null;
+      let bestDist = Infinity;
+      for (const track of tracks) {
+        if (track.claimed) continue;
+        const prev = trackCenter(track.tracked);
+        const dist = Math.hypot(prev.x - center.x, prev.y - center.y);
+        if (dist < bestDist && dist <= gate) {
+          best = track;
+          bestDist = dist;
+        }
+      }
+      if (best) best.claimed = true;
+      return best;
+    }
+
     // Points and expression weights are interpolated every frame, so easing
-    // between detections keeps the overlay glued to the face instead of stepping.
-    function resolveFace(rect, surfaceW, surfaceH, now) {
-      const hasRecentFace = trackedFace && now - lastFaceAt < FACE_GRACE_MS;
-      const target = hasRecentFace ? trackedFace : fallbackFrame(rect, surfaceW, surfaceH);
-      face = face ? smooth(face, target) : target;
-      expression = smoothExpression(expression, hasRecentFace ? trackedExpression : ZERO_EXPR);
-      return face;
+    // between detections keeps the overlay glued to each face instead of
+    // stepping. Everyone in frame is resolved together; only when nobody is
+    // detected does the fixed fallback face come back.
+    function resolveFaces(rect, surfaceW, surfaceH, now) {
+      tracks = tracks.filter((track) => now - track.lastSeen < FACE_GRACE_MS);
+      // A face that cannot be matched to a track starts a new one while the old
+      // one is still in its grace window; keep only the freshest few so a crowded
+      // frame cannot pile up overlays.
+      if (tracks.length > MAX_FACES) {
+        tracks.sort((a, b) => b.lastSeen - a.lastSeen);
+        tracks.length = MAX_FACES;
+      }
+      if (!tracks.length) {
+        return [{ box: fallbackFrame(rect, surfaceW, surfaceH), expr: ZERO_EXPR, skin: fallbackSkin }];
+      }
+      return tracks.map((track) => {
+        track.face = smooth(track.face, track.tracked);
+        track.expr = smoothExpression(track.expr, track.trackedExpr);
+        return { box: track.face, expr: track.expr, skin: track.skin };
+      });
     }
 
     // ---------- drawing primitives ----------
@@ -566,9 +617,9 @@
 
     // Flattens the face into the guest's own skin tone, following the face
     // contour. Returns the outline so warps can be clipped to it.
-    function paintFace(target, rect, box, faceW, faceH, now) {
+    function paintFace(target, rect, box, faceW, faceH, now, skin) {
       const outline = faceOutline(rect, box);
-      const tone = sampleSkinTone(box, now);
+      const tone = sampleSkinTone(box, now, skin);
       let top = Infinity;
       let bottom = -Infinity;
       for (const p of outline) {
@@ -603,8 +654,8 @@
 
     // "Annoying orange", but in the guest's own skin: the face is flattened to
     // its own colour and only the real eyes and mouth are magnified on it.
-    function drawBigEyes(target, rect, box, expr, faceW, faceH, now) {
-      const outline = paintFace(target, rect, box, faceW, faceH, now);
+    function drawBigEyes(target, rect, box, expr, faceW, faceH, now, skin) {
+      const outline = paintFace(target, rect, box, faceW, faceH, now, skin);
 
       // Everything below is clipped to the face, so no warp can spill past the
       // head.
@@ -1108,7 +1159,7 @@
       drawIlluminati(target, top.x, top.y - faceH * 0.3, faceW * 0.2, Math.sin(t * 0.8) * 0.5);
     }
 
-    function drawFilter(target, rect, box, id, expr, now) {
+    function drawFilter(target, rect, box, id, expr, now, skin) {
       if (id === 'none') return undefined;
       const faceW = Math.max(1, Math.abs(box.right - box.left) * rect.w);
       const faceH = Math.max(1, Math.abs(box.bottom - box.top) * rect.h);
@@ -1119,7 +1170,7 @@
       if (id === 'boss') return drawBoss(target, rect, box, faceW, faceH);
       if (id === 'bling') return drawBling(target, rect, box, faceW, faceH);
       if (id === 'joint') return drawJointFuel(target, rect, box, faceW, faceH);
-      if (id === 'big') return drawBigEyes(target, rect, box, faceExpr, faceW, faceH, now);
+      if (id === 'big') return drawBigEyes(target, rect, box, faceExpr, faceW, faceH, now, skin);
       if (id === 'cheeky') return drawCheeky(target, rect, box, faceExpr, faceW, faceH);
       if (id === 'unibrow') return drawUnibrow(target, rect, box, faceW, faceH);
       if (id === 'squish') return drawSquish(target, rect, box, faceW, faceH);
@@ -1141,7 +1192,7 @@
         const build = (delegate) => vision.FaceLandmarker.createFromOptions(fileset, {
           baseOptions: { modelAssetPath: MODEL_URL, delegate },
           runningMode: 'VIDEO',
-          numFaces: 1,
+          numFaces: MAX_FACES,
           outputFaceBlendshapes: true
         });
         try {
@@ -1164,14 +1215,25 @@
       lastVideoTime = video.currentTime;
       try {
         const result = landmarker.detectForVideo(video, now);
-        const points = result && result.faceLandmarks && result.faceLandmarks[0];
-        if (points && points.length) {
-          trackedFace = frameFromLandmarks(points);
-          const blendshapes = result.faceBlendshapes && result.faceBlendshapes[0]
-            ? result.faceBlendshapes[0].categories
-            : null;
-          trackedExpression = readExpression(blendshapes, trackedFace);
-          lastFaceAt = now;
+        const shapes = (result && result.faceLandmarks) || [];
+        const blendshapes = (result && result.faceBlendshapes) || [];
+        // Every face in the frame is matched to a track or starts a new one, so
+        // nobody is left without an overlay.
+        for (const track of tracks) track.claimed = false;
+        const count = Math.min(shapes.length, MAX_FACES);
+        for (let i = 0; i < count; i++) {
+          const points = shapes[i];
+          if (!points || !points.length) continue;
+          const box = frameFromLandmarks(points);
+          const expr = readExpression(blendshapes[i] ? blendshapes[i].categories : null, box);
+          const track = claimTrack(box);
+          if (track) {
+            track.tracked = box;
+            track.trackedExpr = expr;
+            track.lastSeen = now;
+          } else {
+            tracks.push(newTrack(box, expr, now));
+          }
         }
       } catch (err) {
         if (!drawWarningShown) {
@@ -1199,14 +1261,18 @@
 
       // With no filter selected there is nothing to track, so skip detection
       // entirely and keep the preview as cheap as a plain video element.
-      let box = null;
+      let faces = null;
       if (activeFilter !== 'none') {
         detect(now);
-        box = resolveFace(rect, surfaceW, surfaceH, now);
+        faces = resolveFaces(rect, surfaceW, surfaceH, now);
       }
 
       drawMirroredVideo(target, rect);
-      if (box) drawFilter(target, rect, box, activeFilter, expression, now);
+      if (faces) {
+        for (const entry of faces) {
+          drawFilter(target, rect, entry.box, activeFilter, entry.expr, now, entry.skin);
+        }
+      }
     }
 
     function draw() {
@@ -1247,11 +1313,15 @@
       drawMirroredVideo(target, rect);
 
       if (activeFilter !== 'none') {
-        // Reuse the face the preview is tracking, but never blend a preview-
-        // relative fallback into the sensor-sized frame.
-        const trackedRecently = trackedFace && now - lastFaceAt < FACE_GRACE_MS * 2;
-        const box = trackedRecently && face ? face : fallbackFrame(rect, width, height);
-        drawFilter(target, rect, box, activeFilter, trackedRecently ? expression : ZERO_EXPR, now);
+        // Reuse the faces the preview is tracking; their coordinates are
+        // normalized, so they land on the same heads at sensor resolution.
+        const live = tracks.filter((track) => now - track.lastSeen < FACE_GRACE_MS * 2);
+        if (!live.length) {
+          drawFilter(target, rect, fallbackFrame(rect, width, height), activeFilter, ZERO_EXPR, now, fallbackSkin);
+        }
+        for (const track of live) {
+          drawFilter(target, rect, track.face, activeFilter, track.expr, now, track.skin);
+        }
       }
 
       target.restore();

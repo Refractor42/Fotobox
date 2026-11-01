@@ -6,6 +6,16 @@
   <title>SnapBox — Minimalist Photobox</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="kiosk.css" />
+  <!-- Gespeicherten Farbmodus (Barrierefreiheit) vor dem ersten Paint setzen,
+       damit der Kiosk nicht kurz im Standard-Gold aufblitzt. -->
+  <script>
+    (function () {
+      try {
+        var scheme = localStorage.getItem('snapbox_color_scheme');
+        if (scheme && scheme !== 'standard') document.documentElement.setAttribute('data-cvd', scheme);
+      } catch (e) {}
+    })();
+  </script>
 </head>
 <body>
   <!-- Landing / Idle: Foto-Kette, Swipe-up und Monats-Challenge -->
@@ -52,6 +62,14 @@
         <path class="sound-on" d="M18.5 5.5a9 9 0 0 1 0 13"></path>
         <line class="sound-off" x1="16" y1="9" x2="22" y2="15"></line>
         <line class="sound-off" x1="22" y1="9" x2="16" y2="15"></line>
+      </svg>
+    </button>
+
+    <!-- Einstellungen (Farbmodus für Farbsehschwächen): Zahnrad oben rechts -->
+    <button class="splash__settings" id="splashSettings" type="button" aria-haspopup="dialog" aria-label="Einstellungen öffnen" data-i18n-aria="settingsOpenAria">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="3.1"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
       </svg>
     </button>
   </section>
@@ -455,6 +473,39 @@
       <div class="modal__actions">
         <button class="btn btn--ghost" id="confirmCancel" type="button" data-i18n="confirmCancel">Abbrechen</button>
         <button class="btn btn--danger" id="confirmOk" type="button" data-i18n="confirmOk">Endgültig löschen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Einstellungen: Farbmodus für Farbsehschwächen. Die Wahl wirkt sofort
+       auf das ganze UI und bleibt im Gerät gespeichert (auch nach der Sitzung). -->
+  <div class="settings-modal" id="settingsModal" hidden>
+    <div class="settings-modal__card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-describedby="settingsHint">
+      <button class="settings-modal__close" id="settingsClose" type="button" aria-label="Einstellungen schließen" data-i18n-aria="settingsCloseAria">×</button>
+      <h3 class="settings-modal__title" id="settingsTitle" data-i18n="settingsTitle">Einstellungen</h3>
+      <p class="settings-modal__hint" id="settingsHint" data-i18n="cvdHint">Farbmodus für Farbsehschwächen — die Wahl gilt sofort und bleibt gespeichert.</p>
+      <p class="settings-modal__label" id="cvdLabel" data-i18n="cvdGroupLabel">Farbmodus</p>
+      <div class="cvd-options" id="cvdOptions" role="radiogroup" aria-labelledby="cvdLabel">
+        <button class="cvd-option" type="button" role="radio" aria-checked="true" tabindex="0" data-cvd="standard">
+          <span class="cvd-option__name" data-i18n="cvdStandard">Standard</span>
+          <span class="cvd-option__note" data-i18n="cvdStandardNote">Kräftiger Gold-Akzent</span>
+        </button>
+        <button class="cvd-option" type="button" role="radio" aria-checked="false" tabindex="-1" data-cvd="protan">
+          <span class="cvd-option__name" data-i18n="cvdProtan">Protanopie</span>
+          <span class="cvd-option__note" data-i18n="cvdProtanNote">Rotsehschwäche — Blau statt Rot/Grün</span>
+        </button>
+        <button class="cvd-option" type="button" role="radio" aria-checked="false" tabindex="-1" data-cvd="deuter">
+          <span class="cvd-option__name" data-i18n="cvdDeuter">Deuteranopie</span>
+          <span class="cvd-option__note" data-i18n="cvdDeuterNote">Grünsehschwäche — Blau statt Rot/Grün</span>
+        </button>
+        <button class="cvd-option" type="button" role="radio" aria-checked="false" tabindex="-1" data-cvd="tritan">
+          <span class="cvd-option__name" data-i18n="cvdTritan">Tritanopie</span>
+          <span class="cvd-option__note" data-i18n="cvdTritanNote">Blausehschwäche — Magenta statt Blau/Gelb</span>
+        </button>
+        <button class="cvd-option" type="button" role="radio" aria-checked="false" tabindex="-1" data-cvd="mono">
+          <span class="cvd-option__name" data-i18n="cvdMono">Monochrom</span>
+          <span class="cvd-option__note" data-i18n="cvdMonoNote">Achromatopsie — nur Helligkeit</span>
+        </button>
       </div>
     </div>
   </div>

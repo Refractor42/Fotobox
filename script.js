@@ -207,6 +207,21 @@ const I18N = {
     langGroupAria: 'Sprache wählen',
     soundOn: 'Ton ausschalten',
     soundOff: 'Ton einschalten',
+    settingsTitle: 'Einstellungen',
+    settingsOpenAria: 'Einstellungen öffnen',
+    settingsCloseAria: 'Einstellungen schließen',
+    cvdHint: 'Farbmodus für Farbsehschwächen — die Wahl gilt sofort und bleibt gespeichert.',
+    cvdGroupLabel: 'Farbmodus',
+    cvdStandard: 'Standard',
+    cvdStandardNote: 'Kräftiger Gold-Akzent',
+    cvdProtan: 'Protanopie',
+    cvdProtanNote: 'Rotsehschwäche — Blau statt Rot/Grün',
+    cvdDeuter: 'Deuteranopie',
+    cvdDeuterNote: 'Grünsehschwäche — Blau statt Rot/Grün',
+    cvdTritan: 'Tritanopie',
+    cvdTritanNote: 'Blausehschwäche — Magenta statt Blau/Gelb',
+    cvdMono: 'Monochrom',
+    cvdMonoNote: 'Achromatopsie — nur Helligkeit',
     streakAriaOne: 'Foto-Streak: 1 Tag, {s}',
     streakAriaMany: 'Foto-Streak: {n} Tage, {s}',
     streakTaken: 'Foto heute gemacht',
@@ -375,6 +390,21 @@ const I18N = {
     langGroupAria: 'Choose language',
     soundOn: 'Mute sound',
     soundOff: 'Turn sound on',
+    settingsTitle: 'Settings',
+    settingsOpenAria: 'Open settings',
+    settingsCloseAria: 'Close settings',
+    cvdHint: 'Colour mode for colour vision deficiency — applied immediately and remembered.',
+    cvdGroupLabel: 'Colour mode',
+    cvdStandard: 'Default',
+    cvdStandardNote: 'Strong gold accent',
+    cvdProtan: 'Protanopia',
+    cvdProtanNote: 'Red-weak — blue instead of red/green',
+    cvdDeuter: 'Deuteranopia',
+    cvdDeuterNote: 'Green-weak — blue instead of red/green',
+    cvdTritan: 'Tritanopia',
+    cvdTritanNote: 'Blue-weak — magenta instead of blue/yellow',
+    cvdMono: 'Monochrome',
+    cvdMonoNote: 'Achromatopsia — luminance only',
     streakAriaOne: 'Photo streak: 1 day, {s}',
     streakAriaMany: 'Photo streak: {n} days, {s}',
     streakTaken: 'photo taken today',
@@ -455,6 +485,98 @@ document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
   btn.addEventListener('click', () => applyLanguage(btn.dataset.lang));
 });
 
+
+// ============================================================
+//  FARBMODUS FÜR FARBSEHSCHWÄCHEN (CVD)
+//  Barrierefreiheit: Das Zahnrad im Startbildschirm öffnet die
+//  Einstellungen. Die Wahl setzt data-cvd auf <html> — die Schemata in
+//  style.css überschreiben damit die Farb-Tokens des ganzen UI — und
+//  bleibt im Gerät gespeichert, also auch nach dem Sitzungswechsel.
+// ============================================================
+const CVD_STORAGE_KEY = 'snapbox_color_scheme';
+const CVD_SCHEMES = ['standard', 'protan', 'deuter', 'tritan', 'mono'];
+let colorScheme = 'standard';
+try {
+  const savedScheme = localStorage.getItem(CVD_STORAGE_KEY);
+  if (CVD_SCHEMES.includes(savedScheme)) colorScheme = savedScheme;
+} catch (e) {}
+
+function applyColorScheme(scheme, persist = false) {
+  colorScheme = CVD_SCHEMES.includes(scheme) ? scheme : 'standard';
+  if (colorScheme === 'standard') document.documentElement.removeAttribute('data-cvd');
+  else document.documentElement.setAttribute('data-cvd', colorScheme);
+
+  document.querySelectorAll('#cvdOptions [data-cvd]').forEach((option) => {
+    const active = option.dataset.cvd === colorScheme;
+    option.setAttribute('aria-checked', String(active));
+    option.tabIndex = active ? 0 : -1;
+  });
+
+  if (persist) {
+    try { localStorage.setItem(CVD_STORAGE_KEY, colorScheme); } catch (err) {}
+  }
+  return colorScheme;
+}
+applyColorScheme(colorScheme);
+
+const $settingsModal = document.getElementById('settingsModal');
+const $settingsClose = document.getElementById('settingsClose');
+const $splashSettings = document.getElementById('splashSettings');
+const $cvdOptions = document.getElementById('cvdOptions');
+let settingsReturnFocus = null;
+
+function openSettings() {
+  if (!$settingsModal || !$settingsModal.hidden) return;
+  settingsReturnFocus = document.activeElement;
+  $settingsModal.hidden = false;
+  // Fokus in den Dialog: die aktuelle Auswahl, sonst der Schließen-Knopf.
+  const current = $cvdOptions && $cvdOptions.querySelector('[data-cvd][aria-checked="true"]');
+  if (current) current.focus();
+  else if ($settingsClose) $settingsClose.focus();
+  gsap.from($settingsModal.querySelector('.settings-modal__card'), {
+    y: 24, opacity: 0, scale: 0.96, duration: 0.3, ease: 'power2.out', clearProps: 'all'
+  });
+}
+
+function closeSettings() {
+  if (!$settingsModal || $settingsModal.hidden) return;
+  $settingsModal.hidden = true;
+  // Fokus zurück aufs Zahnrad, damit Tastatur und Screenreader den Ort behalten.
+  if (settingsReturnFocus && settingsReturnFocus.isConnected) settingsReturnFocus.focus();
+  settingsReturnFocus = null;
+}
+
+if ($splashSettings) $splashSettings.addEventListener('click', openSettings);
+if ($settingsClose) $settingsClose.addEventListener('click', closeSettings);
+if ($settingsModal) {
+  $settingsModal.addEventListener('click', (e) => { if (e.target === $settingsModal) closeSettings(); });
+}
+
+if ($cvdOptions) {
+  $cvdOptions.addEventListener('click', (e) => {
+    const option = e.target.closest('[data-cvd]');
+    if (!option) return;
+    applyColorScheme(option.dataset.cvd, true);
+    option.focus();
+  });
+
+  // Radiogroup-Tastatur: Pfeiltasten wandern durch die Auswahl und wählen sie.
+  $cvdOptions.addEventListener('keydown', (e) => {
+    if (!['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End'].includes(e.key)) return;
+    const options = Array.from($cvdOptions.querySelectorAll('[data-cvd]'));
+    if (!options.length) return;
+    e.preventDefault();
+    const index = options.indexOf(document.activeElement);
+    const current = index < 0 ? 0 : index;
+    let next = current;
+    if (e.key === 'Home') next = 0;
+    else if (e.key === 'End') next = options.length - 1;
+    else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') next = (current + 1) % options.length;
+    else next = (current - 1 + options.length) % options.length;
+    applyColorScheme(options[next].dataset.cvd, true);
+    options[next].focus();
+  });
+}
 
 // ============================================================
 //  ORIENTATION SYNC (Hochformat / Querformat — Admin Panel)
@@ -3920,6 +4042,12 @@ window.addEventListener('load', () => {
   // keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     const target = e.target;
+    // Einstellungen offen: nur der Dialog selbst reagiert, damit Leertaste
+    // und Enter nicht dahinter die Sitzung starten (Tastaturbedienbarkeit).
+    if ($settingsModal && !$settingsModal.hidden) {
+      if (e.key === 'Escape') { e.preventDefault(); closeSettings(); }
+      return;
+    }
     if (target && target.closest && target.closest('input, textarea, select, [contenteditable="true"]')) return;
     const onButton = !!(target && target.closest && target.closest('button, [role="button"]'));
 
