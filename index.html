@@ -367,13 +367,13 @@
             <span class="endscreen__label" data-i18n="endPrint">Drucken</span>
           </button>
         </div>
-        <button class="endscreen__done" id="endDone" type="button" data-i18n="btnDone">Fertig</button>
       </div>
     </div>
   </section>
 
-  <!-- Globaler Start-Button: auf jedem Screen außer dem Startbildschirm
-       an derselben Stelle unten rechts. Der Ring kommt aus dem CSS. -->
+  <!-- Globaler Start-/Exit-Button: auf jedem Screen außer dem Startbildschirm
+       an derselben Stelle unten rechts. Auf dem Endscreen wird er zur
+       Abschlussaktion „Fertig“, während der Aufnahme zu „Abbrechen“. -->
   <button class="cancel-home" id="cancelHome" type="button" aria-label="Zum Startbildschirm" data-i18n-aria="startHomeAria" hidden>
     <span class="cancel-home__disc" aria-hidden="true">
       <svg class="cancel-home__icon cancel-home__icon--home" viewBox="0 0 24 24" focusable="false">
@@ -381,6 +381,9 @@
       </svg>
       <svg class="cancel-home__icon cancel-home__icon--cancel" viewBox="0 0 24 24" focusable="false">
         <path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"></path>
+      </svg>
+      <svg class="cancel-home__icon cancel-home__icon--done" viewBox="0 0 24 24" focusable="false">
+        <path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M4 12.5l5 5L20 6.5"></path>
       </svg>
     </span>
     <span class="cancel-home__label" data-i18n="startHomeLabel">Start</span>

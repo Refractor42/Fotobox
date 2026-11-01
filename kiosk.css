@@ -430,14 +430,23 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
   color: #e8eaf0;
   pointer-events: none;
 }
-.cancel-home__icon--cancel { display: none; }
+.cancel-home__icon--cancel,
+.cancel-home__icon--done { display: none; }
 .cancel-home.is-cancelling .cancel-home__icon--home { display: none; }
 .cancel-home.is-cancelling .cancel-home__icon--cancel { display: block; }
+.cancel-home.is-done .cancel-home__icon--home { display: none; }
+.cancel-home.is-done .cancel-home__icon--done { display: block; }
 .cancel-home.is-cancelling .cancel-home__disc {
   border-color: #ef4444;
   color: #ef4444;
 }
 .cancel-home.is-cancelling .cancel-home__label { color: #fca5a5; }
+.cancel-home.is-done .cancel-home__disc {
+  border-color: #22c55e;
+  color: #06230f;
+  background: #22c55e;
+}
+.cancel-home.is-done .cancel-home__label { color: #86efac; }
 .cancel-home__label {
   font-size: var(--action-label-size);
   line-height: var(--action-label-line);
@@ -449,6 +458,7 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
   background: rgba(255, 255, 255, 0.08);
   transform: scale(1.06);
 }
+.cancel-home.is-done:hover .cancel-home__disc { background: #16a34a; }
 .cancel-home:active .cancel-home__disc { transform: scale(0.95); }
 .cancel-home:focus-visible { outline: none; }
 .cancel-home:focus-visible .cancel-home__disc {
@@ -738,24 +748,6 @@ body.orientation-landscape .endscreen {
 .endscreen__action:active .endscreen__icon { transform: scale(0.95); }
 .endscreen__action:focus-visible { outline: none; }
 .endscreen__action:focus-visible .endscreen__icon { box-shadow: 0 0 0 5px rgba(250, 204, 21, 0.6); }
-.endscreen__done {
-  position: absolute;
-  /* Platz für den großen Home-Button in der Ecke rechts unten. */
-  right: clamp(112px, 9vw, 140px);
-  bottom: clamp(18px, 2.4vh, 34px);
-  padding: 10px 24px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  background: transparent;
-  color: #fff;
-  font: inherit;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.2s ease;
-}
-.endscreen__done:hover { background: rgba(255, 255, 255, 0.1); }
-
 /* Schmale Querformat-Displays (Tablets) */
 @media (max-width: 1100px) and (orientation: landscape) {
   :root {

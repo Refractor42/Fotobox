@@ -74,6 +74,7 @@ const I18N = {
     modeStrip: 'Fotostreifen',
     startHomeAria: 'Zum Startbildschirm',
     startHomeLabel: 'Start',
+    endHomeAria: 'Fertig — zurück zum Startbildschirm',
     captureCancel: 'Abbrechen',
     captureCancelAria: 'Aufnahme abbrechen',
     acceptAria: 'Foto annehmen',
@@ -233,6 +234,7 @@ const I18N = {
     modeStrip: 'Photo strip',
     startHomeAria: 'Home — go to start screen',
     startHomeLabel: 'Home',
+    endHomeAria: 'Done — go to start screen',
     captureCancel: 'Cancel',
     captureCancelAria: 'Cancel capture',
     acceptAria: 'Accept photo',
@@ -923,20 +925,28 @@ function syncCancelHome() {
   $cancelHome.hidden = currentState === 'splash';
 }
 
-// Während der Aufnahme wird der globale Start-Button zum klaren Ausweg:
-// Er bricht den Countdown bzw. die Verarbeitung ab, ohne ein Foto zu speichern.
-function setHomeCancelMode(active) {
+// Derselbe Button hat drei Zustände: normal „Start“, während der Aufnahme
+// „Abbrechen“ und auf dem Endscreen „Fertig“. Position und Größe bleiben
+// dabei unverändert; nur Icon, Label, ARIA und Farbe wechseln.
+function setHomeMode(mode = 'default') {
   if (!$cancelHome) return;
-  $cancelHome.classList.toggle('is-cancelling', active);
+  const cancelling = mode === 'cancel';
+  const done = mode === 'done';
+  $cancelHome.classList.toggle('is-cancelling', cancelling);
+  $cancelHome.classList.toggle('is-done', done);
   const label = $cancelHome.querySelector('.cancel-home__label');
-  const labelKey = active ? 'captureCancel' : 'startHomeLabel';
-  const ariaKey = active ? 'captureCancelAria' : 'startHomeAria';
+  const labelKey = done ? 'btnDone' : cancelling ? 'captureCancel' : 'startHomeLabel';
+  const ariaKey = done ? 'endHomeAria' : cancelling ? 'captureCancelAria' : 'startHomeAria';
   if (label) {
     label.dataset.i18n = labelKey;
     label.textContent = t(labelKey);
   }
   $cancelHome.dataset.i18nAria = ariaKey;
   $cancelHome.setAttribute('aria-label', t(ariaKey));
+}
+
+function setHomeCancelMode(active) {
+  setHomeMode(active ? 'cancel' : 'default');
 }
 
 function cancelCapture() {
@@ -3399,15 +3409,16 @@ function showEndScreen(url) {
   if ($endScreen) $endScreen.hidden = false;
   $camera.classList.add('is-ended');
   $camera.classList.remove('is-reviewing', 'is-stamping');
+  setHomeMode('done');
   syncCancelHome();
-  const done = document.getElementById('endDone');
-  if (done) done.focus();
+  if ($cancelHome) $cancelHome.focus({ preventScroll: true });
 }
 
 function returnToIdle() {
   resetGuestCaptureSettings();
   if ($endScreen) $endScreen.hidden = true;
   $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping');
+  setHomeMode('default');
   clearStickers();
   currentOverlay = null;
   lastStripLayout = null;
@@ -3477,9 +3488,6 @@ document.querySelectorAll('.endscreen__action').forEach((btn) => {
     }
   });
 });
-const $endDone = document.getElementById('endDone');
-if ($endDone) $endDone.addEventListener('click', returnToIdle);
-
 if ($cancelHome) {
   $cancelHome.addEventListener('click', async () => {
     if (isCapturing) {
