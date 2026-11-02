@@ -250,12 +250,13 @@ section.active { display: block; opacity: 1; }
   70%, 100% { box-shadow: 0 0 0 18px rgb(var(--c-accent-rgb) / 0); }
 }
 
-/* Galerie: reiner runder Icon-Button in der unteren Utility-Reihe, links
-   neben dem Sprachumschalter. Kein Text und kein Zähler — die Form ordnet
-   ihn sichtbar den übrigen Randbuttons zu, das Icon bleibt die Beschriftung. */
+/* Galerie: reiner runder Icon-Button in der unteren Utility-Reihe. Im
+   Querformat sitzt er rechts neben dem Ton-Button, im Hochformat unten
+   links. Kein Text und kein Zähler — das Icon bleibt die Beschriftung. */
 .splash__gallery {
   position: fixed;
-  right: calc(20px + 200px + 14px);
+  left: 20px;
+  right: auto;
   bottom: 20px;
   z-index: 6;
   display: flex;
@@ -288,7 +289,7 @@ section.active { display: block; opacity: 1; }
 }
 @media (max-width: 420px) {
   .splash__gallery {
-    right: calc(20px + 160px + 12px);
+    left: 20px;
     width: 68px;
     height: 68px;
   }

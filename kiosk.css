@@ -35,11 +35,12 @@ body.orientation-landscape .splash__content--kiosk {
   z-index: 4;
 }
 
-/* Die Galerie sitzt auf dem Kiosk in derselben unteren Reihe wie Ton und
-   Sprache: links neben dem Sprachumschalter, 96 px groß wie der Ton-Button.
-   Das Icon ist bewusst größer als die Beschriftungen der Nachbarn. */
+/* Die Galerie sitzt auf dem Kiosk in derselben unteren Reihe wie der Ton:
+   direkt rechts daneben, 96 px groß. Das Icon ist bewusst größer als die
+   Beschriftungen der Nachbarn. */
 body.orientation-landscape .splash__gallery {
-  right: calc(20px + 200px + 18px);
+  left: calc(clamp(24px, 3vw, 52px) + 96px + 18px);
+  right: auto;
   bottom: clamp(20px, 3vh, 44px);
   width: 96px;
   height: 96px;
