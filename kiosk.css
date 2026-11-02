@@ -1101,7 +1101,7 @@ body.orientation-landscape .endscreen {
 .seg.is-locked .seg__btn,
 .kiosk-shutter:disabled { cursor: default; }
 
-/* Fortschritt beim Fotostreifen */
+/* Fortschritt bei der Fotocollage */
 .strip-progress {
   position: absolute;
   top: 16px;

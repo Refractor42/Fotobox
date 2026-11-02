@@ -78,7 +78,7 @@ const I18N = {
     captionMode: 'MODUS',
     modeGroupAria: 'Aufnahmemodus',
     modeSingle: 'Einzelfoto',
-    modeStrip: 'Fotostreifen',
+    modeStrip: 'Fotocollage',
     startHomeAria: 'Zum Startbildschirm',
     startHomeLabel: 'Start',
     endHomeAria: 'Fertig — zurück zum Startbildschirm',
@@ -281,7 +281,7 @@ const I18N = {
     captionMode: 'MODE',
     modeGroupAria: 'Capture mode',
     modeSingle: 'Single photo',
-    modeStrip: 'Photo strip',
+    modeStrip: 'Photo collage',
     startHomeAria: 'Home — go to start screen',
     startHomeLabel: 'Home',
     endHomeAria: 'Done — go to start screen',
@@ -1291,7 +1291,7 @@ document.addEventListener('click', (e) => {
   applyTimerSelection();
 });
 
-// Aufnahmemodus: Einzelfoto oder vierteiliger Fotostreifen.
+// Aufnahmemodus: Einzelfoto oder vierteilige Fotocollage (2×2).
 const storedCaptureMode = localStorage.getItem('snapbox_capture_mode');
 let captureMode = storedCaptureMode === 'strip' || storedCaptureMode === 'single'
   ? storedCaptureMode
@@ -2294,15 +2294,17 @@ async function renderEditedPhoto(photoEl) {
     }
   }
 
-  // Bild-Overlay wie in der Vorschau einbrennen: beim Fotostreifen je
-  // Einzelbild, beim Einzelfoto über die volle Fotofläche.
+  // Bild-Overlay wie in der Vorschau einbrennen: bei der Fotocollage je
+  // Kachel, beim Einzelfoto über die volle Fotofläche.
   if (currentOverlay && currentOverlay.src) {
     try {
       const overlayImg = await loadImg(currentOverlay.src);
       if (photoEl.classList.contains('stage-photo--strip') && lastStripLayout) {
-        const { w, h, pad, gap, count } = lastStripLayout;
+        const { w, h, pad, gap, count, cols = 2 } = lastStripLayout;
         for (let i = 0; i < count; i++) {
-          ctx.drawImage(overlayImg, pad, pad + i * (h + gap), w, h);
+          const x = pad + (i % cols) * (w + gap);
+          const y = pad + Math.floor(i / cols) * (h + gap);
+          ctx.drawImage(overlayImg, x, y, w, h);
         }
       } else {
         ctx.drawImage(overlayImg, 0, 0, base.naturalWidth, base.naturalHeight);
@@ -2518,18 +2520,22 @@ async function composeStrip(frames) {
   const images = await Promise.all(frames.map(loadImg));
   const w = images[0].naturalWidth || 1280;
   const h = images[0].naturalHeight || 960;
+  const cols = 2;
+  const rows = Math.ceil(images.length / cols);
   const pad = Math.round(w * 0.035);
   const gap = Math.round(w * 0.018);
   const footer = Math.round(w * 0.075);
-  lastStripLayout = { w, h, pad, gap, footer, count: images.length };
+  lastStripLayout = { w, h, pad, gap, footer, count: images.length, cols, rows };
   const canvas = document.createElement('canvas');
-  canvas.width = w + pad * 2;
-  canvas.height = pad * 2 + h * images.length + gap * (images.length - 1) + footer;
+  canvas.width = pad * 2 + w * cols + gap * (cols - 1);
+  canvas.height = pad * 2 + h * rows + gap * (rows - 1) + footer;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   images.forEach((img, i) => {
-    ctx.drawImage(img, pad, pad + i * (h + gap), w, h);
+    const x = pad + (i % cols) * (w + gap);
+    const y = pad + Math.floor(i / cols) * (h + gap);
+    ctx.drawImage(img, x, y, w, h);
   });
   ctx.fillStyle = '#111111';
   ctx.font = '700 ' + Math.round(footer * 0.5) + "px 'SF Pro Display', -apple-system, sans-serif";
@@ -2617,8 +2623,8 @@ async function showCaptureResult(photoUrl, runId = captureRunId) {
 
   const img = document.createElement('img');
   img.className = 'stage-photo';
-  // Ein Fotostreifen ist hochkant und würde mit "cover" beschnitten —
-  // deshalb wird er vollständig (contain) gezeigt.
+  // Die Fotocollage würde mit "cover" beschnitten — deshalb wird sie
+  // vollständig (contain) gezeigt.
   const fit = captureMode === 'strip' ? 'contain' : 'cover';
   if (captureMode === 'strip') img.classList.add('stage-photo--strip');
   img.src = photoUrl;
@@ -3907,8 +3913,8 @@ if ($sideMenuToggle) {
 
 let sideContext = 'filter';
 let currentOverlay = null;
-// Bildpixel-Layout des zuletzt erzeugten Fotostreifens, damit das Overlay in
-// der Vorschau und im gespeicherten Foto je Einzelbild sitzt.
+// Bildpixel-Layout der zuletzt erzeugten Fotocollage, damit das Overlay in
+// der Vorschau und im gespeicherten Foto je Kachel sitzt.
 let lastStripLayout = null;
 let endPhotoUrl = null;
 
@@ -4418,16 +4424,17 @@ function renderOverlayPreview() {
     return;
   }
 
-  // Fotostreifen werden vollständig (contain) gezeigt. Das Overlay wird
-  // deshalb je Einzelbild platziert, nicht über den ganzen Streifen gezogen.
+  // Die Fotocollage wird vollständig (contain) gezeigt. Das Overlay wird
+  // deshalb je Kachel platziert, nicht über die ganze Collage gezogen.
   if (stage.classList.contains('stage-photo--strip') && lastStripLayout && stage.naturalWidth) {
     const vf = viewfinder.getBoundingClientRect();
     const scale = Math.min(vf.width / stage.naturalWidth, vf.height / stage.naturalHeight);
     const displayW = stage.naturalWidth * scale;
     const displayH = stage.naturalHeight * scale;
-    const { w, h, pad, gap, footer, count } = lastStripLayout;
-    const totalW = w + pad * 2;
-    const totalH = pad * 2 + h * count + gap * (count - 1) + footer;
+    const { w, h, pad, gap, footer, count, cols = 2 } = lastStripLayout;
+    const rows = Math.ceil(count / cols);
+    const totalW = pad * 2 + w * cols + gap * (cols - 1);
+    const totalH = pad * 2 + h * rows + gap * (rows - 1) + footer;
     const wrap = document.createElement('div');
     wrap.className = 'photo-overlay-strip';
     wrap.style.left = Math.round((vf.width - displayW) / 2) + 'px';
@@ -4438,8 +4445,8 @@ function renderOverlayPreview() {
       const img = document.createElement('img');
       img.src = currentOverlay.src;
       img.alt = '';
-      img.style.left = ((pad / totalW) * 100) + '%';
-      img.style.top = (((pad + i * (h + gap)) / totalH) * 100) + '%';
+      img.style.left = (((pad + (i % cols) * (w + gap)) / totalW) * 100) + '%';
+      img.style.top = (((pad + Math.floor(i / cols) * (h + gap)) / totalH) * 100) + '%';
       img.style.width = ((w / totalW) * 100) + '%';
       img.style.height = ((h / totalH) * 100) + '%';
       wrap.appendChild(img);
@@ -4771,7 +4778,7 @@ window.addEventListener('load', async () => {
     }
 
     // Viele Kiosk-Fernauslöser senden PageUp/PageDown statt Leertaste.
-    // PageUp ist Einzelfoto + Auslöser, PageDown Fotostreifen + Auslöser.
+    // PageUp ist Einzelfoto + Auslöser, PageDown Fotocollage + Auslöser.
     // Auf dem Startbildschirm starten sie die Sitzung direkt im passenden Modus.
     const pageShutter = e.key === 'PageUp' || e.key === 'PageDown';
     if (pageShutter) {
