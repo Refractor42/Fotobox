@@ -218,8 +218,11 @@ const I18N = {
     langGroupAria: 'Sprache wählen',
     soundOn: 'Ton ausschalten',
     soundOff: 'Ton einschalten',
+    soundLabel: 'Audio',
+    galleryLabel: 'Galerie',
+    settingsOpenLabel: 'Sehschwächen',
     settingsTitle: 'Einstellungen',
-    settingsOpenAria: 'Einstellungen öffnen',
+    settingsOpenAria: 'Sehschwächen-Einstellungen öffnen',
     settingsCloseAria: 'Einstellungen schließen',
     cvdHint: 'Farbmodus für Sehschwächen',
     cvdGroupLabel: 'Farbmodus',
@@ -410,8 +413,11 @@ const I18N = {
     langGroupAria: 'Choose language',
     soundOn: 'Mute sound',
     soundOff: 'Turn sound on',
+    soundLabel: 'Audio',
+    galleryLabel: 'Gallery',
+    settingsOpenLabel: 'Vision',
     settingsTitle: 'Settings',
-    settingsOpenAria: 'Open settings',
+    settingsOpenAria: 'Open vision settings',
     settingsCloseAria: 'Close settings',
     cvdHint: 'Colour mode for vision deficiencies',
     cvdGroupLabel: 'Colour mode',
@@ -503,6 +509,15 @@ function applyLanguage(lang) {
 
 document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
   btn.addEventListener('click', () => applyLanguage(btn.dataset.lang));
+});
+// Die sichtbaren Sprachlabels gehören zum jeweiligen Flaggen-Button; ein
+// Tipp auf den Text soll dieselbe Aktion auslösen wie der Button selbst.
+document.querySelectorAll('.lang-switch__label').forEach((label) => {
+  label.addEventListener('click', () => {
+    const unit = label.closest('.lang-switch__unit');
+    const btn = unit && unit.querySelector('.lang-switch__btn');
+    if (btn) btn.click();
+  });
 });
 
 
@@ -3903,23 +3918,37 @@ function renderSplashChain() {
   const chain = document.getElementById('splashChain');
   if (!chain) return;
   // Neueste zuerst: die erste Seite enthält die aktuellsten Fotos.
-  const urls = photoRecords.slice(0, 10).map((record) => record.url).filter(Boolean);
+  const urls = photoRecords.slice(0, 12).map((record) => record.url).filter(Boolean);
   chain.innerHTML = '';
   if (!urls.length) return;
-  const track = document.createElement('div');
-  track.className = 'splash__chain-track';
-  // Zwei Kopien, damit die -50%-Animation nahtlos umläuft.
-  urls.concat(urls).forEach((url) => {
-    const card = document.createElement('div');
-    card.className = 'splash__chain-card';
-    const img = document.createElement('img');
-    img.src = url;
-    img.alt = '';
-    img.draggable = false;
-    card.appendChild(img);
-    track.appendChild(card);
-  });
-  chain.appendChild(track);
+  const grid = document.createElement('div');
+  grid.className = 'splash__chain-grid';
+  // Drei Collage-Reihen, die langsam seitlich durchlaufen. Jede Reihe hat
+  // eine eigene Geschwindigkeit/Richtung; zwei Kopien der Karten machen den
+  // Übergang nahtlos. Das zentrale Startfeld bleibt dabei frei.
+  const perRow = 4;
+  for (let row = 0; row < 3; row += 1) {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'splash__chain-row' + (row === 1 ? ' splash__chain-row--reverse' : '');
+    rowEl.style.setProperty('--row-speed', (92 + row * 14) + 's');
+    const track = document.createElement('div');
+    track.className = 'splash__chain-track';
+    for (let copy = 0; copy < 2; copy += 1) {
+      for (let i = 0; i < perRow; i += 1) {
+        const card = document.createElement('div');
+        card.className = 'splash__chain-card';
+        const img = document.createElement('img');
+        img.src = urls[(row * perRow + i) % urls.length];
+        img.alt = '';
+        img.draggable = false;
+        card.appendChild(img);
+        track.appendChild(card);
+      }
+    }
+    rowEl.appendChild(track);
+    grid.appendChild(rowEl);
+  }
+  chain.appendChild(grid);
 }
 
 function syncSideMenuHint() {

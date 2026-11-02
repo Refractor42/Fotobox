@@ -34,14 +34,17 @@
       </button>
     </div>
 
-    <!-- Galerie: reiner Icon-Button in der unteren Utility-Reihe, rechts neben
-         dem Ton-Button. Kein Text und kein Zähler auf dem Kiosk. -->
-    <button class="splash__gallery" type="button" data-action="open-gallery" data-gallery-source="splash" data-gallery-entry aria-label="Galerie öffnen" data-i18n-aria="galleryOpenAria">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" aria-hidden="true" focusable="false">
-        <rect x="3" y="3" width="18" height="18" rx="4"></rect>
-        <circle cx="8.5" cy="8.5" r="1.5"></circle>
-        <path d="M21 15l-5-5L5 21"></path>
-      </svg>
+    <!-- Galerie: runder Icon-Button mit sichtbarer Beschriftung in der
+         unteren Utility-Reihe, rechts neben dem Ton-Button. -->
+    <button class="splash__gallery splash__tool" type="button" data-action="open-gallery" data-gallery-source="splash" data-gallery-entry aria-label="Galerie öffnen" data-i18n-aria="galleryOpenAria">
+      <span class="splash__tool-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" focusable="false">
+          <rect x="3" y="3" width="18" height="18" rx="4"></rect>
+          <circle cx="8.5" cy="8.5" r="1.5"></circle>
+          <path d="M21 15l-5-5L5 21"></path>
+        </svg>
+      </span>
+      <span class="splash__tool-label" data-i18n="galleryLabel">Galerie</span>
     </button>
 
     <aside class="challenge-card" id="challengeCard" aria-live="polite">
@@ -54,22 +57,28 @@
       <p class="challenge-card__theme" id="challengeTheme">Halloween Motive</p>
     </aside>
 
-    <button class="splash__sound" id="splashSound" type="button" aria-label="Ton ausschalten">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
-        <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
-        <path class="sound-on" d="M15.5 8.5a5 5 0 0 1 0 7"></path>
-        <path class="sound-on" d="M18.5 5.5a9 9 0 0 1 0 13"></path>
-        <line class="sound-off" x1="16" y1="9" x2="22" y2="15"></line>
-        <line class="sound-off" x1="22" y1="9" x2="16" y2="15"></line>
-      </svg>
+    <button class="splash__sound splash__tool" id="splashSound" type="button" aria-label="Ton ausschalten">
+      <span class="splash__tool-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
+          <path class="sound-on" d="M15.5 8.5a5 5 0 0 1 0 7"></path>
+          <path class="sound-on" d="M18.5 5.5a9 9 0 0 1 0 13"></path>
+          <line class="sound-off" x1="16" y1="9" x2="22" y2="15"></line>
+          <line class="sound-off" x1="22" y1="9" x2="16" y2="15"></line>
+        </svg>
+      </span>
+      <span class="splash__tool-label" data-i18n="soundLabel">Audio</span>
     </button>
 
-    <!-- Einstellungen (Farbmodus für Farbsehschwächen): Zahnrad oben rechts -->
-    <button class="splash__settings" id="splashSettings" type="button" aria-haspopup="dialog" aria-label="Einstellungen öffnen" data-i18n-aria="settingsOpenAria">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <circle cx="12" cy="12" r="3.1"></circle>
-        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
-      </svg>
+    <!-- Sehschwächen-Einstellungen: Auge statt Zahnrad, mit sichtbarem Label -->
+    <button class="splash__settings" id="splashSettings" type="button" aria-haspopup="dialog" aria-label="Sehschwächen-Einstellungen öffnen" data-i18n-aria="settingsOpenAria">
+      <span class="splash__settings-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"></path>
+          <circle cx="12" cy="12" r="3.2"></circle>
+        </svg>
+      </span>
+      <span class="splash__settings-label" data-i18n="settingsOpenLabel">Sehschwächen</span>
     </button>
   </section>
 
@@ -77,12 +86,18 @@
        der Ecke statt vorgeschalteter Screen. Direkt nach dem Splash im DOM,
        damit die Flaggen (gleiches z-index) über dem Startbildschirm liegen. -->
   <div class="lang-switch lang-switch--splash" role="group" aria-label="Sprache wählen" data-i18n-aria="langGroupAria">
-    <button class="lang-switch__btn is-selected" data-lang="de" type="button" aria-pressed="true" aria-label="Deutsch">
-      <svg viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#000"/><rect y="5.33" width="24" height="5.34" fill="#D00"/><rect y="10.67" width="24" height="5.33" fill="#FFCE00"/></svg>
-    </button>
-    <button class="lang-switch__btn" data-lang="en" type="button" aria-pressed="false" aria-label="English">
-      <svg viewBox="0 0 60 40" aria-hidden="true"><rect width="60" height="40" fill="#012169"/><path d="M0 0 L60 40 M60 0 L0 40" stroke="#fff" stroke-width="8"/><path d="M0 0 L60 40 M60 0 L0 40" stroke="#C8102E" stroke-width="4"/><path d="M30 0 V40 M0 20 H60" stroke="#fff" stroke-width="13"/><path d="M30 0 V40 M0 20 H60" stroke="#C8102E" stroke-width="7"/></svg>
-    </button>
+    <span class="lang-switch__unit is-selected">
+      <button class="lang-switch__btn is-selected" data-lang="de" type="button" aria-pressed="true" aria-label="Deutsch">
+        <svg viewBox="0 0 24 16" aria-hidden="true"><rect width="24" height="16" fill="#000"/><rect y="5.33" width="24" height="5.34" fill="#D00"/><rect y="10.67" width="24" height="5.33" fill="#FFCE00"/></svg>
+      </button>
+      <span class="lang-switch__label" aria-hidden="true">Deutsch</span>
+    </span>
+    <span class="lang-switch__unit">
+      <button class="lang-switch__btn" data-lang="en" type="button" aria-pressed="false" aria-label="English">
+        <svg viewBox="0 0 60 40" aria-hidden="true"><rect width="60" height="40" fill="#012169"/><path d="M0 0 L60 40 M60 0 L0 40" stroke="#fff" stroke-width="8"/><path d="M0 0 L60 40 M60 0 L0 40" stroke="#C8102E" stroke-width="4"/><path d="M30 0 V40 M0 20 H60" stroke="#fff" stroke-width="13"/><path d="M30 0 V40 M0 20 H60" stroke="#C8102E" stroke-width="7"/></svg>
+      </button>
+      <span class="lang-switch__label" aria-hidden="true">English</span>
+    </span>
   </div>
 
   <!-- Camera -->

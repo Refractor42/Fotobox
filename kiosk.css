@@ -35,23 +35,47 @@ body.orientation-landscape .splash__content--kiosk {
   z-index: 4;
 }
 
-/* Die Galerie sitzt auf dem Kiosk in derselben unteren Reihe wie der Ton:
-   direkt rechts daneben, 96 px groß. Das Icon ist bewusst größer als die
-   Beschriftungen der Nachbarn. */
+/* Audio und Galerie bilden dieselbe untere Utility-Reihe: runde Icons mit
+   sichtbarem Label. Beide Buttons bleiben als ganze Spalte klickbar. */
+body.orientation-landscape .splash__gallery,
+body.orientation-landscape .splash__sound {
+  --splash-tool-size: clamp(76px, 7.6vw, 92px);
+  display: flex;
+  width: calc(var(--splash-tool-size) + 20px);
+  height: auto;
+  padding: 4px 0 2px;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 body.orientation-landscape .splash__gallery {
-  left: calc(clamp(24px, 3vw, 52px) + 96px + 18px);
+  left: calc(clamp(22px, 2.6vw, 44px) + clamp(76px, 7.6vw, 92px) + 32px);
   right: auto;
-  bottom: clamp(20px, 3vh, 44px);
-  width: 96px;
-  height: 96px;
+  bottom: clamp(16px, 2.6vh, 32px);
+}
+body.orientation-landscape .splash__gallery .splash__tool-icon,
+body.orientation-landscape .splash__sound .splash__tool-icon {
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(18, 19, 24, 0.72);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
 }
-body.orientation-landscape .splash__gallery svg { width: 46px; height: 46px; }
-body.orientation-landscape .splash__gallery:hover {
+body.orientation-landscape .splash__gallery .splash__tool-icon svg,
+body.orientation-landscape .splash__sound .splash__tool-icon svg {
+  width: 42px;
+  height: 42px;
+}
+body.orientation-landscape .splash__gallery .splash__tool-label,
+body.orientation-landscape .splash__sound .splash__tool-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.005em;
+}
+body.orientation-landscape .splash__gallery:hover .splash__tool-icon,
+body.orientation-landscape .splash__sound:hover .splash__tool-icon {
   background: rgba(38, 40, 48, 0.9);
   border-color: rgb(var(--c-highlight-rgb) / 0.55);
   color: var(--c-highlight);
@@ -68,7 +92,7 @@ body.orientation-landscape .splash__brand {
   text-align: center;
   line-height: 1.02;
   z-index: 5;
-  font-size: clamp(4.95rem, 6.3vw, 7.2rem);
+  font-size: clamp(3rem, 5.6vw, 5rem);
   text-shadow: none;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -78,41 +102,65 @@ body.orientation-landscape .splash__brand {
   -webkit-text-fill-color: transparent;
 }
 
-/* Foto-Kette im Hintergrund */
+/* Foto-Collage im Hintergrund: drei Reihen, die langsam seitlich
+   durchlaufen. Jede Reihe bewegt sich eigenständig, sodass die Fläche
+   lebendig bleibt, ohne die zentrale Startkarte zu überlagern. */
 body.orientation-landscape .splash__chain {
-  display: flex;
+  display: block;
   position: absolute;
   inset: 0;
   z-index: 1;
-  align-items: center;
   overflow: hidden;
   pointer-events: none;
-  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10%, #000 90%, transparent 100%);
-  mask-image: linear-gradient(90deg, transparent 0, #000 10%, #000 90%, transparent 100%);
+}
+.splash__chain::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(7, 9, 13, 0.56) 0%, rgba(7, 9, 13, 0.38) 34%, rgba(7, 9, 13, 0.12) 62%, transparent 80%),
+    linear-gradient(180deg, rgba(5, 7, 10, 0.48) 0%, rgba(5, 7, 10, 0.08) 26%, rgba(5, 7, 10, 0.08) 72%, rgba(5, 7, 10, 0.52) 100%);
+}
+.splash__chain-grid {
+  position: absolute;
+  inset: -8% -3%;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(16px, 2.4vh, 32px);
+  overflow: hidden;
+}
+.splash__chain-row {
+  flex: 1 1 0;
+  min-height: 0;
+  overflow: hidden;
 }
 .splash__chain-track {
+  --chain-gap: clamp(18px, 2.2vw, 34px);
   display: flex;
   align-items: center;
-  gap: clamp(14px, 1.4vw, 26px);
+  gap: var(--chain-gap);
   width: max-content;
-  padding-left: clamp(14px, 1.4vw, 26px);
-  animation: splashChain 90s linear infinite;
+  height: 100%;
+  animation: splashChain var(--row-speed, 100s) linear infinite;
+  will-change: transform;
 }
+.splash__chain-row--reverse .splash__chain-track { animation-direction: reverse; }
 @keyframes splashChain {
   from { transform: translateX(0); }
-  to   { transform: translateX(-50%); }
+  to   { transform: translateX(calc(-50% - var(--chain-gap) / 2)); }
 }
 .splash__chain-card {
   flex: 0 0 auto;
-  width: clamp(150px, 15vw, 240px);
-  aspect-ratio: 3 / 4;
-  border-radius: 14px;
+  width: clamp(210px, 25vw, 360px);
+  height: 100%;
+  border-radius: 16px;
   overflow: hidden;
   background: #1a1b20;
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.55);
   transform: rotate(var(--tilt, 0deg));
-  opacity: 0.62;
-  filter: brightness(0.72) saturate(0.9);
+  opacity: 0.86;
+  filter: brightness(0.8) saturate(1.02);
 }
 .splash__chain-card img {
   width: 100%;
@@ -120,31 +168,34 @@ body.orientation-landscape .splash__chain {
   object-fit: cover;
   display: block;
 }
-.splash__chain-card:nth-child(3n)   { --tilt: -4deg; }
-.splash__chain-card:nth-child(3n+1) { --tilt: 3deg; }
-.splash__chain-card:nth-child(3n+2) { --tilt: -1.5deg; }
+.splash__chain-card:nth-child(3n)   { --tilt: -2deg; }
+.splash__chain-card:nth-child(3n+1) { --tilt: 1.4deg; }
+.splash__chain-card:nth-child(3n+2) { --tilt: -0.8deg; }
 
 /* Tippen-Affordance: Der Start läuft über Klick/Tipp, nicht über Wischen. */
 .splash__start {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(12px, 1.6vh, 22px);
-  border: 1px solid rgb(var(--c-highlight-rgb) / 0.34);
-  background: linear-gradient(180deg, rgb(var(--c-highlight-rgb) / 0.10), rgba(10, 12, 16, 0.62));
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 22px 60px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  gap: clamp(10px, 1.5vh, 17px);
+  width: clamp(340px, 38vw, 500px);
+  min-height: clamp(190px, 32vh, 230px);
+  border: 1.5px solid rgb(var(--c-highlight-rgb) / 0.74);
+  background: linear-gradient(180deg, rgba(25, 27, 33, 0.76), rgba(8, 9, 12, 0.84));
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 46px rgb(var(--c-highlight-rgb) / 0.08);
   color: #fff;
   cursor: pointer;
   font: inherit;
-  padding: clamp(18px, 2.4vh, 30px) clamp(30px, 4vw, 60px);
-  border-radius: 24px;
+  padding: clamp(22px, 3.6vh, 36px) clamp(26px, 3.6vw, 48px);
+  border-radius: 26px;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
 .splash__start:hover {
-  background: linear-gradient(180deg, rgb(var(--c-highlight-rgb) / 0.16), rgba(18, 20, 26, 0.74));
-  border-color: rgb(var(--c-highlight-rgb) / 0.56);
+  background: linear-gradient(180deg, rgba(32, 34, 41, 0.82), rgba(14, 16, 21, 0.88));
+  border-color: rgb(var(--c-highlight-rgb) / 0.9);
   transform: translateY(-2px);
 }
 .splash__start:active { transform: scale(0.98); }
@@ -162,22 +213,23 @@ body.orientation-landscape .splash__chain {
   text-shadow: 0 6px 30px rgba(0, 0, 0, 0.8);
 }
 .splash__start-hint {
-  font-size: clamp(1.05rem, 1.15vw, 1.3rem);
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  color: #d7d2d2;
+  font-size: clamp(1.45rem, 2vw, 1.75rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: 0.01em;
+  color: #f2eeee;
 }
 .splash__tap {
   position: relative;
   display: grid;
   place-items: center;
-  width: clamp(46px, 4.4vw, 66px);
+  width: clamp(36px, 3.5vw, 48px);
   aspect-ratio: 1;
   filter: drop-shadow(0 4px 14px rgba(0, 0, 0, 0.7));
 }
 .splash__tap-dot {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #fff;
 }
@@ -188,15 +240,25 @@ body.orientation-landscape .splash__chain {
   border-radius: 50%;
   animation: tapPulse 1.8s ease-out infinite;
 }
+/* Die Vorlage zeigt nur den ruhigen weißen Punkt; der pulsierende Ring
+   würde neben dem Titel wie ein zusätzliches Icon wirken. */
+body.orientation-landscape .splash__tap-ring { display: none; }
+body.orientation-landscape .splash__tap-dot {
+  width: 11px;
+  height: 11px;
+  box-shadow: 0 0 0 5px rgba(255, 255, 255, 0.12), 0 0 18px rgba(255, 255, 255, 0.45);
+}
 @keyframes tapPulse {
   0%   { transform: scale(0.3); opacity: 0; }
   30%  { opacity: 0.85; }
   100% { transform: scale(1); opacity: 0; }
 }
 
-/* Challenge-Hinweisschild */
+/* Challenge-Hinweisschild: Die neue Startansicht setzt den Fokus ganz auf
+   die Foto-Collage und die zentrale Startkarte; die Karte bleibt im DOM,
+   wird im Idle aber nicht mehr eingeblendet. */
 body.orientation-landscape .challenge-card {
-  display: block;
+  display: none;
   position: absolute;
   right: clamp(24px, 3.4vw, 64px);
   top: 44%;
@@ -237,26 +299,13 @@ body.orientation-landscape .challenge-card {
 
 /* Ton im Idle */
 body.orientation-landscape .splash__sound {
-  display: flex;
   position: absolute;
-  left: clamp(24px, 3vw, 52px);
-  bottom: clamp(20px, 3vh, 44px);
+  left: clamp(22px, 2.6vw, 44px);
+  bottom: clamp(16px, 2.6vh, 32px);
   z-index: 5;
-  width: 96px;
-  height: 96px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 50%;
-  background: rgba(18, 19, 24, 0.72);
-  -webkit-backdrop-filter: blur(16px);
-  backdrop-filter: blur(16px);
   color: #fff;
   cursor: pointer;
-  transition: background 0.2s ease, transform 0.2s ease;
 }
-.splash__sound:hover { background: rgba(38, 40, 48, 0.9); transform: scale(1.05); }
-.splash__sound svg { width: 46px; height: 46px; }
 
 /* --- Kamera-Bühne: Vorschau in voller Breite, Menü als Schublade ---- */
 /* Rechts bleibt die schmale Schiene für Menü-Griff und Start-Button frei. */
@@ -1016,6 +1065,15 @@ body.orientation-landscape .endscreen {
   .kiosk-shutter__disc { width: clamp(62px, 7vw, 84px); }
   .kiosk-shutter__label { font-size: 13px; }
   .endscreen__actions { gap: clamp(22px, 4vw, 46px); }
+}
+
+@media (max-width: 460px) {
+  body.orientation-landscape .splash__gallery,
+  body.orientation-landscape .splash__sound {
+    --splash-tool-size: 68px;
+  }
+  body.orientation-landscape .splash__sound { left: 16px; }
+  body.orientation-landscape .splash__gallery { left: 116px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

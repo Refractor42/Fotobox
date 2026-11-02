@@ -250,50 +250,67 @@ section.active { display: block; opacity: 1; }
   70%, 100% { box-shadow: 0 0 0 18px rgb(var(--c-accent-rgb) / 0); }
 }
 
-/* Galerie: reiner runder Icon-Button in der unteren Utility-Reihe. Im
-   Querformat sitzt er rechts neben dem Ton-Button, im Hochformat unten
-   links. Kein Text und kein Zähler — das Icon bleibt die Beschriftung. */
-.splash__gallery {
+/* Untere Utility-Reihe: Audio und Galerie nutzen dieselbe runde
+   Icon-Sprache und tragen beide eine sichtbare Beschriftung. Das Icon
+   bleibt die Affordance, das Label macht die Funktion eindeutig. */
+.splash__tool {
+  --splash-tool-size: 82px;
   position: fixed;
   left: 20px;
   right: auto;
-  bottom: 20px;
+  bottom: clamp(16px, 2.6vh, 32px);
   z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: calc(var(--splash-tool-size) + 20px);
+  padding: 4px 0 0;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.splash__tool-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 74px;
-  height: 74px;
-  padding: 0;
+  width: var(--splash-tool-size);
+  height: var(--splash-tool-size);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 50%;
   background: rgba(10, 10, 10, 0.5);
-  color: var(--c-accent);
-  cursor: pointer;
+  color: #fff;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   transition: color var(--transition), border-color var(--transition),
     background var(--transition), transform 0.2s ease;
 }
-.splash__gallery svg { width: 34px; height: 34px; }
-.splash__gallery:hover {
+.splash__tool-icon svg { width: 38px; height: 38px; }
+.splash__tool-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.005em;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 2px 12px rgba(0, 0, 0, 0.7);
+}
+.splash__tool:hover .splash__tool-icon {
   background: rgba(28, 30, 38, 0.86);
   color: #fff;
   border-color: rgb(var(--c-accent-rgb) / 0.6);
   transform: translateY(-1px);
 }
-.splash__gallery:active { transform: scale(0.94); }
-.splash__gallery:focus-visible {
-  outline: none;
+.splash__tool:active .splash__tool-icon { transform: scale(0.94); }
+.splash__tool:focus-visible { outline: none; }
+.splash__tool:focus-visible .splash__tool-icon {
   box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.55);
 }
 @media (max-width: 420px) {
-  .splash__gallery {
-    left: 20px;
-    width: 68px;
-    height: 68px;
-  }
-  .splash__gallery svg { width: 32px; height: 32px; }
+  .splash__tool { --splash-tool-size: 72px; width: calc(var(--splash-tool-size) + 16px); }
+  .splash__tool-icon svg { width: 32px; height: 32px; }
+  .splash__tool-label { font-size: 0.8rem; }
 }
 
 
@@ -523,7 +540,7 @@ section.active { display: block; opacity: 1; }
 .lang-switch--splash {
   position: fixed;
   right: 20px;
-  bottom: 20px;
+  bottom: clamp(16px, 2.6vh, 32px);
   z-index: 9999; /* gleiche Ebene wie der Splash, steht danach im DOM */
 }
 .lang-switch__btn {
@@ -559,6 +576,76 @@ section.active { display: block; opacity: 1; }
 @media (max-width: 420px) {
   .lang-switch__btn { width: 76px; height: 60px; }
   .lang-switch__btn svg { width: 64px; height: 43px; }
+}
+
+/* Splash-Variante: Flagge plus sichtbares Sprachlabel. Der gelbe Rahmen
+   markiert die aktive Sprache, die andere bleibt dezent zurückgenommen. */
+.lang-switch--splash { gap: 14px; }
+.lang-switch--splash .lang-switch__unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 2px;
+}
+.lang-switch--splash .lang-switch__btn {
+  width: 88px;
+  height: 58px;
+  padding: 3px;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  opacity: 0.5;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+}
+.lang-switch--splash .lang-switch__btn svg {
+  width: 100%;
+  height: 100%;
+  border-radius: 4px;
+  display: block;
+}
+.lang-switch--splash .lang-switch__btn:hover { opacity: 0.85; }
+.lang-switch--splash .lang-switch__btn.is-selected {
+  opacity: 1;
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 2px rgb(var(--c-accent-rgb) / 0.15);
+}
+.lang-switch--splash .lang-switch__label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.005em;
+  line-height: 1;
+  color: #8f9099;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 2px 12px rgba(0, 0, 0, 0.7);
+  cursor: pointer;
+  user-select: none;
+  transition: color var(--transition);
+}
+.lang-switch--splash .lang-switch__unit.is-selected .lang-switch__label { color: #fff; }
+/* Die Querformat-Regeln weiter unten setzen 11 px/Uppercase für die Dock-Flaggen.
+   Für den Splash bleiben die Labels in normaler Schreibweise und lesbarer Größe. */
+body.orientation-landscape .lang-switch--splash .lang-switch__unit {
+  gap: 10px;
+  padding-bottom: 2px;
+}
+body.orientation-landscape .lang-switch--splash .lang-switch__label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+  color: #8f9099;
+}
+body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .lang-switch__label {
+  color: #fff;
+  font-weight: 800;
+}
+@media (max-width: 460px) {
+  .lang-switch--splash { gap: 8px; right: 12px; }
+  .lang-switch--splash .lang-switch__btn { width: 78px; height: 52px; }
 }
 
 /* Post-shot editor — sits below the photo so the image stays untouched */
@@ -1928,34 +2015,56 @@ body.orientation-landscape .gallery__grid {
    ============================================================ */
 .splash__settings {
   position: absolute;
-  top: clamp(14px, 2.2vh, 28px);
-  right: clamp(14px, 2.2vw, 28px);
+  top: clamp(28px, 4.6vh, 54px);
+  right: clamp(28px, 4.4vw, 58px);
   z-index: 6;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 6px;
+  border: 0;
+  background: none;
+  color: #fff;
+  font: inherit;
+  cursor: pointer;
+}
+.splash__settings-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: clamp(48px, 4.6vw, 68px);
-  height: clamp(48px, 4.6vw, 68px);
-  padding: 0;
-  border: 1px solid rgba(255 255 255 / 0.16);
+  width: clamp(68px, 7.6vw, 90px);
+  height: clamp(68px, 7.6vw, 90px);
+  border: 1px solid rgba(255 255 255 / 0.2);
   border-radius: 50%;
-  background: rgba(10 10 10 / 0.5);
-  color: var(--c-text-2);
-  cursor: pointer;
+  background: rgba(10 10 10 / 0.52);
+  color: #fff;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   transition: color var(--transition), border-color var(--transition),
     background var(--transition), transform 0.2s ease;
 }
-.splash__settings svg { width: 52%; height: 52%; }
-.splash__settings:hover {
-  color: var(--c-text);
-  border-color: rgb(var(--c-accent-rgb) / 0.6);
-  transform: rotate(30deg);
+.splash__settings-icon svg { width: 54%; height: 54%; }
+.splash__settings-label {
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.005em;
+  line-height: 1;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 2px 12px rgba(0, 0, 0, 0.7);
 }
-.splash__settings:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.5); }
+.splash__settings:hover .splash__settings-icon {
+  background: rgba(28, 30, 38, 0.86);
+  border-color: rgb(var(--c-accent-rgb) / 0.65);
+  transform: translateY(-1px);
+}
+.splash__settings:focus-visible { outline: none; }
+.splash__settings:focus-visible .splash__settings-icon {
+  box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.5);
+}
 @media (max-width: 420px) {
-  .splash__settings { width: 44px; height: 44px; }
+  .splash__settings-icon { width: 64px; height: 64px; }
+  .splash__settings-label { font-size: 0.8rem; }
 }
 
 .settings-modal {
