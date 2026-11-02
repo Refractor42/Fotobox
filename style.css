@@ -69,6 +69,9 @@ body {
 /* ============================================================
    helpers — glass surface
    ============================================================ */
+/* Im Admin-Panel deaktivierte Gäste-Funktionen */
+.feature-disabled { display: none !important; }
+
 .glass {
   background: var(--c-surface);
   border: 1px solid rgba(255 255 255 / 0.08);

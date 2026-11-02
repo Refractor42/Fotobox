@@ -500,6 +500,9 @@ const APP_SETTINGS_DEFAULTS = Object.freeze({
   defaultCountdownSeconds: 5,
   defaultCaptureMode: 'single',
   defaultSound: true,
+  filtersEnabled: true,
+  stickersEnabled: true,
+  overlaysEnabled: true,
   cameraFacingMode: 'environment',
   galleryPageSize: 12,
   accentColor: '#ffd700',
@@ -537,6 +540,9 @@ function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
     defaultCountdownSeconds: [3, 5, 10].includes(countdown) ? countdown : APP_SETTINGS_DEFAULTS.defaultCountdownSeconds,
     defaultCaptureMode: merged.defaultCaptureMode === 'strip' ? 'strip' : 'single',
     defaultSound: merged.defaultSound !== false,
+    filtersEnabled: merged.filtersEnabled !== false,
+    stickersEnabled: merged.stickersEnabled !== false,
+    overlaysEnabled: merged.overlaysEnabled !== false,
     cameraFacingMode: merged.cameraFacingMode === 'user' ? 'user' : 'environment',
     galleryPageSize: [6, 12, 24].includes(pageSize) ? pageSize : APP_SETTINGS_DEFAULTS.galleryPageSize,
     accentColor: color(merged.accentColor, APP_SETTINGS_DEFAULTS.accentColor),
@@ -783,6 +789,7 @@ function applyAppSettings(data) {
   appSettings = normalizeAppSettings(data, appSettings);
   applyThemeSettings(appSettings);
   applyBrandSettings(appSettings.brandName);
+  applyFeatureAvailability();
 
   if (appSettings.orientation !== currentOrientation) {
     applyOrientation(appSettings.orientation);
@@ -1202,6 +1209,83 @@ function resetGuestCaptureSettings() {
   syncFaceFilterSelection();
   applySoundState();
   applyColorScheme('standard');
+  applyFeatureAvailability();
+}
+
+// Blendet Gäste-Funktionen aus, die im Admin-Panel deaktiviert wurden.
+// Die Klasse nutzt !important, weil einzelne Komponenten eigene display-Werte
+// haben (Buttons sind z. B. inline-flex) und [hidden] sonst überschreiben.
+function setFeatureHidden(el, hidden) {
+  if (el) el.classList.toggle('feature-disabled', hidden);
+}
+
+// Kiosk-Seitenmenü: nur Bereiche anbieten, die der Admin freigegeben hat.
+// Sticker brauchen ein Foto, damit das Menü nicht schon im Sucher Sticker
+// auf die Live-Vorschau legt.
+function sideMenuContextAvailable(context) {
+  if (context === 'filter') return appSettings.filtersEnabled !== false;
+  if (context === 'overlay') return appSettings.overlaysEnabled !== false;
+  if (context === 'stamp') return appSettings.stickersEnabled !== false && hasPhoto;
+  return false;
+}
+
+function chooseSideMenuContext(preferred) {
+  if (sideMenuContextAvailable(preferred)) return preferred;
+  return ['filter', 'overlay', 'stamp'].find(sideMenuContextAvailable) || null;
+}
+
+function setSideMenuVisible(visible) {
+  if (!$sideMenu) return;
+  $sideMenu.classList.toggle('feature-disabled', !visible);
+  const stage = $camera.querySelector('.camera__stage');
+  if (stage) stage.classList.toggle('has-no-side-menu', !visible);
+}
+
+function refreshSideMenu() {
+  if (!isKioskLayout() || !$sideMenu) return;
+  const next = chooseSideMenuContext(sideContext);
+  if (!next) {
+    setSideMenuVisible(false);
+    return;
+  }
+  setSideMenuVisible(true);
+  if (next !== sideContext) openSideMenu(next);
+}
+
+function applyFeatureAvailability() {
+  const filtersOn = appSettings.filtersEnabled !== false;
+  const stickersOn = appSettings.stickersEnabled !== false;
+  const overlaysOn = appSettings.overlaysEnabled !== false;
+
+  setFeatureHidden(document.querySelector('.dock-group--filters'), !filtersOn);
+  setFeatureHidden(document.getElementById('filterToggle'), !filtersOn);
+  setFeatureHidden(document.getElementById('filterTray'), !filtersOn);
+  setFeatureHidden(document.getElementById('stickerToggle'), !stickersOn);
+  setFeatureHidden(document.getElementById('stickerTray'), !stickersOn);
+  setFeatureHidden(document.getElementById('landscapeStamp'), !stickersOn);
+
+  if (!filtersOn) {
+    if (filterEngine && filterEngine.getFilter() !== 'none') filterEngine.setFilter('none');
+    if (currentFilter !== 'standard') {
+      currentFilter = 'standard';
+      applyFilterSelection();
+    }
+    if (openReviewTool === 'filters') closeReviewTools();
+  }
+
+  if (!stickersOn) {
+    if ($camera.classList.contains('is-stamping')) closeStampMode(true);
+    if (activeStickers.length) clearStickers();
+    if (openReviewTool === 'stickers') closeReviewTools();
+  }
+
+  if (!overlaysOn && currentOverlay) {
+    currentOverlay = null;
+    renderOverlayPreview();
+    repositionStickers();
+  }
+
+  if (isKioskLayout()) refreshSideMenu();
 }
 
 // Während der Aufnahmesequenz (Countdown → Verarbeitung) sind Gallery, Timer
@@ -1346,6 +1430,8 @@ function hideReview() {
 let openReviewTool = null;
 
 function setReviewTool(tool) {
+  if (tool === 'stickers' && !appSettings.stickersEnabled) return;
+  if (tool === 'filters' && !appSettings.filtersEnabled) return;
   openReviewTool = openReviewTool === tool ? null : tool;
   const stickersOpen = openReviewTool === 'stickers';
   const filtersOpen = openReviewTool === 'filters';
@@ -1611,6 +1697,7 @@ function initFilterBar() {
     chip.textContent = (filter.emoji ? filter.emoji + ' ' : '') + faceLabel(filter);
     chip.setAttribute('aria-label', faceLabel(filter));
     chip.addEventListener('click', () => {
+      if (!appSettings.filtersEnabled) return;
       const selected = filterEngine.setFilter(filter.id);
       $filterBar.querySelectorAll('.timer__chip').forEach((el) => {
         const isActive = el.dataset.filter === selected;
@@ -1702,6 +1789,7 @@ function applyFilterSelection() {
 }
 
 $filterChips.forEach((chip) => chip.addEventListener('click', () => {
+  if (!appSettings.filtersEnabled) return;
   currentFilter = chip.dataset.filter;
   applyFilterSelection();
 }));
@@ -1725,6 +1813,7 @@ function stickerSvgUrl(kind) {
 }
 
 function addSticker(kind) {
+  if (!appSettings.stickersEnabled) return;
   const el = document.createElement('div');
   el.className = 'sticker';
   const img = document.createElement('img');
@@ -3663,7 +3752,13 @@ function syncSideMenuHint() {
 }
 
 function openSideMenu(context, tab) {
-  if (!SIDE_CONFIG[context] || !$sideMenu) return;
+  if (!$sideMenu) return;
+  context = chooseSideMenuContext(context);
+  if (!SIDE_CONFIG[context]) {
+    setSideMenuVisible(false);
+    return;
+  }
+  setSideMenuVisible(true);
   sideContext = context;
   const config = SIDE_CONFIG[context];
   const wanted = tab || config.defaultTab;
@@ -3845,6 +3940,7 @@ function findOverlay(id) {
 }
 
 function setOverlay(id) {
+  if (!appSettings.overlaysEnabled) return;
   if (id === NO_OVERLAY_ID) {
     currentOverlay = null;
     renderOverlayPreview();
@@ -3952,6 +4048,7 @@ function renderOverlayPreview() {
 }
 
 function addEmojiStamp(glyph) {
+  if (!appSettings.stickersEnabled) return;
   const el = document.createElement('div');
   el.className = 'sticker sticker--emoji';
   const span = document.createElement('span');
@@ -3993,7 +4090,7 @@ function addEmojiStamp(glyph) {
 }
 
 function openStampMode() {
-  if (!hasPhoto) return;
+  if (!hasPhoto || !appSettings.stickersEnabled) return;
   stampSnapshot = activeStickers.slice();
   $camera.classList.add('is-stamping');
   const actions = document.getElementById('reviewActions');

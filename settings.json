@@ -8,6 +8,9 @@
   "defaultCountdownSeconds": 5,
   "defaultCaptureMode": "single",
   "defaultSound": true,
+  "filtersEnabled": true,
+  "stickersEnabled": true,
+  "overlaysEnabled": true,
   "cameraFacingMode": "environment",
   "galleryPageSize": 12,
   "accentColor": "#ffd700",
@@ -15,5 +18,5 @@
   "backgroundColor": "#0d0d0d",
   "brandName": "SnapBox",
   "qrTtlHours": 24,
-  "updatedAt": "2026-11-01T05:44:26.774Z"
+  "updatedAt": "2026-11-02T09:38:18.587Z"
 }

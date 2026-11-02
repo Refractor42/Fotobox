@@ -251,6 +251,12 @@ body.orientation-landscape .camera__stage {
   aspect-ratio: auto;
 }
 
+/* Ohne Filter, Overlays und Sticker bleibt kein Seitenmenü übrig; dann
+   bekommt die Bildvorschau die volle Breite statt einer leeren Spalte. */
+body.orientation-landscape .camera__stage.has-no-side-menu {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 body.orientation-landscape .stage-left { display: contents; }
 
 body.orientation-landscape .viewfinder {

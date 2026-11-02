@@ -752,6 +752,9 @@ const DEFAULT_SETTINGS = Object.freeze({
   defaultCountdownSeconds: 5,
   defaultCaptureMode: 'single',
   defaultSound: true,
+  filtersEnabled: true,
+  stickersEnabled: true,
+  overlaysEnabled: true,
   cameraFacingMode: 'environment',
   galleryPageSize: 12,
   accentColor: '#ffd700',
@@ -788,6 +791,9 @@ function sanitizeSettings(data) {
     defaultCountdownSeconds: [3, 5, 10].includes(countdown) ? countdown : DEFAULT_SETTINGS.defaultCountdownSeconds,
     defaultCaptureMode: raw.defaultCaptureMode === 'strip' ? 'strip' : 'single',
     defaultSound: raw.defaultSound !== false,
+    filtersEnabled: raw.filtersEnabled !== false,
+    stickersEnabled: raw.stickersEnabled !== false,
+    overlaysEnabled: raw.overlaysEnabled !== false,
     cameraFacingMode: raw.cameraFacingMode === 'user' ? 'user' : 'environment',
     galleryPageSize: [6, 12, 24].includes(pageSize) ? pageSize : DEFAULT_SETTINGS.galleryPageSize,
     accentColor: typeof raw.accentColor === 'string' && COLOR_RE.test(raw.accentColor)
@@ -871,6 +877,11 @@ function validateSettingsPatch(patch) {
     if (typeof patch.defaultSound !== 'boolean') throw new Error('Ungültiger Ton-Standard.');
     next.defaultSound = patch.defaultSound;
   }
+  ['filtersEnabled', 'stickersEnabled', 'overlaysEnabled'].forEach((key) => {
+    if (!has(key)) return;
+    if (typeof patch[key] !== 'boolean') throw new Error('Ungültige Gäste-Funktion.');
+    next[key] = patch[key];
+  });
   if (has('cameraFacingMode')) {
     if (patch.cameraFacingMode !== 'environment' && patch.cameraFacingMode !== 'user') {
       throw new Error('Ungültige Kameraseite.');

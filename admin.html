@@ -1570,7 +1570,7 @@
             <span class="section-kicker">02</span>
             Aufnahme-Standard
           </h2>
-          <p class="section-header__desc">Diese Werte gelten für jeden neuen Gast. Gäste können sie während ihrer Sitzung weiterhin selbst ändern; beim Zurückspringen werden sie wieder auf den Standard gesetzt.</p>
+          <p class="section-header__desc">Diese Werte gelten für jeden neuen Gast. Gäste können sie während ihrer Sitzung weiterhin selbst ändern; beim Zurückspringen werden sie wieder auf den Standard gesetzt. Filter, Sticker und Overlays lassen sich zusätzlich für alle Gäste ausblenden — diese Schalter wirken sofort.</p>
         </div>
       </div>
 
@@ -1625,6 +1625,45 @@
               <option value="environment">Rückkamera / Umgebung</option>
               <option value="user">Frontkamera / Selbstporträt</option>
             </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Filter anzeigen</span>
+            <p class="setting-row__desc">Gesichtsfilter, Farbfilter und die Filter-Werkzeuge für Gäste ausblenden.</p>
+          </div>
+          <div class="setting-control">
+            <button class="switch" id="filtersEnabledToggle" type="button" role="switch" aria-checked="true">
+              <span class="switch__track" aria-hidden="true"></span>
+              <span id="filtersEnabledText">Ein</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Sticker anzeigen</span>
+            <p class="setting-row__desc">Sticker-Auswahl und Sticker-Werkzeuge für Gäste ausblenden.</p>
+          </div>
+          <div class="setting-control">
+            <button class="switch" id="stickersEnabledToggle" type="button" role="switch" aria-checked="true">
+              <span class="switch__track" aria-hidden="true"></span>
+              <span id="stickersEnabledText">Ein</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Overlays anzeigen</span>
+            <p class="setting-row__desc">Rahmen und Bild-Overlays für Gäste ausblenden. Bereits gewählte Overlays werden entfernt.</p>
+          </div>
+          <div class="setting-control">
+            <button class="switch" id="overlaysEnabledToggle" type="button" role="switch" aria-checked="true">
+              <span class="switch__track" aria-hidden="true"></span>
+              <span id="overlaysEnabledText">Ein</span>
+            </button>
           </div>
         </div>
       </div>
@@ -1858,6 +1897,9 @@
         defaultCountdownSeconds: 5,
         defaultCaptureMode: 'single',
         defaultSound: true,
+        filtersEnabled: true,
+        stickersEnabled: true,
+        overlaysEnabled: true,
         cameraFacingMode: 'environment',
         galleryPageSize: 12,
         accentColor: '#ffd700',
@@ -1882,6 +1924,12 @@
       const $countdownOptions = Array.from(document.querySelectorAll('[data-default-countdown]'));
       const $defaultSoundToggle = document.getElementById('defaultSoundToggle');
       const $defaultSoundText = document.getElementById('defaultSoundText');
+      const $filtersEnabledToggle = document.getElementById('filtersEnabledToggle');
+      const $filtersEnabledText = document.getElementById('filtersEnabledText');
+      const $stickersEnabledToggle = document.getElementById('stickersEnabledToggle');
+      const $stickersEnabledText = document.getElementById('stickersEnabledText');
+      const $overlaysEnabledToggle = document.getElementById('overlaysEnabledToggle');
+      const $overlaysEnabledText = document.getElementById('overlaysEnabledText');
       const $cameraFacingMode = document.getElementById('cameraFacingMode');
       const $brandName = document.getElementById('brandName');
       const $themePreview = document.getElementById('themePreview');
@@ -2019,6 +2067,12 @@
         });
         $defaultSoundToggle.setAttribute('aria-checked', String(currentSettings.defaultSound));
         $defaultSoundText.textContent = currentSettings.defaultSound ? 'Ein' : 'Aus';
+        $filtersEnabledToggle.setAttribute('aria-checked', String(currentSettings.filtersEnabled));
+        $filtersEnabledText.textContent = currentSettings.filtersEnabled ? 'Ein' : 'Aus';
+        $stickersEnabledToggle.setAttribute('aria-checked', String(currentSettings.stickersEnabled));
+        $stickersEnabledText.textContent = currentSettings.stickersEnabled ? 'Ein' : 'Aus';
+        $overlaysEnabledToggle.setAttribute('aria-checked', String(currentSettings.overlaysEnabled));
+        $overlaysEnabledText.textContent = currentSettings.overlaysEnabled ? 'Ein' : 'Aus';
         $cameraFacingMode.value = currentSettings.cameraFacingMode;
         $brandName.value = currentSettings.brandName;
         $accentColorPicker.value = currentSettings.accentColor;
@@ -2452,6 +2506,21 @@
         const value = $cameraFacingMode.value === 'user' ? 'user' : 'environment';
         if (value === currentSettings.cameraFacingMode) return;
         persistSettings({ cameraFacingMode: value }, 'Kamera-Auswahl gespeichert.');
+      });
+
+      $filtersEnabledToggle.addEventListener('click', () => {
+        const enabled = !currentSettings.filtersEnabled;
+        persistSettings({ filtersEnabled: enabled }, enabled ? 'Filter eingeschaltet.' : 'Filter ausgeschaltet.');
+      });
+
+      $stickersEnabledToggle.addEventListener('click', () => {
+        const enabled = !currentSettings.stickersEnabled;
+        persistSettings({ stickersEnabled: enabled }, enabled ? 'Sticker eingeschaltet.' : 'Sticker ausgeschaltet.');
+      });
+
+      $overlaysEnabledToggle.addEventListener('click', () => {
+        const enabled = !currentSettings.overlaysEnabled;
+        persistSettings({ overlaysEnabled: enabled }, enabled ? 'Overlays eingeschaltet.' : 'Overlays ausgeschaltet.');
       });
 
       // ---- Darstellung ----
