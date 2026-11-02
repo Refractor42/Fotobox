@@ -142,25 +142,22 @@
         </div>
       </div>
 
-        <!-- Untere Steuerleiste: Countdown, Auslöser und Modus. Der
-             Home-Button sitzt unter dem Seitenmenü. -->
+        <!-- Untere Steuerleiste: Menü links, Auslöser mittig, Countdown und
+             Modus gemeinsam hinter einem Button rechts. Der Start-Button
+             schwebt über der rechten Ecke, damit das Foto die volle Breite
+             bekommt. -->
         <div class="capture-bar" id="captureBar">
-          <div class="capture-switch">
-            <div class="seg" id="kioskTimer" role="group" aria-label="Countdown-Dauer" data-i18n-aria="timerGroupAria">
-              <button class="seg__btn" data-seconds="3" type="button">3s</button>
-              <button class="seg__btn" data-seconds="5" type="button">5s</button>
-              <button class="seg__btn" data-seconds="10" type="button">10s</button>
-            </div>
-            <p class="capture-switch__label" data-i18n="captionTimer">COUNTDOWN</p>
-          </div>
-
-          <div class="capture-switch">
-            <div class="seg" id="modeChips" role="group" aria-label="Aufnahmemodus" data-i18n-aria="modeGroupAria">
-              <button class="seg__btn" data-mode="single" type="button" data-i18n="modeSingle">Einzelfoto</button>
-              <button class="seg__btn" data-mode="strip" type="button" data-i18n="modeStrip">Fotostreifen</button>
-            </div>
-            <p class="capture-switch__label" data-i18n="captionMode">MODUS</p>
-          </div>
+          <button class="bar-btn side-menu-toggle" id="sideMenuToggle" type="button" aria-controls="sideMenu" aria-expanded="false" aria-label="Filter- und Effektmenü ausklappen" data-i18n-aria="sideMenuShowAria" hidden>
+            <span class="bar-btn__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                <path d="M3.5 7h9.6M18.6 7h1.9"></path>
+                <path d="M3.5 17h2.9M12 17h8.5"></path>
+                <circle cx="15.9" cy="7" r="2.4"></circle>
+                <circle cx="9.3" cy="17" r="2.4"></circle>
+              </svg>
+            </span>
+            <span class="bar-btn__label side-menu-toggle__label" data-i18n="sideMenuToggleOpen">Menü</span>
+          </button>
 
           <button class="kiosk-shutter" id="landscapeCaptureBtn" type="button" data-action="capture" aria-label="Foto aufnehmen" data-i18n-aria="captureAria" aria-keyshortcuts="Space PageUp PageDown">
             <span class="kiosk-shutter__disc" aria-hidden="true">
@@ -170,6 +167,36 @@
             </span>
             <span class="kiosk-shutter__label" data-i18n="shutterLabel">AUSLÖSER</span>
           </button>
+
+          <div class="bar-options">
+            <div class="bar-popover" id="captureOptions" hidden>
+              <div class="capture-switch">
+                <p class="capture-switch__label" data-i18n="captionTimer">COUNTDOWN</p>
+                <div class="seg" id="kioskTimer" role="group" aria-label="Countdown-Dauer" data-i18n-aria="timerGroupAria">
+                  <button class="seg__btn" data-seconds="3" type="button">3s</button>
+                  <button class="seg__btn" data-seconds="5" type="button">5s</button>
+                  <button class="seg__btn" data-seconds="10" type="button">10s</button>
+                </div>
+              </div>
+              <div class="capture-switch">
+                <p class="capture-switch__label" data-i18n="captionMode">MODUS</p>
+                <div class="seg" id="modeChips" role="group" aria-label="Aufnahmemodus" data-i18n-aria="modeGroupAria">
+                  <button class="seg__btn" data-mode="single" type="button" data-i18n="modeSingle">Einzelfoto</button>
+                  <button class="seg__btn" data-mode="strip" type="button" data-i18n="modeStrip">Fotostreifen</button>
+                </div>
+              </div>
+            </div>
+            <button class="bar-btn" id="captureOptionsToggle" type="button" aria-controls="captureOptions" aria-expanded="false" aria-label="Countdown und Modus einstellen" data-i18n-aria="barOptionsAria">
+              <span class="bar-btn__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                  <circle cx="12" cy="13.4" r="7.6"></circle>
+                  <path d="M12 9.6v4.2l2.9 1.7"></path>
+                  <path d="M9.2 2.6h5.6"></path>
+                </svg>
+              </span>
+              <span class="bar-btn__label" data-i18n="barOptions">Optionen</span>
+            </button>
+          </div>
         </div>
 
         <!-- Review-Aktionen direkt unter dem Foto -->
@@ -375,15 +402,10 @@
     </div>
   </section>
 
-  <!-- Rechte Schiene: oben der Griff für Filter/Overlays/Sticker, unten
-       durch eine Trennlinie abgesetzt der globale Start-Button. In Galerie
-       und Papierkorb bleibt der Griff weg, Linie und Start bleiben. -->
+  <!-- Start-Button: schwebt über der rechten unteren Ecke. Das Menü sitzt
+       jetzt in der unteren Leiste, deshalb gibt es keine rechte Schiene
+       mehr und das Foto nutzt die volle Breite. -->
   <div class="side-rail" id="sideRail" hidden>
-    <button class="side-menu-toggle" id="sideMenuToggle" type="button" aria-controls="sideMenu" aria-expanded="false" aria-label="Filter- und Effektmenü ausklappen" data-i18n-aria="sideMenuShowAria" hidden>
-      <svg class="side-menu-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
-      <span class="side-menu-toggle__label" data-i18n="sideMenuToggleOpen">Menü</span>
-    </button>
-    <div class="side-rail__divider" aria-hidden="true"></div>
     <div class="side-rail__home">
       <button class="cancel-home" id="cancelHome" type="button" aria-label="Zum Startbildschirm" data-i18n-aria="startHomeAria" hidden>
         <span class="cancel-home__disc" aria-hidden="true">

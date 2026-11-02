@@ -321,24 +321,40 @@ body.orientation-landscape .streak { display: none !important; }
 body.orientation-landscape .camera__controls { display: contents; }
 body.orientation-landscape .lang-switch--portrait { display: none !important; }
 
-/* --- Untere Steuerleiste ------------------------------------------ */
+/* --- Untere Steuerleiste ------------------------------------------
+   Links das Menü, mittig der Auslöser, rechts Countdown/Modus hinter einem
+   gemeinsamen Button. Rechts bleibt Platz für den schwebenden Start-Button. */
 body.orientation-landscape .capture-bar {
   grid-area: 2 / 1;
+  position: relative;
+  z-index: 2;
   display: grid;
+  /* Leere Flächen der Leiste lassen Klicks durch (im Review liegen die
+     runden Aktionen in derselben Zelle). */
+  pointer-events: none;
   height: 100%;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   min-width: 0;
   align-items: end;
   gap: clamp(10px, 1.4vw, 24px);
-  padding: 0 6px 0 12px;
+  padding: 0 calc(var(--home-size) + clamp(14px, 1.6vw, 26px)) 0 clamp(10px, 1.2vw, 18px);
 }
-body.orientation-landscape .capture-bar > .capture-switch:first-of-type { grid-column: 1; grid-row: 1; justify-self: start; }
-body.orientation-landscape .capture-bar > .capture-switch:last-of-type {
+body.orientation-landscape .capture-bar > * { pointer-events: auto; }
+body.orientation-landscape .capture-bar > .side-menu-toggle {
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+}
+body.orientation-landscape .capture-bar > .bar-options {
   grid-column: 3;
   grid-row: 1;
   justify-self: end;
 }
-#camera.is-reviewing .capture-bar,
+/* Im Review und auf dem Endscreen übernehmen die runden Aktionen bzw. der
+   Endscreen selbst; nur das Menü (Overlay/Sticker) bleibt erreichbar. */
+#camera.is-reviewing .capture-bar > .kiosk-shutter,
+#camera.is-reviewing .capture-bar > .bar-options { display: none; }
 #camera.is-ended .capture-bar { display: none; }
 
 .capture-switch {
@@ -380,6 +396,91 @@ body.orientation-landscape .capture-bar > .capture-switch:last-of-type {
 .seg__btn:hover { background: rgba(255, 255, 255, 0.1); }
 .seg__btn.is-selected { background: var(--c-highlight); color: var(--c-accent-contrast); font-weight: 700; }
 .seg__btn:focus-visible { outline: none; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.7); }
+
+/* --- Menü- und Options-Button der unteren Leiste -------------------
+   Beide sitzen als runde Buttons mit Beschriftung in der Fußleiste, damit
+   die Vorschau die volle Breite behält. */
+.bar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--action-gap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #e8eaf0;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.bar-btn__icon {
+  display: grid;
+  place-items: center;
+  width: clamp(50px, 4.6vw, 64px);
+  aspect-ratio: 1;
+  border: 2px solid rgba(255, 255, 255, 0.24);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.bar-btn__icon svg { width: 48%; height: 48%; }
+.bar-btn:hover .bar-btn__icon {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.bar-btn:active .bar-btn__icon { transform: scale(0.95); }
+.bar-btn:focus-visible { outline: none; }
+.bar-btn:focus-visible .bar-btn__icon { box-shadow: 0 0 0 4px rgb(var(--c-highlight-rgb) / 0.55); }
+.bar-btn:disabled { opacity: 0.4; cursor: default; }
+.bar-btn:disabled .bar-btn__icon { transform: none; }
+.bar-btn[aria-expanded="true"] .bar-btn__icon {
+  border-color: var(--c-highlight);
+  background: rgb(var(--c-highlight-rgb) / 0.16);
+  color: var(--c-highlight);
+}
+.bar-btn__label {
+  font-size: clamp(11px, 0.85vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  color: #9aa1ad;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.bar-btn[aria-expanded="true"] .bar-btn__label { color: var(--c-highlight); }
+
+/* Panel über der Leiste: Countdown und Modus an einer Stelle. */
+.bar-options {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+.bar-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + clamp(10px, 1.2vh, 16px));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.1vh, 14px);
+  width: clamp(240px, 21vw, 306px);
+  padding: clamp(12px, 1.1vw, 18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: #17181d;
+  box-shadow: 0 -8px 44px rgba(0, 0, 0, 0.55);
+}
+.bar-popover .capture-switch { align-items: stretch; gap: 6px; }
+.bar-popover .capture-switch__label { text-align: left; }
+.bar-popover .seg { display: flex; width: 100%; }
+.bar-popover .seg__btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: clamp(8px, 0.8vw, 14px);
+  text-align: center;
+}
 
 /* Zentraler, sichtbarer Auslöser in der unteren Leiste. */
 .kiosk-shutter {
@@ -444,7 +545,9 @@ body.orientation-landscape .capture-bar > .capture-switch:last-of-type {
   /* Start-Button so groß wie die runden Review-/Sticker-Aktionen; die
      Schiene wächst mit, damit der Kreis nicht am Rand klebt. */
   --home-size: clamp(58px, 5.6vw, 78px);
-  --rail-w: calc(var(--home-size) + 18px);
+  /* Keine rechte Schiene mehr: Das Foto nutzt die volle Breite, der
+     Start-Button liegt als runder Button über der unteren rechten Ecke. */
+  --rail-w: 0px;
   --action-gap: 8px;
   --action-label-size: clamp(12px, 0.95vw, 15px);
   --action-label-line: 1.25;
@@ -521,6 +624,7 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
 /* --- Runde Review-/Sticker-Aktionen ------------------------------ */
 body.orientation-landscape .review-actions {
   grid-area: 2 / 1;
+  z-index: 1;
   display: flex;
   height: 100%;
   min-width: 0;
@@ -604,103 +708,13 @@ body.orientation-landscape .side-menu.is-locked {
   pointer-events: none;
 }
 
-/* --- Rechte Schiene ---------------------------------------------------
-   Dünner Streifen am rechten Rand: oben der Griff, mit dem das Seitenmenü
-   herausfährt, unten durch eine Linie abgetrennt der Start-Button. */
-body.orientation-landscape .side-rail {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 10000;
-  display: flex;
-  flex-direction: column;
-  width: var(--rail-w);
-  background: #0b0c10;
-  border-left: 1px solid rgba(255, 255, 255, 0.09);
-}
+/* --- Schwebender Start-Button ----------------------------------------
+   Die rechte Schiene entfällt: .side-rail und .side-rail__home sind nur
+   noch Hüllen (display: contents), der Start-Button liegt fest über der
+   unteren rechten Ecke und überdeckt keine Steuerleiste. */
+body.orientation-landscape .side-rail,
+body.orientation-landscape .side-rail__home { display: contents; }
 
-/* Der ganze obere Streifen ist die Touchfläche zum Aus- und Einklappen. */
-body.orientation-landscape .side-menu-toggle {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 0;
-  padding: 12px 4px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: #b9bec9;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-body.orientation-landscape .side-menu-toggle:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-}
-body.orientation-landscape .side-menu-toggle:active { background: rgba(255, 255, 255, 0.1); }
-body.orientation-landscape .side-menu-toggle:disabled {
-  opacity: 0.38;
-  cursor: default;
-}
-body.orientation-landscape .side-menu-toggle:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px rgb(var(--c-highlight-rgb) / 0.65);
-}
-body.orientation-landscape .side-menu-toggle[aria-expanded="true"] {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--c-highlight);
-}
-.side-menu-toggle__icon {
-  width: clamp(20px, 1.7vw, 26px);
-  height: clamp(20px, 1.7vw, 26px);
-  transition: transform 0.32s ease;
-}
-.side-menu-toggle__label {
-  font-size: clamp(12px, 0.88vw, 14px);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.2;
-  text-align: center;
-}
-body.orientation-landscape .side-menu-toggle[aria-expanded="true"] .side-menu-toggle__icon {
-  transform: rotate(180deg);
-}
-body.orientation-landscape .side-menu-toggle[aria-expanded="true"] .side-menu-toggle__label {
-  color: var(--c-highlight);
-}
-
-body.orientation-landscape .side-rail__divider {
-  display: block;
-  flex: 0 0 auto;
-  width: calc(100% - 20px);
-  height: 1px;
-  /* auto: hält Linie und Start-Button auch dann unten, wenn der Menü-Griff
-     (wie in der Galerie) ausgeblendet ist und keinen Platz mehr füllt. */
-  margin: auto 10px 0;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-body.orientation-landscape .side-rail__home {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  padding: clamp(10px, 1.2vw, 18px) 0;
-}
-
-/* Der Start-Button sitzt in der Schiene statt über dem Inhalt. */
-body.orientation-landscape .side-rail .cancel-home {
-  position: static;
-  right: auto;
-  bottom: auto;
-}
 .side-menu__panel {
   display: flex;
   flex: 1 1 auto;

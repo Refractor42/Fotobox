@@ -113,6 +113,8 @@ const I18N = {
     scrollHint: 'scrollen',
     sideMenuShowAria: 'Menü öffnen: Filter, Overlay und Sticker',
     sideMenuHideAria: 'Menü schließen',
+    barOptions: 'Optionen',
+    barOptionsAria: 'Countdown und Modus einstellen',
     scrollUpAria: 'Nach oben scrollen',
     scrollDownAria: 'Nach unten scrollen',
     overlayNone: 'Kein Rahmen',
@@ -305,6 +307,8 @@ const I18N = {
     scrollHint: 'scroll',
     sideMenuShowAria: 'Open menu: filters, overlays and stickers',
     sideMenuHideAria: 'Close menu',
+    barOptions: 'Options',
+    barOptionsAria: 'Adjust countdown and mode',
     scrollUpAria: 'Scroll up',
     scrollDownAria: 'Scroll down',
     overlayNone: 'No frame',
@@ -1072,7 +1076,13 @@ function startSession() {
   currentState = 'camera';
   initCamera(); // request camera immediately to preserve user-gesture context
 
-  if (isKioskLayout()) openSideMenu('filter');
+  // Menü-Inhalt vorbereiten, aber geschlossen lassen: Die Vorschau startet
+  // in voller Größe, das Menü öffnet der Gast über die untere Leiste.
+  if (isKioskLayout()) {
+    openSideMenu('filter');
+    setSideMenuOpen(false);
+  }
+  setCaptureOptionsOpen(false);
 
   const tl = timeline();
   tl.to(['.splash__content--portrait', '.splash__content--kiosk', '.lang-switch--splash',
@@ -1344,6 +1354,10 @@ function setControlsLocked(locked) {
     else sideMenu.removeAttribute('aria-disabled');
   }
   if ($sideMenuToggle) $sideMenuToggle.disabled = locked;
+  if ($captureOptionsToggle) {
+    $captureOptionsToggle.disabled = locked;
+    setCaptureOptionsOpen(false);
+  }
   // Die Schublade verdeckt sonst die Vorschau während Countdown und
   // Verarbeitung.
   if (locked) setSideMenuOpen(false);
@@ -1366,7 +1380,10 @@ function syncCancelHome() {
   if ($sideMenuToggle) {
     const showToggle = !onSplash && currentState === 'camera'
       && !$camera.classList.contains('is-ended');
-    if (!showToggle) setSideMenuOpen(false);
+    if (!showToggle) {
+      setSideMenuOpen(false);
+      setCaptureOptionsOpen(false);
+    }
     $sideMenuToggle.hidden = !showToggle;
   }
 }
@@ -3673,6 +3690,8 @@ const $sideViewport = document.querySelector('.side-menu__viewport');
 const $sideScrollUp = document.getElementById('sideScrollUp');
 const $sideScrollDown = document.getElementById('sideScrollDown');
 const $sideMenuToggle = document.getElementById('sideMenuToggle');
+const $captureOptions = document.getElementById('captureOptions');
+const $captureOptionsToggle = document.getElementById('captureOptionsToggle');
 const $sideRail = document.getElementById('sideRail');
 const $endScreen = document.getElementById('endScreen');
 const $cancelHome = document.getElementById('cancelHome');
@@ -3706,6 +3725,7 @@ function setSideMenuOpen(open, options = {}) {
   const next = !!open
     && !$sideMenu.classList.contains('feature-disabled')
     && !$sideMenu.classList.contains('is-locked');
+  if (next) setCaptureOptionsOpen(false);
   $sideMenu.classList.toggle('is-open', next);
   $sideMenu.inert = !next;
   $sideMenuToggle.setAttribute('aria-expanded', String(next));
@@ -3739,6 +3759,30 @@ if ($sideMenuToggle) {
     setSideMenuOpen(opening, { focus: opening });
   });
 }
+
+// Countdown und Modus teilen sich einen Button in der unteren Leiste. Das
+// Panel darüber klappt per Tipp wieder zu; es liegt nie über dem Auslöser.
+function setCaptureOptionsOpen(open) {
+  if (!$captureOptions || !$captureOptionsToggle) return;
+  const next = !!open && !$captureOptionsToggle.disabled;
+  $captureOptions.hidden = !next;
+  $captureOptionsToggle.setAttribute('aria-expanded', String(next));
+}
+
+if ($captureOptionsToggle) {
+  $captureOptionsToggle.addEventListener('click', () => {
+    const opening = $captureOptionsToggle.getAttribute('aria-expanded') !== 'true';
+    if (opening) setSideMenuOpen(false);
+    setCaptureOptionsOpen(opening);
+  });
+}
+
+// Tippen neben das Panel schließt es — wie beim Seitenmenü.
+document.addEventListener('click', (e) => {
+  if (!$captureOptions || $captureOptions.hidden) return;
+  if (e.target.closest('#captureOptions, #captureOptionsToggle')) return;
+  setCaptureOptionsOpen(false);
+});
 
 let sideContext = 'filter';
 let currentOverlay = null;
@@ -4641,6 +4685,12 @@ window.addEventListener('load', async () => {
     }
 
     if (e.key === 'Escape') {
+      if ($captureOptions && !$captureOptions.hidden) {
+        e.preventDefault();
+        setCaptureOptionsOpen(false);
+        if ($captureOptionsToggle) $captureOptionsToggle.focus({ preventScroll: true });
+        return;
+      }
       if ($sideMenu && $sideMenu.classList.contains('is-open')) {
         e.preventDefault();
         setSideMenuOpen(false);
