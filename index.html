@@ -150,9 +150,9 @@
             </svg>
             <div class="permission__copy">
               <p class="permission__text" data-i18n="permissionText">Kamerazugriff für SnapBox erforderlich</p>
-              <p class="permission__hint" data-i18n="permissionHint">Dauerhaft blockiert? Erlaube die Kamera in den Browser-Einstellungen und lade die Seite neu.</p>
+              <p class="permission__hint" id="permissionHint" role="status" aria-live="polite" data-i18n="permissionHint">Dauerhaft blockiert? Erlaube die Kamera in den Browser-Einstellungen (Schloss-Symbol in der Adressleiste) und lade die Seite neu.</p>
             </div>
-            <button class="btn btn--primary" data-action="retry-camera" data-i18n="permissionBtn">Kamera erlauben</button>
+            <button class="btn btn--primary" data-action="retry-camera" data-i18n="permissionBtn" aria-describedby="permissionHint">Kamera erlauben</button>
           </div>
         </div>
       </div>

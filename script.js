@@ -131,8 +131,16 @@ const I18N = {
     idleResetText: 'Zurück zum Start in',
     idleResetStay: 'Hier bleiben',
     permissionText: 'Kamerazugriff für SnapBox erforderlich',
-    permissionHint: 'Dauerhaft blockiert? Erlaube die Kamera in den Browser-Einstellungen und lade die Seite neu.',
+    permissionHint: 'Dauerhaft blockiert? Erlaube die Kamera in den Browser-Einstellungen (Schloss-Symbol in der Adressleiste) und lade die Seite neu.',
     permissionBtn: 'Kamera erlauben',
+    permissionOpening: 'Kamera wird geöffnet…',
+    permissionRequestingHint: 'Bitte im Browser-Dialog „Zulassen“ wählen. Falls kein Dialog erscheint, ist die Kamera für diese Seite blockiert.',
+    permissionDeniedHint: 'Der Browser blockiert die Kamera. Öffne die Kamera-Freigabe über das Schloss-Symbol in der Adressleiste und lade die Seite danach neu.',
+    permissionNoDeviceHint: 'Keine Kamera gefunden. Prüfe, ob die Kamera angeschlossen und eingeschaltet ist, und versuche es erneut.',
+    permissionBusyHint: 'Die Kamera wird gerade von einer anderen App benutzt. Schließe diese App und versuche es erneut.',
+    permissionConstraintHint: 'Die gewählte Kamera ist nicht verfügbar. Prüfe die Kamera-Auswahl im Admin-Panel und versuche es erneut.',
+    permissionInsecureHint: 'Kamera braucht eine sichere Verbindung. Öffne die Fotobox über https://localhost:8443 oder starte sie mit Fotobox-Kiosk.cmd.',
+    permissionFailedHint: 'Die Kamera konnte nicht geöffnet werden. Prüfe die Browser-Einstellungen und versuche es erneut.',
     captionFace: 'GESICHTSFILTER',
     captionTimer: 'COUNTDOWN',
     shutterLabel: 'AUSLÖSER',
@@ -326,8 +334,16 @@ const I18N = {
     idleResetText: 'Returning to start in',
     idleResetStay: 'Stay here',
     permissionText: 'Camera access required for SnapBox',
-    permissionHint: 'Blocked permanently? Allow the camera in your browser settings, then reload the page.',
+    permissionHint: 'Blocked permanently? Allow the camera in your browser settings (lock icon in the address bar), then reload the page.',
     permissionBtn: 'Allow Camera',
+    permissionOpening: 'Opening camera…',
+    permissionRequestingHint: 'Choose “Allow” in the browser prompt. If no prompt appears, the camera is blocked for this page.',
+    permissionDeniedHint: 'The browser is blocking the camera. Open the camera permission via the lock icon in the address bar, then reload the page.',
+    permissionNoDeviceHint: 'No camera found. Check that the camera is connected and switched on, then try again.',
+    permissionBusyHint: 'Another app is using the camera. Close that app and try again.',
+    permissionConstraintHint: 'The selected camera is not available. Check the camera choice in the admin panel and try again.',
+    permissionInsecureHint: 'The camera needs a secure connection. Open the photo box at https://localhost:8443 or start it with Fotobox-Kiosk.cmd.',
+    permissionFailedHint: 'The camera could not be opened. Check the browser settings and try again.',
     captionFace: 'FACE FILTERS',
     captionTimer: 'COUNTDOWN',
     shutterLabel: 'CAPTURE',
@@ -485,6 +501,9 @@ function applyLanguage(lang) {
     unit.classList.toggle('is-selected', btn.dataset.lang === currentLang);
   });
   applySoundState(); // Beschriftung des Ton-Buttons in der aktiven Sprache
+  // Ein laufender Kamera-Versuch behält seine Beschriftung beim Sprachwechsel.
+  const permissionBtn = $permission && $permission.querySelector('[data-action="retry-camera"]');
+  if (permissionBtn) permissionBtn.textContent = t(permissionBtn.disabled ? 'permissionOpening' : 'permissionBtn');
   renderTrashRetention(); // dynamische Aufbewahrungsdauer (Serverwert)
   // Beschriftungen der Gesichtsfilter-Chips in der aktiven Sprache nachziehen
   if ($filterBar && window.SnapBoxFilters) {
@@ -902,14 +921,61 @@ setInterval(syncSettingsFromServer, 2500);
 //  CAMERA ACCESS
 // ============================================================
 let stream = null;
+// Ein laufender getUserMedia-Aufruf. Verhindert, dass Doppelklicks mehrere
+// gleichzeitige Berechtigungsdialoge öffnen.
+let cameraRequest = null;
 
-async function initCamera() {
-  $permission.classList.remove('visible');
+function hasLiveVideoTrack(mediaStream) {
+  return !!mediaStream && mediaStream.getVideoTracks().some((track) => track.readyState === 'live');
+}
 
-  // already have a stream (returning from gallery or re-entering)
+function setPermissionBusy(busy) {
+  const button = $permission.querySelector('[data-action="retry-camera"]');
+  if (!button) return;
+  button.disabled = busy;
+  button.setAttribute('aria-busy', String(busy));
+  button.textContent = t(busy ? 'permissionOpening' : 'permissionBtn');
+}
+
+function setPermissionHint(key) {
+  const hint = $permission.querySelector('.permission__hint');
+  if (!hint) return;
+  hint.dataset.i18n = key;
+  hint.textContent = t(key);
+}
+
+// Fehlername → konkreter Hinweis mit Lösung. Ein pauschales „geht nicht“
+// hilft niemandem; der Gast soll wissen, was er jetzt tun kann.
+function cameraErrorHint(err) {
+  switch (err && err.name) {
+    case 'NotAllowedError':
+    case 'PermissionDeniedError':
+    case 'SecurityError':
+      return 'permissionDeniedHint';
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+      return 'permissionNoDeviceHint';
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return 'permissionBusyHint';
+    case 'OverconstrainedError':
+    case 'ConstraintNotSatisfiedError':
+      return 'permissionConstraintHint';
+    default:
+      return 'permissionFailedHint';
+  }
+}
+
+async function initCamera({ retry = false } = {}) {
+  if (cameraRequest) return cameraRequest;
+
   if (filterEngine) filterEngine.start();
-  if (stream) {
+
+  // already have a live stream (returning from gallery or re-entering)
+  if (hasLiveVideoTrack(stream)) {
     videoPlaying = true;
+    $permission.classList.remove('visible');
+    setPermissionBusy(false);
     $video.classList.add('has-source');
     if (!$video.srcObject) {
       $video.srcObject = stream;
@@ -921,38 +987,78 @@ async function initCamera() {
     return true;
   }
 
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: appSettings.cameraFacingMode },
-      audio: false
-    });
-    $video.srcObject = stream;
-    $video.classList.add('has-source');
+  // Ein alter, beendeter Track darf einen neuen Versuch nicht verhindern.
+  if (stream) stopCamera();
 
-    // once video can play, hide placeholder and show viewfinder
-    $video.onplaying = () => {
-      videoPlaying = true;
-      gsap.to($placeholder, { opacity: 0, duration: 0.3 });
-      showViewfinder();
-    };
-
-    // mirror the video for a natural selfie feel
-    $video.style.transform = 'scaleX(-1)';
-
-    return true;
-  } catch (err) {
-    console.warn('Camera access denied:', err.message);
-    showPermissionPrompt();
+  if (!navigator.mediaDevices || typeof navigator.mediaDevices.getUserMedia !== 'function') {
+    showPermissionPrompt('permissionInsecureHint');
+    setPermissionBusy(false);
     return false;
   }
+
+  if (retry) {
+    // Der Dialog bleibt sichtbar und zeigt sofort, dass der Klick angekommen ist.
+    showPermissionPrompt('permissionRequestingHint');
+    setPermissionBusy(true);
+  } else {
+    $permission.classList.remove('visible');
+    setPermissionBusy(false);
+  }
+
+  cameraRequest = (async () => {
+    const requestStarted = performance.now();
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: appSettings.cameraFacingMode },
+        audio: false
+      });
+      stream = mediaStream;
+      $video.srcObject = stream;
+      $video.classList.add('has-source');
+
+      // once video can play, hide placeholder and show viewfinder
+      $video.onplaying = () => {
+        videoPlaying = true;
+        gsap.to($placeholder, { opacity: 0, duration: 0.3 });
+        showViewfinder();
+      };
+
+      // mirror the video for a natural selfie feel
+      $video.style.transform = 'scaleX(-1)';
+
+      $permission.classList.remove('visible');
+      setPermissionBusy(false);
+      return true;
+    } catch (err) {
+      stream = null;
+      console.warn('Camera access failed:', err && err.name, err && err.message);
+      // Bei sofortiger Ablehnung (blockierte Kamera) den Busy-Zustand kurz
+      // stehen lassen, sonst wirkt der Klick wie ohne Reaktion.
+      if (retry) {
+        const remaining = 700 - (performance.now() - requestStarted);
+        if (remaining > 0) await new Promise((resolve) => setTimeout(resolve, remaining));
+      }
+      showPermissionPrompt(cameraErrorHint(err));
+      setPermissionBusy(false);
+      return false;
+    } finally {
+      cameraRequest = null;
+    }
+  })();
+
+  return cameraRequest;
 }
 
-function showPermissionPrompt() {
+function showPermissionPrompt(hintKey = 'permissionHint') {
+  const wasVisible = $permission.classList.contains('visible');
+  setPermissionHint(hintKey);
   $permission.classList.add('visible');
-  gsap.from('.permission__content > *', {
-    y: 20, opacity: 0, stagger: 0.1,
-    duration: 0.5, ease: 'power2.out'
-  });
+  if (!wasVisible) {
+    gsap.from('.permission__content > *', {
+      y: 20, opacity: 0, stagger: 0.1,
+      duration: 0.5, ease: 'power2.out'
+    });
+  }
 }
 
 function stopCamera() {
@@ -3702,7 +3808,7 @@ document.querySelectorAll('[data-action]').forEach((el) => {
         if (currentState === 'gallery') toggleTrash();
         break;
       case 'retry-camera':
-        initCamera();
+        initCamera({ retry: true });
         break;
     }
   });

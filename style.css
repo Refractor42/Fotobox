@@ -384,42 +384,68 @@ section.active { display: block; opacity: 1; }
   opacity: 0;
   pointer-events: none;
   z-index: 7;
+  transition: opacity 0.2s ease;
 }
 .permission.visible {
   opacity: 1;
   pointer-events: all;
 }
+/* Der Screen wird aus 1–2 Metern in der Holzbox gelesen: großzügige
+   Typografie und ein klar sichtbarer primärer Button. */
 .permission__content {
+  box-sizing: border-box;
+  width: min(92%, 680px);
+  max-height: 100%;
+  overflow-y: auto;
+  padding: clamp(18px, 4vh, 40px) clamp(18px, 4vw, 40px);
   text-align: center;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.25rem;
-  max-width: 80%;
+  gap: clamp(16px, 2.6vh, 24px);
 }
 .permission__icon {
-  width: 48px;
-  height: 48px;
+  width: clamp(52px, 6vh, 68px);
+  height: clamp(52px, 6vh, 68px);
   stroke: var(--c-text-2);
-  opacity: 0.6;
+  opacity: 0.65;
 }
 .permission__copy {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.75rem;
 }
 .permission__text {
-  font-size: 0.95rem;
-  color: var(--c-text-2);
-  letter-spacing: -0.005em;
-  line-height: 1.5;
+  margin: 0;
+  font-size: clamp(1.5rem, 2.15vw, 1.75rem);
+  font-weight: 700;
+  color: var(--c-text);
+  letter-spacing: -0.02em;
+  line-height: 1.25;
+  text-wrap: balance;
 }
 .permission__hint {
-  max-width: 36ch;
-  font-size: 0.82rem;
-  color: var(--c-text-3);
-  line-height: 1.5;
+  max-width: 48ch;
+  margin: 0 auto;
+  font-size: clamp(1rem, 1.25vw, 1.125rem);
+  color: var(--c-text-2);
+  line-height: 1.55;
 }
+.permission .btn--primary {
+  width: min(100%, 400px);
+  min-height: 68px;
+  padding: 0 2rem;
+  font-size: clamp(1.125rem, 1.35vw, 1.3125rem);
+  font-weight: 700;
+  letter-spacing: 0;
+}
+.permission .btn--primary:disabled {
+  opacity: 0.7;
+  cursor: wait;
+  transform: none !important;
+  box-shadow: none !important;
+}
+.permission .btn--primary:disabled::before { display: none; }
 
 
 
