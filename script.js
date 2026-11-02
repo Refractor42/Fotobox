@@ -210,10 +210,10 @@ const I18N = {
     settingsTitle: 'Einstellungen',
     settingsOpenAria: 'Einstellungen öffnen',
     settingsCloseAria: 'Einstellungen schließen',
-    cvdHint: 'Farbmodus für Farbsehschwächen — die Wahl gilt sofort und bleibt gespeichert.',
+    cvdHint: 'Farbmodus für Farbsehschwächen — die Wahl gilt sofort und nur für diese Sitzung.',
     cvdGroupLabel: 'Farbmodus',
     cvdStandard: 'Standard',
-    cvdStandardNote: 'Kräftiger Gold-Akzent',
+    cvdStandardNote: 'Farben aus dem Admin-Panel',
     cvdProtan: 'Protanopie',
     cvdProtanNote: 'Rotsehschwäche — Blau statt Rot/Grün',
     cvdDeuter: 'Deuteranopie',
@@ -393,10 +393,10 @@ const I18N = {
     settingsTitle: 'Settings',
     settingsOpenAria: 'Open settings',
     settingsCloseAria: 'Close settings',
-    cvdHint: 'Colour mode for colour vision deficiency — applied immediately and remembered.',
+    cvdHint: 'Colour mode for colour vision deficiency — applied immediately and only for this session.',
     cvdGroupLabel: 'Colour mode',
     cvdStandard: 'Default',
-    cvdStandardNote: 'Strong gold accent',
+    cvdStandardNote: 'Colours from the admin panel',
     cvdProtan: 'Protanopia',
     cvdProtanNote: 'Red-weak — blue instead of red/green',
     cvdDeuter: 'Deuteranopia',
@@ -487,24 +487,199 @@ document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
 
 
 // ============================================================
+//  ADMIN SETTINGS (eine Quelle für alle Terminals)
+// ============================================================
+const SETTINGS_CACHE_KEY = 'snapbox_settings_cache';
+const APP_SETTINGS_DEFAULTS = Object.freeze({
+  orientation: 'portrait',
+  defaultLanguage: 'de',
+  trashRetentionDays: 7,
+  idleEndSeconds: 40,
+  idleProcessSeconds: 75,
+  idleWarnSeconds: 15,
+  defaultCountdownSeconds: 5,
+  defaultCaptureMode: 'single',
+  defaultSound: true,
+  cameraFacingMode: 'environment',
+  galleryPageSize: 12,
+  accentColor: '#ffd700',
+  secondaryColor: '#00e0d6',
+  backgroundColor: '#0d0d0d',
+  brandName: 'SnapBox',
+  qrTtlHours: 24
+});
+let appSettings = { ...APP_SETTINGS_DEFAULTS };
+
+function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
+  const raw = data && typeof data === 'object' ? data : {};
+  const merged = { ...base, ...raw };
+  const intInRange = (value, fallback, min, max) => {
+    const n = Number(value);
+    return Number.isInteger(n) ? Math.min(max, Math.max(min, n)) : fallback;
+  };
+  const color = (value, fallback) => (
+    typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : fallback
+  );
+  const brand = typeof merged.brandName === 'string' && merged.brandName.trim()
+    ? merged.brandName.trim().replace(/[<>]/g, '').slice(0, 32)
+    : APP_SETTINGS_DEFAULTS.brandName;
+  const retention = Number(merged.trashRetentionDays);
+  const pageSize = Number(merged.galleryPageSize);
+  const countdown = Number(merged.defaultCountdownSeconds);
+
+  const next = {
+    orientation: merged.orientation === 'landscape' ? 'landscape' : 'portrait',
+    defaultLanguage: merged.defaultLanguage === 'en' ? 'en' : 'de',
+    trashRetentionDays: [7, 14, 30].includes(retention) ? retention : APP_SETTINGS_DEFAULTS.trashRetentionDays,
+    idleEndSeconds: intInRange(merged.idleEndSeconds, APP_SETTINGS_DEFAULTS.idleEndSeconds, 15, 180),
+    idleProcessSeconds: intInRange(merged.idleProcessSeconds, APP_SETTINGS_DEFAULTS.idleProcessSeconds, 20, 300),
+    idleWarnSeconds: intInRange(merged.idleWarnSeconds, APP_SETTINGS_DEFAULTS.idleWarnSeconds, 5, 60),
+    defaultCountdownSeconds: [3, 5, 10].includes(countdown) ? countdown : APP_SETTINGS_DEFAULTS.defaultCountdownSeconds,
+    defaultCaptureMode: merged.defaultCaptureMode === 'strip' ? 'strip' : 'single',
+    defaultSound: merged.defaultSound !== false,
+    cameraFacingMode: merged.cameraFacingMode === 'user' ? 'user' : 'environment',
+    galleryPageSize: [6, 12, 24].includes(pageSize) ? pageSize : APP_SETTINGS_DEFAULTS.galleryPageSize,
+    accentColor: color(merged.accentColor, APP_SETTINGS_DEFAULTS.accentColor),
+    secondaryColor: color(merged.secondaryColor, APP_SETTINGS_DEFAULTS.secondaryColor),
+    backgroundColor: color(merged.backgroundColor, APP_SETTINGS_DEFAULTS.backgroundColor),
+    brandName: brand || APP_SETTINGS_DEFAULTS.brandName,
+    qrTtlHours: intInRange(merged.qrTtlHours, APP_SETTINGS_DEFAULTS.qrTtlHours, 1, 168)
+  };
+  next.idleWarnSeconds = Math.max(5, Math.min(
+    next.idleWarnSeconds,
+    next.idleEndSeconds - 5,
+    next.idleProcessSeconds - 5
+  ));
+  return next;
+}
+
+function readCachedAppSettings() {
+  try {
+    const raw = localStorage.getItem(SETTINGS_CACHE_KEY);
+    if (!raw) return null;
+    return normalizeAppSettings(JSON.parse(raw));
+  } catch (e) {
+    return null;
+  }
+}
+
+function cacheAppSettings(settings) {
+  try { localStorage.setItem(SETTINGS_CACHE_KEY, JSON.stringify(settings)); } catch (e) {}
+}
+
+function hexToRgb(hex) {
+  const value = hex.replace('#', '');
+  return {
+    r: parseInt(value.slice(0, 2), 16),
+    g: parseInt(value.slice(2, 4), 16),
+    b: parseInt(value.slice(4, 6), 16)
+  };
+}
+
+function relativeLuminance(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  const channel = (v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+}
+
+function mixHex(hex, targetHex, amount) {
+  const from = hexToRgb(hex);
+  const to = hexToRgb(targetHex);
+  const mix = (a, b) => Math.round(a + (b - a) * amount).toString(16).padStart(2, '0');
+  return '#' + mix(from.r, to.r) + mix(from.g, to.g) + mix(from.b, to.b);
+}
+
+function applyThemeSettings(settings) {
+  const root = document.documentElement;
+  const style = root.style;
+  const scheme = root.getAttribute('data-cvd');
+  const props = [
+    '--c-bg', '--c-accent', '--c-accent-rgb', '--c-accent-2', '--c-accent-2-rgb',
+    '--c-accent-dark', '--c-accent-hover', '--c-accent-contrast',
+    '--c-highlight', '--c-highlight-rgb', '--c-highlight-edge', '--c-highlight-edge-rgb'
+  ];
+
+  // Die Farbsehschwächen-Schemata sind ein Barrierefreiheitsangebot und
+  // haben Vorrang vor frei gewählten Farben aus dem Admin-Panel.
+  if (scheme && scheme !== 'standard') {
+    props.forEach((prop) => style.removeProperty(prop));
+    return;
+  }
+
+  const accent = settings.accentColor;
+  const secondary = settings.secondaryColor;
+  const accentRgb = hexToRgb(accent);
+  const secondaryRgb = hexToRgb(secondary);
+  const accentLight = relativeLuminance(accent) > 0.55;
+  const hover = mixHex(accent, accentLight ? '#000000' : '#ffffff', 0.14);
+  const hoverRgb = hexToRgb(hover);
+  const accentTuple = `${accentRgb.r} ${accentRgb.g} ${accentRgb.b}`;
+  const secondaryTuple = `${secondaryRgb.r} ${secondaryRgb.g} ${secondaryRgb.b}`;
+  const hoverTuple = `${hoverRgb.r} ${hoverRgb.g} ${hoverRgb.b}`;
+
+  // rgb(var(--token) / alpha) im Hauptprojekt erwartet Leerzeichen-Tripel.
+  style.setProperty('--c-bg', settings.backgroundColor);
+  style.setProperty('--c-accent', accent);
+  style.setProperty('--c-accent-rgb', accentTuple);
+  style.setProperty('--c-accent-2', secondary);
+  style.setProperty('--c-accent-2-rgb', secondaryTuple);
+  style.setProperty('--c-accent-dark', hover);
+  style.setProperty('--c-accent-hover', hover);
+  style.setProperty('--c-accent-contrast', accentLight ? '#0b0c10' : '#ffffff');
+  style.setProperty('--c-highlight', accent);
+  style.setProperty('--c-highlight-rgb', accentTuple);
+  style.setProperty('--c-highlight-edge', hover);
+  style.setProperty('--c-highlight-edge-rgb', hoverTuple);
+}
+
+function applyBrandSettings(name) {
+  const brand = name || APP_SETTINGS_DEFAULTS.brandName;
+  document.title = `${brand} — Minimalist Photobox`;
+  document.querySelectorAll('.splash__brand, .splash__title').forEach((el) => {
+    el.textContent = brand;
+  });
+  I18N.de.permissionText = `Kamerazugriff für ${brand} erforderlich`;
+  I18N.en.permissionText = `Camera access required for ${brand}`;
+  document.querySelectorAll('[data-i18n="permissionText"]').forEach((el) => {
+    el.textContent = currentLang === 'en' ? I18N.en.permissionText : I18N.de.permissionText;
+  });
+}
+
+function brandFileBase() {
+  return (appSettings.brandName || 'SnapBox')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'foto';
+}
+
+// Zuletzt bekannte Farben/Marke sofort anwenden, damit beim Neuladen kein
+// gelber Zwischenschritt aufblitzt. Alles Weitere kommt vom Server.
+const cachedAppSettings = readCachedAppSettings();
+if (cachedAppSettings) appSettings = cachedAppSettings;
+applyThemeSettings(appSettings);
+applyBrandSettings(appSettings.brandName);
+
+// ============================================================
 //  FARBMODUS FÜR FARBSEHSCHWÄCHEN (CVD)
 //  Barrierefreiheit: Das Zahnrad im Startbildschirm öffnet die
 //  Einstellungen. Die Wahl setzt data-cvd auf <html> — die Schemata in
-//  style.css überschreiben damit die Farb-Tokens des ganzen UI — und
-//  bleibt im Gerät gespeichert, also auch nach dem Sitzungswechsel.
+//  style.css überschreiben damit die Farb-Tokens des ganzen UI. Die
+//  Wahl gilt nur für die aktuelle Sitzung und wird beim Zurückkehren
+//  zum Startbildschirm wie die übrigen Gäste-Einstellungen zurückgesetzt.
 // ============================================================
-const CVD_STORAGE_KEY = 'snapbox_color_scheme';
 const CVD_SCHEMES = ['standard', 'protan', 'deuter', 'tritan', 'mono'];
 let colorScheme = 'standard';
-try {
-  const savedScheme = localStorage.getItem(CVD_STORAGE_KEY);
-  if (CVD_SCHEMES.includes(savedScheme)) colorScheme = savedScheme;
-} catch (e) {}
 
-function applyColorScheme(scheme, persist = false) {
+function applyColorScheme(scheme) {
   colorScheme = CVD_SCHEMES.includes(scheme) ? scheme : 'standard';
   if (colorScheme === 'standard') document.documentElement.removeAttribute('data-cvd');
   else document.documentElement.setAttribute('data-cvd', colorScheme);
+
+  // Bei einem CVD-Schema dessen Palette zeigen, sonst die Admin-Farben.
+  applyThemeSettings(appSettings);
 
   document.querySelectorAll('#cvdOptions [data-cvd]').forEach((option) => {
     const active = option.dataset.cvd === colorScheme;
@@ -512,9 +687,6 @@ function applyColorScheme(scheme, persist = false) {
     option.tabIndex = active ? 0 : -1;
   });
 
-  if (persist) {
-    try { localStorage.setItem(CVD_STORAGE_KEY, colorScheme); } catch (err) {}
-  }
   return colorScheme;
 }
 applyColorScheme(colorScheme);
@@ -556,7 +728,7 @@ if ($cvdOptions) {
   $cvdOptions.addEventListener('click', (e) => {
     const option = e.target.closest('[data-cvd]');
     if (!option) return;
-    applyColorScheme(option.dataset.cvd, true);
+    applyColorScheme(option.dataset.cvd);
     option.focus();
   });
 
@@ -573,7 +745,7 @@ if ($cvdOptions) {
     else if (e.key === 'End') next = options.length - 1;
     else if (e.key === 'ArrowDown' || e.key === 'ArrowRight') next = (current + 1) % options.length;
     else next = (current - 1 + options.length) % options.length;
-    applyColorScheme(options[next].dataset.cvd, true);
+    applyColorScheme(options[next].dataset.cvd);
     options[next].focus();
   });
 }
@@ -581,7 +753,7 @@ if ($cvdOptions) {
 // ============================================================
 //  ORIENTATION SYNC (Hochformat / Querformat — Admin Panel)
 // ============================================================
-let currentOrientation = 'portrait';
+let currentOrientation = appSettings.orientation;
 try {
   const saved = localStorage.getItem('snapbox_orientation');
   if (saved === 'landscape' || saved === 'portrait') currentOrientation = saved;
@@ -600,15 +772,36 @@ function applyOrientation(orientation) {
 }
 
 // Aufbewahrungsdauer aus den Server-Einstellungen (Admin-geschützt).
-let serverRetentionDays = 7;
+let serverRetentionDays = appSettings.trashRetentionDays;
 
 function renderTrashRetention() {
   const el = document.getElementById('trashRetentionText');
   if (el) el.textContent = t('trashRetentionText', { n: serverRetentionDays });
 }
 
+function applyAppSettings(data) {
+  appSettings = normalizeAppSettings(data, appSettings);
+  applyThemeSettings(appSettings);
+  applyBrandSettings(appSettings.brandName);
+
+  if (appSettings.orientation !== currentOrientation) {
+    applyOrientation(appSettings.orientation);
+  }
+  if (appSettings.defaultLanguage !== defaultLang) {
+    defaultLang = appSettings.defaultLanguage;
+    try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
+    if (currentState === 'splash') applyLanguage(defaultLang);
+  }
+  if (appSettings.trashRetentionDays !== serverRetentionDays) {
+    serverRetentionDays = appSettings.trashRetentionDays;
+    renderTrashRetention();
+  }
+  cacheAppSettings(appSettings);
+}
+
 // Sofort initial anwenden
 applyOrientation(currentOrientation);
+renderTrashRetention();
 
 // Synchronisation zwischen Tabs über BroadcastChannel
 if ('BroadcastChannel' in window) {
@@ -616,6 +809,9 @@ if ('BroadcastChannel' in window) {
     const settingsChannel = new BroadcastChannel('snapbox_channel');
     settingsChannel.onmessage = (event) => {
       if (!event.data) return;
+      if (event.data.type === 'settings_change' && event.data.settings) {
+        applyAppSettings(event.data.settings);
+      }
       if (event.data.type === 'orientation_change') {
         applyOrientation(event.data.orientation);
       }
@@ -649,33 +845,15 @@ window.addEventListener('storage', (e) => {
 // Periodische Synchronisation mit dem Server (/api/settings) für Multi-Device / Kiosk
 async function syncSettingsFromServer() {
   try {
-    const res = await fetch('/api/settings');
+    const res = await fetch('/api/settings', { cache: 'no-store' });
     if (res.ok) {
       const data = await res.json();
-      if (data) {
-        if (data.orientation && data.orientation !== currentOrientation) {
-          applyOrientation(data.orientation);
-        }
-        if (data.defaultLanguage && (data.defaultLanguage === 'en' || data.defaultLanguage === 'de')) {
-          if (defaultLang !== data.defaultLanguage) {
-            defaultLang = data.defaultLanguage;
-            try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
-            if (currentState === 'splash') {
-              applyLanguage(defaultLang);
-            }
-          }
-        }
-        const retention = Number(data.trashRetentionDays);
-        if ([7, 14, 30].includes(retention) && retention !== serverRetentionDays) {
-          serverRetentionDays = retention;
-          renderTrashRetention();
-        }
-      }
+      if (data) applyAppSettings(data);
     }
   } catch (e) {}
 }
 
-syncSettingsFromServer();
+const settingsReady = syncSettingsFromServer();
 setInterval(syncSettingsFromServer, 2500);
 
 // ============================================================
@@ -703,7 +881,7 @@ async function initCamera() {
 
   try {
     stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' },
+      video: { facingMode: appSettings.cameraFacingMode },
       audio: false
     });
     $video.srcObject = stream;
@@ -940,16 +1118,12 @@ const $filterToggle = document.getElementById('filterToggle');
 const $timerChips = document.getElementById('timerChips');
 
 // Gäste-Einstellungen gelten nur für die aktuelle Sitzung. Beim Verlassen
-// des Startbildschirms werden sie auf diese neutralen Werte zurückgesetzt,
+// des Startbildschirms werden sie auf die Admin-Standardwerte zurückgesetzt,
 // damit der nächste Gast nicht die Wahl des Vorgängers erbt.
-const DEFAULT_CAPTURE_MODE = 'single';
-const DEFAULT_COUNTDOWN_SECONDS = 5;
 
 // Countdown-Dauer (Selbstauslöser) — sichtbar gewählt, pro Sitzung gemerkt.
-// Default 5s: Standard bei echten Fotoboxen und genug Zeit, um sich zu
-// positionieren; 3s bleibt als Schnell-Option wählbar.
 let countdownSeconds = Number(localStorage.getItem('countdownSeconds'));
-if (![3, 5, 10].includes(countdownSeconds)) countdownSeconds = DEFAULT_COUNTDOWN_SECONDS;
+if (![3, 5, 10].includes(countdownSeconds)) countdownSeconds = appSettings.defaultCountdownSeconds;
 
 function applyTimerSelection() {
   // Hochformat-Dock und Kiosk-Leiste teilen sich denselben Zustand.
@@ -970,7 +1144,10 @@ document.addEventListener('click', (e) => {
 });
 
 // Aufnahmemodus: Einzelfoto oder vierteiliger Fotostreifen.
-let captureMode = localStorage.getItem('snapbox_capture_mode') === 'strip' ? 'strip' : DEFAULT_CAPTURE_MODE;
+const storedCaptureMode = localStorage.getItem('snapbox_capture_mode');
+let captureMode = storedCaptureMode === 'strip' || storedCaptureMode === 'single'
+  ? storedCaptureMode
+  : appSettings.defaultCaptureMode;
 
 function applyModeSelection() {
   document.querySelectorAll('[data-mode]').forEach((btn) => {
@@ -1003,11 +1180,11 @@ function syncFaceFilterSelection() {
 // Betreiber-Einstellungen (Ausrichtung, Standardsprache, Aufbewahrung) bleiben
 // davon unberührt, weil sie nicht in dieser Funktion liegen.
 function resetGuestCaptureSettings() {
-  captureMode = DEFAULT_CAPTURE_MODE;
-  countdownSeconds = DEFAULT_COUNTDOWN_SECONDS;
+  captureMode = appSettings.defaultCaptureMode;
+  countdownSeconds = appSettings.defaultCountdownSeconds;
   currentFilter = 'standard';
   currentOverlay = null;
-  soundEnabled = true;
+  soundEnabled = appSettings.defaultSound;
 
   // Keine Gästeauswahl im Gerät behalten: Beim nächsten Laden gilt der
   // Standard, nicht die letzte Wahl eines fremden Gastes.
@@ -1015,6 +1192,7 @@ function resetGuestCaptureSettings() {
     localStorage.removeItem('snapbox_capture_mode');
     localStorage.removeItem('countdownSeconds');
     localStorage.removeItem('soundEnabled');
+    localStorage.removeItem('snapbox_color_scheme'); // Altbestand früherer Versionen
   } catch (err) {}
 
   if (filterEngine) filterEngine.setFilter('none');
@@ -1023,6 +1201,7 @@ function resetGuestCaptureSettings() {
   applyFilterSelection();
   syncFaceFilterSelection();
   applySoundState();
+  applyColorScheme('standard');
 }
 
 // Während der Aufnahmesequenz (Countdown → Verarbeitung) sind Gallery, Timer
@@ -2411,7 +2590,7 @@ function attachDelete(card, photoId) {
   card.appendChild(btn);
 }
 
-const PHOTO_PAGE_SIZE = 12;
+// Galerie-Seitengröße kommt aus den Admin-Einstellungen (6/12/24).
 let photoCursor = null;
 let photoHasMore = false;
 let photoPageLoading = false;
@@ -2460,7 +2639,7 @@ async function loadPhotoPage() {
   setLoadMoreBusy(true);
   updateGalleryLoadMore();
   try {
-    const params = new URLSearchParams({ limit: String(PHOTO_PAGE_SIZE) });
+    const params = new URLSearchParams({ limit: String(appSettings.galleryPageSize) });
     if (photoCursor) params.set('before', photoCursor);
     const res = await fetch('/api/photos?' + params.toString(), { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -3176,7 +3355,8 @@ function playSynthShutter(ctx) {
 // ============================================================
 const $soundToggle = document.getElementById('soundToggle');
 const $splashSound = document.getElementById('splashSound');
-let soundEnabled = localStorage.getItem('soundEnabled') !== '0';
+const storedSoundSetting = localStorage.getItem('soundEnabled');
+let soundEnabled = storedSoundSetting === null ? appSettings.defaultSound : storedSoundSetting !== '0';
 
 function applySoundState() {
   [$soundToggle, $splashSound].forEach((btn) => {
@@ -3902,9 +4082,9 @@ async function shareEndPhoto() {
   if (!endPhotoUrl) return;
   try {
     const blob = await (await fetch(endPhotoUrl)).blob();
-    const file = new File([blob], 'snapbox.jpg', { type: blob.type || 'image/jpeg' });
+    const file = new File([blob], brandFileBase() + '.jpg', { type: blob.type || 'image/jpeg' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'SnapBox' });
+      await navigator.share({ files: [file], title: appSettings.brandName });
       return;
     }
   } catch (err) {
@@ -3912,7 +4092,7 @@ async function shareEndPhoto() {
   }
   const link = document.createElement('a');
   link.href = endPhotoUrl;
-  link.download = 'snapbox.jpg';
+  link.download = brandFileBase() + '.jpg';
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -3926,7 +4106,7 @@ function printEndPhoto() {
     showToast(t('toastPrintBlocked'), { error: true });
     return;
   }
-  win.document.write('<!doctype html><html><head><title>SnapBox</title><style>'
+  win.document.write('<!doctype html><html><head><title>' + appSettings.brandName + '</title><style>'
     + 'html,body{margin:0;height:100%;background:#fff}'
     + 'body{display:flex;align-items:center;justify-content:center}'
     + 'img{max-width:100%;max-height:100vh;object-fit:contain}'
@@ -4024,7 +4204,10 @@ function toggleFullscreen() {
 // ============================================================
 //  INIT
 // ============================================================
-window.addEventListener('load', () => {
+window.addEventListener('load', async () => {
+  // Erst die Admin-Einstellungen anwenden: Sprache, Farben, Marke und die
+  // Galerie-Seitengröße sollen schon beim allerersten Aufbau stimmen.
+  await settingsReady;
   applyLanguage(defaultLang);
   // Alte Gästeauswahl aus früheren Versionen darf nicht in die erste
   // Sitzung nach dem Laden hineinreichen.
@@ -4139,9 +4322,11 @@ const $idleWarning = document.getElementById('idleWarning');
 const $idleCount = document.getElementById('idleCount');
 const $idleStay = document.getElementById('idleStay');
 
-const IDLE_WARN_MS = 15000;
-const IDLE_END_MS = 40000;
-const IDLE_PROCESS_MS = 75000;
+// Die Fristen sind Admin-Einstellungen; Änderungen greifen beim nächsten
+// Zustandswechsel bzw. beim nächsten Zurücksetzen auf den Startbildschirm.
+function idleWarnMs() { return appSettings.idleWarnSeconds * 1000; }
+function idleEndMs() { return appSettings.idleEndSeconds * 1000; }
+function idleProcessMs() { return appSettings.idleProcessSeconds * 1000; }
 
 let idleDeadline = 0;
 let idleWarnUntil = 0;
@@ -4162,7 +4347,7 @@ function currentIdleStateKey() {
 
 function idleTimeoutFor(key) {
   if (key === 'splash') return 0;
-  return key === 'end' ? IDLE_END_MS : IDLE_PROCESS_MS;
+  return key === 'end' ? idleEndMs() : idleProcessMs();
 }
 
 function resetIdleDeadline() {
@@ -4181,8 +4366,8 @@ function hideIdleWarning() {
 function showIdleWarning() {
   if (!$idleWarning) return;
   idleWarnVisible = true;
-  idleWarnUntil = Date.now() + IDLE_WARN_MS;
-  if ($idleCount) $idleCount.textContent = String(Math.round(IDLE_WARN_MS / 1000));
+  idleWarnUntil = Date.now() + idleWarnMs();
+  if ($idleCount) $idleCount.textContent = String(Math.round(idleWarnMs() / 1000));
   $idleWarning.hidden = false;
   gsap.fromTo(
     $idleWarning.querySelector('.idle-warning__card'),

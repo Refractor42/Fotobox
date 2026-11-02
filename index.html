@@ -6,16 +6,6 @@
   <title>SnapBox — Minimalist Photobox</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="kiosk.css" />
-  <!-- Gespeicherten Farbmodus (Barrierefreiheit) vor dem ersten Paint setzen,
-       damit der Kiosk nicht kurz im Standard-Gold aufblitzt. -->
-  <script>
-    (function () {
-      try {
-        var scheme = localStorage.getItem('snapbox_color_scheme');
-        if (scheme && scheme !== 'standard') document.documentElement.setAttribute('data-cvd', scheme);
-      } catch (e) {}
-    })();
-  </script>
 </head>
 <body>
   <!-- Landing / Idle: Foto-Kette, Swipe-up und Monats-Challenge -->
@@ -478,12 +468,12 @@
   </div>
 
   <!-- Einstellungen: Farbmodus für Farbsehschwächen. Die Wahl wirkt sofort
-       auf das ganze UI und bleibt im Gerät gespeichert (auch nach der Sitzung). -->
+       auf das ganze UI und gilt nur für die aktuelle Sitzung. -->
   <div class="settings-modal" id="settingsModal" hidden>
     <div class="settings-modal__card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-describedby="settingsHint">
       <button class="settings-modal__close" id="settingsClose" type="button" aria-label="Einstellungen schließen" data-i18n-aria="settingsCloseAria">×</button>
       <h3 class="settings-modal__title" id="settingsTitle" data-i18n="settingsTitle">Einstellungen</h3>
-      <p class="settings-modal__hint" id="settingsHint" data-i18n="cvdHint">Farbmodus für Farbsehschwächen — die Wahl gilt sofort und bleibt gespeichert.</p>
+      <p class="settings-modal__hint" id="settingsHint" data-i18n="cvdHint">Farbmodus für Farbsehschwächen — die Wahl gilt sofort und nur für diese Sitzung.</p>
       <p class="settings-modal__label" id="cvdLabel" data-i18n="cvdGroupLabel">Farbmodus</p>
       <div class="cvd-options" id="cvdOptions" role="radiogroup" aria-labelledby="cvdLabel">
         <button class="cvd-option" type="button" role="radio" aria-checked="true" tabindex="0" data-cvd="standard">
@@ -526,7 +516,7 @@
     </div>
   </div>
 
-  <!-- Inaktivitäts-Warnung: 15 s Countdown, jeder Tipp bricht ab -->
+  <!-- Inaktivitäts-Warnung: Countdown in der im Admin-Panel gesetzten Warnzeit; jeder Tipp bricht ab -->
   <div class="idle-warning" id="idleWarning" hidden>
     <div class="idle-warning__card" role="alertdialog" aria-modal="true" aria-labelledby="idleWarningTitle" aria-describedby="idleWarningText">
       <p class="idle-warning__title" id="idleWarningTitle" data-i18n="idleResetTitle">Noch da?</p>

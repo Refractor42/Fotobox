@@ -222,7 +222,6 @@ const TRASH_PREFIX = 'trash/';
 const PHOTO_NAME = '[A-Za-z0-9-]+\\.jpg';
 const TRASH_NAME_RE = new RegExp(`^(\\d{10,})-(${PHOTO_NAME})$`);
 const PURGE_INTERVAL_MS = 60 * 60 * 1000; // purge expired trash hourly
-const QR_URL_TTL_SECONDS = 24 * 60 * 60; // QR-Download-Links: 24h gültig
 
 function getSupabaseConfig() {
   const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_BUCKET } = process.env;
@@ -525,10 +524,11 @@ async function handlePhotosApi(req, res) {
       if (!new RegExp(`^${PHOTO_PREFIX}(${PHOTO_NAME})$`).test(id)) {
         return sendJson(res, 400, { error: 'Invalid id' });
       }
+      const qrTtlSeconds = readSettings().qrTtlHours * 3600;
       const signRes = await supabaseFetch(cfg, `/object/sign/${encodeURIComponent(cfg.bucket)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ expiresIn: QR_URL_TTL_SECONDS, paths: [id] })
+        body: JSON.stringify({ expiresIn: qrTtlSeconds, paths: [id] })
       });
       const body = await signRes.json();
       // Storage-API antwortet mit einem Array [{ error, path, signedURL }]
@@ -536,7 +536,7 @@ async function handlePhotosApi(req, res) {
       const rel = item.signedUrl || item.signedURL || '';
       if (!rel) throw new Error('no signed url in response');
       const url = rel.startsWith('http') ? rel : cfg.baseUrl + '/storage/v1' + rel;
-      return sendJson(res, 200, { url, ttl: QR_URL_TTL_SECONDS });
+      return sendJson(res, 200, { url, ttl: qrTtlSeconds });
     }
 
     if (req.method === 'GET') {
@@ -722,35 +722,191 @@ async function handleTrashApi(req, res) {
 
 
 // ---- Settings API (/api/settings) ----
+// Eine gemeinsame, flache Struktur für alle Stellschrauben der Fotobox. Der
+// Server ist die einzige Quelle der Wahrheit; das Admin-Panel schickt immer
+// nur die geänderten Felder. So bleiben mehrere Terminals synchron.
 const SETTINGS_FILE = path.join(DIST_DIR, 'settings.json');
+const COLOR_RE = /^#[0-9a-f]{6}$/i;
+const BRAND_MAX_LENGTH = 32;
+// Die Fotobox ist gestalterisch ein Dark-Theme. Ein zu heller Hintergrund
+// würde die weiße Schrift und die Glasflächen unlesbar machen.
+const MAX_BACKGROUND_LUMINANCE = 0.18;
+
+function hexLuminance(hex) {
+  const value = hex.replace('#', '');
+  const channels = [0, 2, 4].map((i) => parseInt(value.slice(i, i + 2), 16));
+  const linear = channels.map((v) => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
+const DEFAULT_SETTINGS = Object.freeze({
+  orientation: 'portrait',
+  defaultLanguage: 'de',
+  trashRetentionDays: 7,
+  idleEndSeconds: 40,
+  idleProcessSeconds: 75,
+  idleWarnSeconds: 15,
+  defaultCountdownSeconds: 5,
+  defaultCaptureMode: 'single',
+  defaultSound: true,
+  cameraFacingMode: 'environment',
+  galleryPageSize: 12,
+  accentColor: '#ffd700',
+  secondaryColor: '#00e0d6',
+  backgroundColor: '#0d0d0d',
+  brandName: 'SnapBox',
+  qrTtlHours: 24,
+  updatedAt: null
+});
+
+function numberInRange(value, fallback, min, max) {
+  const n = Number(value);
+  return Number.isInteger(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+
+function sanitizeSettings(data) {
+  const raw = data && typeof data === 'object' ? data : {};
+  const retention = Number(raw.trashRetentionDays);
+  const pageSize = Number(raw.galleryPageSize);
+  const countdown = Number(raw.defaultCountdownSeconds);
+  const brand = typeof raw.brandName === 'string' ? raw.brandName.trim().slice(0, BRAND_MAX_LENGTH) : '';
+  const background = typeof raw.backgroundColor === 'string' && COLOR_RE.test(raw.backgroundColor)
+    ? raw.backgroundColor.toLowerCase() : DEFAULT_SETTINGS.backgroundColor;
+  const safeBackground = hexLuminance(background) <= MAX_BACKGROUND_LUMINANCE
+    ? background : DEFAULT_SETTINGS.backgroundColor;
+
+  const settings = {
+    orientation: raw.orientation === 'landscape' ? 'landscape' : 'portrait',
+    defaultLanguage: raw.defaultLanguage === 'en' ? 'en' : 'de',
+    trashRetentionDays: [7, 14, 30].includes(retention) ? retention : DEFAULT_SETTINGS.trashRetentionDays,
+    idleEndSeconds: numberInRange(raw.idleEndSeconds, DEFAULT_SETTINGS.idleEndSeconds, 15, 180),
+    idleProcessSeconds: numberInRange(raw.idleProcessSeconds, DEFAULT_SETTINGS.idleProcessSeconds, 20, 300),
+    idleWarnSeconds: numberInRange(raw.idleWarnSeconds, DEFAULT_SETTINGS.idleWarnSeconds, 5, 60),
+    defaultCountdownSeconds: [3, 5, 10].includes(countdown) ? countdown : DEFAULT_SETTINGS.defaultCountdownSeconds,
+    defaultCaptureMode: raw.defaultCaptureMode === 'strip' ? 'strip' : 'single',
+    defaultSound: raw.defaultSound !== false,
+    cameraFacingMode: raw.cameraFacingMode === 'user' ? 'user' : 'environment',
+    galleryPageSize: [6, 12, 24].includes(pageSize) ? pageSize : DEFAULT_SETTINGS.galleryPageSize,
+    accentColor: typeof raw.accentColor === 'string' && COLOR_RE.test(raw.accentColor)
+      ? raw.accentColor.toLowerCase() : DEFAULT_SETTINGS.accentColor,
+    secondaryColor: typeof raw.secondaryColor === 'string' && COLOR_RE.test(raw.secondaryColor)
+      ? raw.secondaryColor.toLowerCase() : DEFAULT_SETTINGS.secondaryColor,
+    backgroundColor: safeBackground,
+    brandName: brand || DEFAULT_SETTINGS.brandName,
+    qrTtlHours: numberInRange(raw.qrTtlHours, DEFAULT_SETTINGS.qrTtlHours, 1, 168),
+    updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null
+  };
+
+  // Die Warnung muss kürzer sein als beide Inaktivitätsfristen, sonst würde
+  // der Countdown den Reset überholen. Alte Dateien werden dabei repariert.
+  settings.idleWarnSeconds = Math.max(5, Math.min(
+    settings.idleWarnSeconds,
+    settings.idleEndSeconds - 5,
+    settings.idleProcessSeconds - 5
+  ));
+  return settings;
+}
 
 function readSettings() {
   try {
     if (fs.existsSync(SETTINGS_FILE)) {
-      const data = JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8'));
-      const retention = Number(data.trashRetentionDays);
-      return {
-        orientation: data.orientation === 'landscape' ? 'landscape' : 'portrait',
-        defaultLanguage: data.defaultLanguage === 'en' ? 'en' : 'de',
-        trashRetentionDays: [7, 14, 30].includes(retention) ? retention : 7,
-        updatedAt: data.updatedAt || null
-      };
+      return sanitizeSettings(JSON.parse(fs.readFileSync(SETTINGS_FILE, 'utf8')));
     }
   } catch (err) {
     console.warn('Could not read settings.json:', err.message);
   }
-  return { orientation: 'portrait', defaultLanguage: 'de', trashRetentionDays: 7, updatedAt: null };
+  return { ...DEFAULT_SETTINGS };
+}
+
+function assertInteger(value, name, min, max) {
+  const n = Number(value);
+  if (!Number.isInteger(n) || n < min || n > max) {
+    throw new Error(`${name} muss eine ganze Zahl zwischen ${min} und ${max} sein.`);
+  }
+  return n;
+}
+
+function validateSettingsPatch(patch) {
+  const next = { ...readSettings() };
+  const has = (key) => Object.prototype.hasOwnProperty.call(patch, key);
+
+  if (has('orientation')) {
+    if (patch.orientation !== 'portrait' && patch.orientation !== 'landscape') {
+      throw new Error('Ungültige Ausrichtung.');
+    }
+    next.orientation = patch.orientation;
+  }
+  if (has('defaultLanguage')) {
+    if (patch.defaultLanguage !== 'de' && patch.defaultLanguage !== 'en') {
+      throw new Error('Ungültige Standardsprache.');
+    }
+    next.defaultLanguage = patch.defaultLanguage;
+  }
+  if (has('trashRetentionDays')) {
+    const days = assertInteger(patch.trashRetentionDays, 'Aufbewahrung', 7, 30);
+    if (![7, 14, 30].includes(days)) throw new Error('Ungültige Aufbewahrungsdauer.');
+    next.trashRetentionDays = days;
+  }
+  if (has('idleEndSeconds')) next.idleEndSeconds = assertInteger(patch.idleEndSeconds, 'Endscreen-Zeit', 15, 180);
+  if (has('idleProcessSeconds')) next.idleProcessSeconds = assertInteger(patch.idleProcessSeconds, 'Ablauf-Zeit', 20, 300);
+  if (has('idleWarnSeconds')) next.idleWarnSeconds = assertInteger(patch.idleWarnSeconds, 'Warnzeit', 5, 60);
+  if (next.idleWarnSeconds >= next.idleEndSeconds || next.idleWarnSeconds >= next.idleProcessSeconds) {
+    throw new Error('Die Warnzeit muss kürzer als beide Inaktivitätszeiten sein.');
+  }
+  if (has('defaultCountdownSeconds')) {
+    const seconds = Number(patch.defaultCountdownSeconds);
+    if (![3, 5, 10].includes(seconds)) throw new Error('Ungültiger Countdown-Standard.');
+    next.defaultCountdownSeconds = seconds;
+  }
+  if (has('defaultCaptureMode')) {
+    if (patch.defaultCaptureMode !== 'single' && patch.defaultCaptureMode !== 'strip') {
+      throw new Error('Ungültiger Aufnahmemodus.');
+    }
+    next.defaultCaptureMode = patch.defaultCaptureMode;
+  }
+  if (has('defaultSound')) {
+    if (typeof patch.defaultSound !== 'boolean') throw new Error('Ungültiger Ton-Standard.');
+    next.defaultSound = patch.defaultSound;
+  }
+  if (has('cameraFacingMode')) {
+    if (patch.cameraFacingMode !== 'environment' && patch.cameraFacingMode !== 'user') {
+      throw new Error('Ungültige Kameraseite.');
+    }
+    next.cameraFacingMode = patch.cameraFacingMode;
+  }
+  if (has('galleryPageSize')) {
+    const size = Number(patch.galleryPageSize);
+    if (![6, 12, 24].includes(size)) throw new Error('Ungültige Galerie-Seitengröße.');
+    next.galleryPageSize = size;
+  }
+  ['accentColor', 'secondaryColor', 'backgroundColor'].forEach((key) => {
+    if (!has(key)) return;
+    if (typeof patch[key] !== 'string' || !COLOR_RE.test(patch[key])) {
+      throw new Error('Farben müssen als Hex-Wert (#rrggbb) angegeben werden.');
+    }
+    next[key] = patch[key].toLowerCase();
+  });
+  if (has('backgroundColor') && hexLuminance(next.backgroundColor) > MAX_BACKGROUND_LUMINANCE) {
+    throw new Error('Der Hintergrund muss dunkel bleiben, damit die weiße Schrift lesbar ist.');
+  }
+  if (has('brandName')) {
+    const brand = typeof patch.brandName === 'string' ? patch.brandName.trim() : '';
+    if (!brand || brand.length > BRAND_MAX_LENGTH || /[<>]/.test(brand)) {
+      throw new Error(`Der Fotobox-Name muss 1–${BRAND_MAX_LENGTH} Zeichen lang sein.`);
+    }
+    next.brandName = brand;
+  }
+  if (has('qrTtlHours')) next.qrTtlHours = assertInteger(patch.qrTtlHours, 'QR-Gültigkeit', 1, 168);
+
+  next.updatedAt = new Date().toISOString();
+  return next;
 }
 
 function saveSettings(patch) {
-  const current = readSettings();
-  const retention = Number(patch.trashRetentionDays);
-  const next = {
-    orientation: patch.orientation !== undefined ? (patch.orientation === 'landscape' ? 'landscape' : 'portrait') : current.orientation,
-    defaultLanguage: patch.defaultLanguage !== undefined ? (patch.defaultLanguage === 'en' ? 'en' : 'de') : current.defaultLanguage,
-    trashRetentionDays: [7, 14, 30].includes(retention) ? retention : current.trashRetentionDays,
-    updatedAt: new Date().toISOString()
-  };
+  const next = validateSettingsPatch(patch);
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), 'utf8');
   return next;
 }
@@ -778,16 +934,10 @@ async function handleSettingsApi(req, res) {
       if (!body || typeof body !== 'object' || Array.isArray(body)) {
         return sendJson(res, 400, { error: 'Invalid JSON or settings' });
       }
-      if (body.trashRetentionDays !== undefined) {
-        const days = Number(body.trashRetentionDays);
-        if (![7, 14, 30].includes(days)) {
-          return sendJson(res, 400, { error: 'Invalid retention' });
-        }
-      }
       const saved = saveSettings(body);
       return sendJson(res, 200, { ok: true, settings: saved });
     } catch (err) {
-      return sendJson(res, 400, { error: 'Invalid JSON or settings' });
+      return sendJson(res, 400, { error: err.message || 'Invalid JSON or settings' });
     }
   }
   return sendJson(res, 405, { error: 'Method not allowed' });

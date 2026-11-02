@@ -69,6 +69,10 @@
     }
 
     .brand__logo {
+      max-width: 240px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
       font-size: 1.35rem;
       font-weight: 800;
       letter-spacing: -0.02em;
@@ -685,6 +689,11 @@
       transform: translateY(0);
     }
 
+    .admin-toast--error {
+      border-color: rgba(239, 68, 68, 0.6);
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), 0 0 15px rgba(239, 68, 68, 0.2);
+    }
+
     /* Idle-Warnung vor dem automatischen Abmelden. */
     .idle-modal {
       position: fixed;
@@ -734,6 +743,532 @@
       min-height: 48px;
     }
 
+    /* ---- Neue Konfigurationsoberfläche ------------------------------- */
+    .admin-main > section,
+    .admin-main > div {
+      scroll-margin-top: 96px;
+    }
+
+    .admin-intro {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .settings-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      align-self: flex-start;
+      min-height: 34px;
+      padding: 0.35rem 0.85rem;
+      border: 1px solid var(--c-border);
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.035);
+      color: var(--c-text-muted);
+      font-size: 0.82rem;
+    }
+
+    .settings-status__dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--c-success);
+      box-shadow: 0 0 8px var(--c-success);
+      flex: 0 0 auto;
+    }
+
+    .settings-status.is-saving .settings-status__dot {
+      background: var(--c-accent);
+      box-shadow: 0 0 8px var(--c-accent);
+      animation: pulse 1s infinite;
+    }
+
+    .settings-status.is-error .settings-status__dot {
+      background: var(--c-danger);
+      box-shadow: 0 0 8px var(--c-danger);
+    }
+
+    .admin-nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.55rem;
+      padding: 0.75rem;
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-lg);
+      background: rgba(21, 23, 30, 0.78);
+    }
+
+    .admin-nav a {
+      display: inline-flex;
+      align-items: center;
+      min-height: 42px;
+      padding: 0.45rem 0.9rem;
+      border: 1px solid transparent;
+      border-radius: 9999px;
+      color: var(--c-text-muted);
+      font-size: 0.84rem;
+      font-weight: 600;
+      text-decoration: none;
+      transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
+    }
+
+    .admin-nav a:hover,
+    .admin-nav a:focus-visible {
+      background: rgba(255, 255, 255, 0.07);
+      border-color: var(--c-border);
+      color: var(--c-text);
+      outline: none;
+    }
+
+    .section-kicker {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 26px;
+      height: 26px;
+      border-radius: 8px;
+      background: rgba(var(--c-accent-rgb, 250, 204, 21), 0.14);
+      color: var(--c-accent);
+      font-size: 0.75rem;
+      font-weight: 800;
+      flex: 0 0 auto;
+    }
+
+    .section-note {
+      color: var(--c-text-muted);
+      font-size: 0.84rem;
+      line-height: 1.55;
+    }
+
+    .settings-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 0.9rem;
+    }
+
+    .setting-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+      gap: 1rem 1.5rem;
+      align-items: center;
+      padding: 1rem 0;
+      border-top: 1px solid var(--c-border);
+    }
+
+    .setting-row:first-child { border-top: 0; padding-top: 0; }
+    .setting-row:last-child { padding-bottom: 0; }
+
+    .setting-row__copy {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      min-width: 0;
+    }
+
+    .setting-row__title {
+      font-size: 0.98rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .setting-row__desc {
+      color: var(--c-text-muted);
+      font-size: 0.83rem;
+      line-height: 1.45;
+    }
+
+    .setting-control {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.7rem;
+      min-width: 0;
+    }
+
+    .setting-control--stack {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .range-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 28px;
+      margin: 0;
+      background: transparent;
+      accent-color: var(--c-accent);
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 6px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 22px;
+      height: 22px;
+      margin-top: -8px;
+      border: 3px solid var(--c-surface);
+      border-radius: 50%;
+      background: var(--c-accent);
+      box-shadow: 0 0 0 2px var(--c-accent), 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    input[type="range"]::-moz-range-track {
+      height: 6px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border: 3px solid var(--c-surface);
+      border-radius: 50%;
+      background: var(--c-accent);
+    }
+
+    input[type="range"]:focus-visible {
+      outline: 2px solid var(--c-accent);
+      outline-offset: 4px;
+      border-radius: 9999px;
+    }
+
+    .range-value {
+      flex: 0 0 auto;
+      min-width: 68px;
+      padding: 0.35rem 0.55rem;
+      border: 1px solid var(--c-border);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.045);
+      color: var(--c-text);
+      font-size: 0.82rem;
+      font-variant-numeric: tabular-nums;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .field-label {
+      display: block;
+      margin-bottom: 0.4rem;
+      color: var(--c-text-muted);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .field-input,
+    .field-select {
+      width: 100%;
+      min-height: 48px;
+      padding: 0.65rem 0.8rem;
+      border: 1px solid var(--c-border);
+      border-radius: 10px;
+      background: #0f1117;
+      color: var(--c-text);
+      font: inherit;
+      font-size: 0.92rem;
+    }
+
+    .field-input:hover,
+    .field-select:hover { border-color: rgba(255, 255, 255, 0.2); }
+
+    .field-input:focus,
+    .field-select:focus {
+      outline: none;
+      border-color: var(--c-accent);
+      box-shadow: 0 0 0 3px rgba(250, 204, 21, 0.18);
+    }
+
+    .field-hint {
+      margin-top: 0.35rem;
+      color: var(--c-text-dim);
+      font-size: 0.76rem;
+      line-height: 1.4;
+    }
+
+    .choice-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .choice-btn {
+      min-height: 48px;
+      padding: 0.55rem 1rem;
+      border: 1px solid var(--c-border);
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--c-text);
+      font: inherit;
+      font-size: 0.88rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+    }
+
+    .choice-btn:hover {
+      background: var(--c-surface-hover);
+      border-color: rgba(250, 204, 21, 0.4);
+      transform: translateY(-1px);
+    }
+
+    .choice-btn:focus-visible {
+      outline: none;
+      border-color: var(--c-accent);
+      box-shadow: 0 0 0 3px var(--c-accent-glow);
+    }
+
+    .choice-btn[aria-pressed="true"],
+    .choice-btn[aria-checked="true"] {
+      background: var(--c-accent);
+      border-color: var(--c-accent);
+      color: #0b0c10;
+      box-shadow: 0 4px 16px var(--c-accent-glow);
+    }
+
+    .switch {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      min-height: 48px;
+      padding: 0.4rem 0.8rem;
+      border: 1px solid var(--c-border);
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.04);
+      color: var(--c-text);
+      font: inherit;
+      font-size: 0.87rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    .switch__track {
+      position: relative;
+      width: 38px;
+      height: 22px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.16);
+      transition: background 0.18s ease;
+    }
+
+    .switch__track::after {
+      content: "";
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: #fff;
+      transition: transform 0.18s ease;
+    }
+
+    .switch[aria-checked="true"] .switch__track { background: var(--c-accent); }
+    .switch[aria-checked="true"] .switch__track::after {
+      transform: translateX(16px);
+      background: #0b0c10;
+    }
+    .switch:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
+
+    .setting-row--colors {
+      grid-template-columns: 1fr;
+    }
+
+    .setting-row--colors .setting-control {
+      justify-content: stretch;
+    }
+
+    .color-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 0.8rem;
+      width: 100%;
+    }
+
+    .color-field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      min-width: 0;
+    }
+
+    .color-field__control {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      padding: 0.35rem;
+      border: 1px solid var(--c-border);
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.035);
+    }
+
+    input[type="color"] {
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      flex: 0 0 auto;
+    }
+
+    input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+    input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 7px; }
+    input[type="color"]::-moz-color-swatch { border: 0; border-radius: 7px; }
+
+    .color-field__hex {
+      width: 100%;
+      min-width: 70px;
+      padding: 0.4rem;
+      border: 0;
+      background: transparent;
+      color: var(--c-text);
+      font: 600 0.82rem/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      text-transform: lowercase;
+    }
+
+    .color-field__hex:focus { outline: none; color: var(--c-accent); }
+
+    .theme-preview {
+      position: relative;
+      overflow: hidden;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 190px;
+      gap: 1rem;
+      align-items: stretch;
+      min-height: 190px;
+      padding: 1.1rem;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: var(--radius-md);
+      background: var(--preview-bg, #0d0d0d);
+      color: #fff;
+    }
+
+    .theme-preview__copy {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 0.65rem;
+      min-width: 0;
+    }
+
+    .theme-preview__brand {
+      font-size: 1.55rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      background: linear-gradient(135deg, var(--preview-accent, #ffd700) 20%, var(--preview-secondary, #00e0d6) 90%);
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      overflow-wrap: anywhere;
+    }
+
+    .theme-preview__sub {
+      color: rgba(255, 255, 255, 0.66);
+      font-size: 0.8rem;
+    }
+
+    .theme-preview__cta {
+      align-self: flex-start;
+      min-height: 40px;
+      padding: 0.55rem 1rem;
+      border: 0;
+      border-radius: 9999px;
+      background: var(--preview-accent, #ffd700);
+      color: var(--preview-contrast, #0b0c10);
+      font: inherit;
+      font-size: 0.82rem;
+      font-weight: 800;
+    }
+
+    .theme-preview__phone {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      border-radius: 18px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(0, 0, 0, 0.3));
+      box-shadow: 0 16px 34px rgba(0, 0, 0, 0.4);
+    }
+
+    .theme-preview__stage {
+      flex: 1;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 11px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.08), rgba(0, 0, 0, 0.16));
+    }
+
+    .theme-preview__shutter {
+      align-self: center;
+      width: 42px;
+      height: 42px;
+      margin: 8px 0 2px;
+      border: 4px solid rgba(255, 255, 255, 0.38);
+      border-radius: 50%;
+      background: var(--preview-accent, #ffd700);
+      box-shadow: 0 0 18px rgba(0, 0, 0, 0.4);
+    }
+
+    .contrast-note {
+      display: flex;
+      align-items: center;
+      gap: 0.55rem;
+      min-height: 42px;
+      padding: 0.6rem 0.8rem;
+      border: 1px solid var(--c-border);
+      border-radius: 10px;
+      color: var(--c-text-muted);
+      font-size: 0.8rem;
+    }
+
+    .contrast-note.is-warning {
+      border-color: rgba(239, 68, 68, 0.45);
+      background: rgba(239, 68, 68, 0.08);
+      color: #fca5a5;
+    }
+
+    .button-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.65rem;
+    }
+
+    .btn--danger-ghost {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.35);
+      color: #fca5a5;
+    }
+
+    .btn--danger-ghost:hover {
+      background: rgba(239, 68, 68, 0.16);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    .stats-grid--compact { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+    @media (max-width: 760px) {
+      .setting-row { grid-template-columns: 1fr; align-items: start; }
+      .setting-control { justify-content: flex-start; }
+      .color-grid { grid-template-columns: 1fr; }
+      .theme-preview { grid-template-columns: 1fr; }
+      .theme-preview__phone { min-height: 160px; }
+    }
+
     @media (max-width: 640px) {
       .admin-session__label { display: none; }
       .admin-session { padding-right: 0.35rem; }
@@ -742,6 +1277,11 @@
       .header-actions { justify-content: space-between; }
       .orientation-grid { grid-template-columns: 1fr; }
       .section-card { padding: 1.25rem; }
+      .admin-nav { gap: 0.35rem; }
+      .admin-nav a { min-height: 40px; font-size: 0.79rem; }
+      .setting-row { gap: 0.65rem; }
+      .admin-main > section,
+      .admin-main > div { scroll-margin-top: 196px; }
     }
   </style>
 </head>
@@ -751,7 +1291,7 @@
   <header class="admin-header">
     <div class="admin-header__inner">
       <div class="brand">
-        <span class="brand__logo">SnapBox</span>
+        <span class="brand__logo" id="adminBrand">SnapBox</span>
         <span class="brand__badge">Admin</span>
       </div>
 
@@ -785,13 +1325,30 @@
       <span>Standard-PIN aktiv. Bitte in <code>.env</code> unter <code>ADMIN_PIN</code> einen eigenen PIN setzen.</span>
     </div>
 
-    <div>
-      <h1 class="hero-title">Fotobox Steuerung</h1>
-      <p class="hero-subtitle">Verwalte die Bildschirm-Ausrichtung und Einstellungen für verbundene Terminals und Bildschirme in Echtzeit. Beim Verlassen oder Neuladen wirst du automatisch abgemeldet.</p>
+    <div class="admin-intro">
+      <div>
+        <h1 class="hero-title">Fotobox konfigurieren</h1>
+        <p class="hero-subtitle">Format, Sprache, Zeiten, Aufnahme-Standards, Farben und Galerie zentral steuern. Änderungen werden sofort gespeichert und an alle geöffneten Fotobox-Terminals übertragen.</p>
+      </div>
+      <div class="settings-status" id="settingsStatus" role="status" aria-live="polite">
+        <span class="settings-status__dot" aria-hidden="true"></span>
+        <span id="settingsStatusText">Einstellungen werden geladen…</span>
+      </div>
     </div>
 
+    <nav class="admin-nav" aria-label="Admin-Bereiche">
+      <a href="#format">Format</a>
+      <a href="#language">Sprache</a>
+      <a href="#retentionSection">Papierkorb</a>
+      <a href="#times">Zeiten</a>
+      <a href="#capture">Aufnahme</a>
+      <a href="#appearance">Darstellung</a>
+      <a href="#gallerySettings">Galerie</a>
+      <a href="#system">System</a>
+    </nav>
+
     <!-- Section: Orientation -->
-    <section class="section-card">
+    <section class="section-card" id="format">
       <div class="section-header">
         <div>
           <h2 class="section-header__title">
@@ -808,7 +1365,7 @@
 
       <!-- Orientation Cards -->
       <div class="orientation-grid" role="radiogroup" aria-label="Fotobox Ausrichtung">
-        
+
         <!-- Portrait Card -->
         <div class="format-card" id="cardPortrait" role="radio" aria-checked="false" tabindex="0">
           <span class="format-card__badge" id="badgePortrait">Wählen</span>
@@ -855,7 +1412,7 @@
               </svg>
               Querformat (Landscape)
             </h3>
-            <p class="format-card__desc">Modernes 16:9 Breitbild-Layout mit seitlichem gelben Auslöser und schwebender Steuerleiste für Timer, Gesichtsfilter & Sprache.</p>
+            <p class="format-card__desc">16:9-Kiosk-Layout mit rundem Auslöser unten, Sticker-Menü, Foto-Kette und Endscreen für QR-Code, Teilen und Drucken.</p>
           </div>
         </div>
 
@@ -863,7 +1420,7 @@
     </section>
 
         <!-- Section: Default Language -->
-    <section class="section-card">
+    <section class="section-card" id="language">
       <div class="section-header">
         <div>
           <h2 class="section-header__title">
@@ -938,8 +1495,249 @@
       <p class="retention-note">Änderungen werden sofort gespeichert. Nur mit gültiger Admin-PIN erreichbar.</p>
     </section>
 
+    <!-- Section: Times & Idle -->
+    <section class="section-card" id="times">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <span class="section-kicker">01</span>
+            Zeiten & Inaktivität
+          </h2>
+          <p class="section-header__desc">Wie lange Gäste auf einem Screen bleiben dürfen, bevor die Fotobox zurückspringt. Die Warnung erscheint vor dem Reset und lässt sich per Tipp abbrechen.</p>
+        </div>
+      </div>
+
+      <div class="settings-stack">
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="idleEndRange">Nach dem Foto</label>
+            <p class="setting-row__desc">Endscreen mit QR-Code, Teilen und Drucken. Kurz halten, damit die Warteschlange weiterläuft.</p>
+          </div>
+          <div class="setting-control">
+            <div class="range-wrap">
+              <input type="range" id="idleEndRange" min="15" max="180" step="5" value="40" />
+              <output class="range-value" id="idleEndValue" for="idleEndRange">40 s</output>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="idleProcessRange">Mitten im Ablauf</label>
+            <p class="setting-row__desc">Kamera, Review, Galerie, Papierkorb und QR-Dialog. Mehr Zeit zum Positionieren, Requisiten holen oder Tippen.</p>
+          </div>
+          <div class="setting-control">
+            <div class="range-wrap">
+              <input type="range" id="idleProcessRange" min="20" max="300" step="5" value="75" />
+              <output class="range-value" id="idleProcessValue" for="idleProcessRange">75 s</output>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="idleWarnRange">Warnung vor dem Reset</label>
+            <p class="setting-row__desc">Sichtbarer Countdown mit „Hier bleiben“. Muss kürzer als beide Fristen oben sein.</p>
+          </div>
+          <div class="setting-control">
+            <div class="range-wrap">
+              <input type="range" id="idleWarnRange" min="5" max="60" step="1" value="15" />
+              <output class="range-value" id="idleWarnValue" for="idleWarnRange">15 s</output>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="qrTtlHours">QR-Link gültig</label>
+            <p class="setting-row__desc">So lange bleibt der Download-Link auf dem Handy erreichbar, nachdem der QR-Code erzeugt wurde.</p>
+          </div>
+          <div class="setting-control">
+            <input class="field-input" id="qrTtlHours" type="number" min="1" max="168" step="1" inputmode="numeric" style="max-width: 150px" />
+            <span class="section-note">Stunden</span>
+          </div>
+        </div>
+      </div>
+
+      <p class="section-note" id="idleSummary">Nach dem Foto: 40 s · mitten im Ablauf: 75 s · Warnung: 15 s.</p>
+    </section>
+
+    <!-- Section: Capture Defaults -->
+    <section class="section-card" id="capture">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <span class="section-kicker">02</span>
+            Aufnahme-Standard
+          </h2>
+          <p class="section-header__desc">Diese Werte gelten für jeden neuen Gast. Gäste können sie während ihrer Sitzung weiterhin selbst ändern; beim Zurückspringen werden sie wieder auf den Standard gesetzt.</p>
+        </div>
+      </div>
+
+      <div class="settings-stack">
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Aufnahmemodus</span>
+            <p class="setting-row__desc">Einzelfoto oder vierteiliger Fotostreifen beim Start.</p>
+          </div>
+          <div class="setting-control">
+            <div class="choice-group" role="group" aria-label="Standard-Aufnahmemodus">
+              <button class="choice-btn" type="button" data-capture-mode="single" aria-pressed="true">Einzelfoto</button>
+              <button class="choice-btn" type="button" data-capture-mode="strip" aria-pressed="false">Fotostreifen</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Countdown</span>
+            <p class="setting-row__desc">Startwert des Selbstauslösers. Die Optionen 3, 5 und 10 Sekunden bleiben wählbar.</p>
+          </div>
+          <div class="setting-control">
+            <div class="choice-group" role="group" aria-label="Standard-Countdown">
+              <button class="choice-btn" type="button" data-default-countdown="3" aria-pressed="false">3 s</button>
+              <button class="choice-btn" type="button" data-default-countdown="5" aria-pressed="true">5 s</button>
+              <button class="choice-btn" type="button" data-default-countdown="10" aria-pressed="false">10 s</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Ton beim Start</span>
+            <p class="setting-row__desc">Auslöser- und Countdown-Töne sind für neue Gäste zunächst eingeschaltet.</p>
+          </div>
+          <div class="setting-control">
+            <button class="switch" id="defaultSoundToggle" type="button" role="switch" aria-checked="true">
+              <span class="switch__track" aria-hidden="true"></span>
+              <span id="defaultSoundText">Ein</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="cameraFacingMode">Kamera</label>
+            <p class="setting-row__desc">Welche Kamera das Gerät verwendet. „Umgebung“ ist bei Fotoboxen üblich; „Front“ eignet sich für Selbstporträts.</p>
+          </div>
+          <div class="setting-control">
+            <select class="field-select" id="cameraFacingMode" style="max-width: 260px">
+              <option value="environment">Rückkamera / Umgebung</option>
+              <option value="user">Frontkamera / Selbstporträt</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section: Appearance -->
+    <section class="section-card" id="appearance">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <span class="section-kicker">03</span>
+            Darstellung
+          </h2>
+          <p class="section-header__desc">Marke und Farben der Fotobox. Die Vorschau zeigt sofort, wie Startbutton, Auslöser und Verlauf auf den Gäste-Bildschirmen aussehen.</p>
+        </div>
+      </div>
+
+      <div class="settings-stack">
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="brandName">Fotobox-Name</label>
+            <p class="setting-row__desc">Erscheint auf dem Startbildschirm, im Seitentitel und in der Kamera-Berechtigung.</p>
+          </div>
+          <div class="setting-control">
+            <input class="field-input" id="brandName" type="text" maxlength="32" autocomplete="off" style="max-width: 320px" />
+          </div>
+        </div>
+
+        <div class="setting-row setting-row--colors">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Farbpalette</span>
+            <p class="setting-row__desc">Akzentfarbe für Buttons und Auslöser, zweite Farbe für den Farbverlauf, Hintergrund für alle Screens. Der Hintergrund bleibt dunkel, damit die weiße Schrift lesbar ist. Bei aktivem Farbsehschwächen-Modus im Startbildschirm hat dessen Palette Vorrang.</p>
+          </div>
+          <div class="setting-control setting-control--stack">
+            <div class="color-grid">
+              <label class="color-field">
+                <span class="field-label">Akzent</span>
+                <span class="color-field__control">
+                  <input type="color" id="accentColorPicker" value="#ffd700" aria-label="Akzentfarbe wählen" />
+                  <input class="color-field__hex" id="accentColorHex" type="text" maxlength="7" spellcheck="false" aria-label="Akzentfarbe als Hex-Wert" />
+                </span>
+              </label>
+              <label class="color-field">
+                <span class="field-label">Verlauf</span>
+                <span class="color-field__control">
+                  <input type="color" id="secondaryColorPicker" value="#00e0d6" aria-label="Zweite Farbe wählen" />
+                  <input class="color-field__hex" id="secondaryColorHex" type="text" maxlength="7" spellcheck="false" aria-label="Zweite Farbe als Hex-Wert" />
+                </span>
+              </label>
+              <label class="color-field">
+                <span class="field-label">Hintergrund</span>
+                <span class="color-field__control">
+                  <input type="color" id="backgroundColorPicker" value="#0d0d0d" aria-label="Hintergrundfarbe wählen" />
+                  <input class="color-field__hex" id="backgroundColorHex" type="text" maxlength="7" spellcheck="false" aria-label="Hintergrundfarbe als Hex-Wert" />
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="theme-preview" id="themePreview" style="--preview-bg: #0d0d0d; --preview-accent: #ffd700; --preview-secondary: #00e0d6; --preview-contrast: #0b0c10;">
+        <div class="theme-preview__copy">
+          <span class="theme-preview__brand" id="themePreviewBrand">SnapBox</span>
+          <span class="theme-preview__sub">Knipsen. Animieren. Erinnern.</span>
+          <span class="theme-preview__cta">Fotobox starten</span>
+        </div>
+        <div class="theme-preview__phone" aria-hidden="true">
+          <div class="theme-preview__stage"></div>
+          <div class="theme-preview__shutter"></div>
+        </div>
+      </div>
+
+      <p class="contrast-note" id="contrastNote" role="status" aria-live="polite">Kontrast wird geprüft…</p>
+
+      <div class="button-row">
+        <button class="btn btn--ghost" id="resetColorsBtn" type="button">Standardfarben wiederherstellen</button>
+      </div>
+    </section>
+
+    <!-- Section: Gallery -->
+    <section class="section-card" id="gallerySettings">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <span class="section-kicker">04</span>
+            Galerie & Leistung
+          </h2>
+          <p class="section-header__desc">Die Galerie lädt Fotos seitenweise. Eine kleinere Seite startet schneller; „Mehr laden“ bleibt für alle weiteren Fotos sichtbar.</p>
+        </div>
+      </div>
+
+      <div class="settings-stack">
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Fotos pro Seite</span>
+            <p class="setting-row__desc">Gilt ab dem nächsten Neuladen der Fotobox. Bereits geladene Seiten bleiben unverändert.</p>
+          </div>
+          <div class="setting-control">
+            <div class="choice-group" role="group" aria-label="Fotos pro Galerie-Seite">
+              <button class="choice-btn" type="button" data-page-size="6" aria-pressed="false">6</button>
+              <button class="choice-btn" type="button" data-page-size="12" aria-pressed="true">12</button>
+              <button class="choice-btn" type="button" data-page-size="24" aria-pressed="false">24</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="section-note">Empfehlung: 12 Fotos. Das entspricht der bisherigen Geschwindigkeit und hält den ersten Aufruf unter einer halben Megabyte.</p>
+    </section>
+
     <!-- Section: System & Quick Info -->
-    <section class="section-card">
+    <section class="section-card" id="system">
       <div class="section-header">
         <div>
           <h2 class="section-header__title">
@@ -1048,24 +1846,292 @@
       const $idleCount = document.getElementById('idleCount');
       const $idleStay = document.getElementById('idleStay');
 
-      let networkUrl = window.location.origin;
+      // Gemeinsame Einstellungs-Struktur mit der Hauptseite. Der Server
+      // validiert jeden Wert; das Panel schickt immer nur die Änderung.
+      const DEFAULT_SETTINGS = {
+        orientation: 'portrait',
+        defaultLanguage: 'de',
+        trashRetentionDays: 7,
+        idleEndSeconds: 40,
+        idleProcessSeconds: 75,
+        idleWarnSeconds: 15,
+        defaultCountdownSeconds: 5,
+        defaultCaptureMode: 'single',
+        defaultSound: true,
+        cameraFacingMode: 'environment',
+        galleryPageSize: 12,
+        accentColor: '#ffd700',
+        secondaryColor: '#00e0d6',
+        backgroundColor: '#0d0d0d',
+        brandName: 'SnapBox',
+        qrTtlHours: 24
+      };
+      const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS);
+      const $settingsStatus = document.getElementById('settingsStatus');
+      const $settingsStatusText = document.getElementById('settingsStatusText');
+      const $adminBrand = document.getElementById('adminBrand');
+      const $idleEndRange = document.getElementById('idleEndRange');
+      const $idleEndValue = document.getElementById('idleEndValue');
+      const $idleProcessRange = document.getElementById('idleProcessRange');
+      const $idleProcessValue = document.getElementById('idleProcessValue');
+      const $idleWarnRange = document.getElementById('idleWarnRange');
+      const $idleWarnValue = document.getElementById('idleWarnValue');
+      const $idleSummary = document.getElementById('idleSummary');
+      const $qrTtlHours = document.getElementById('qrTtlHours');
+      const $captureModeOptions = Array.from(document.querySelectorAll('[data-capture-mode]'));
+      const $countdownOptions = Array.from(document.querySelectorAll('[data-default-countdown]'));
+      const $defaultSoundToggle = document.getElementById('defaultSoundToggle');
+      const $defaultSoundText = document.getElementById('defaultSoundText');
+      const $cameraFacingMode = document.getElementById('cameraFacingMode');
+      const $brandName = document.getElementById('brandName');
+      const $themePreview = document.getElementById('themePreview');
+      const $themePreviewBrand = document.getElementById('themePreviewBrand');
+      const $contrastNote = document.getElementById('contrastNote');
+      const $accentColorPicker = document.getElementById('accentColorPicker');
+      const $accentColorHex = document.getElementById('accentColorHex');
+      const $secondaryColorPicker = document.getElementById('secondaryColorPicker');
+      const $secondaryColorHex = document.getElementById('secondaryColorHex');
+      const $backgroundColorPicker = document.getElementById('backgroundColorPicker');
+      const $backgroundColorHex = document.getElementById('backgroundColorHex');
+      const $pageSizeOptions = Array.from(document.querySelectorAll('[data-page-size]'));
+      const $resetColorsBtn = document.getElementById('resetColorsBtn');
 
-      function showToast(message) {
+      let networkUrl = window.location.origin;
+      let currentSettings = { ...DEFAULT_SETTINGS };
+      let statusTimer = null;
+
+      const MIN_BACKGROUND_LUMINANCE = 0.18;
+
+      function showToast(message, isError = false) {
         const toast = document.createElement('div');
-        toast.className = 'admin-toast';
-        toast.innerHTML = `
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="#facc15" stroke-width="2">
-            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-            <polyline points="22 4 12 14.01 9 11.01"></polyline>
-          </svg>
-          <span>${message}</span>
-        `;
+        toast.className = 'admin-toast' + (isError ? ' admin-toast--error' : '');
+        const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        icon.setAttribute('viewBox', '0 0 24 24');
+        icon.setAttribute('width', '18');
+        icon.setAttribute('height', '18');
+        icon.setAttribute('fill', 'none');
+        icon.setAttribute('stroke', isError ? '#f87171' : '#facc15');
+        icon.setAttribute('stroke-width', '2');
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', isError
+          ? 'M12 9v4m0 4h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z'
+          : 'M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01 9 11.01');
+        icon.appendChild(path);
+        const label = document.createElement('span');
+        label.textContent = message;
+        toast.append(icon, label);
         $toastContainer.appendChild(toast);
         requestAnimationFrame(() => toast.classList.add('show'));
         setTimeout(() => {
           toast.classList.remove('show');
           setTimeout(() => toast.remove(), 350);
-        }, 3200);
+        }, 3600);
+      }
+
+      function setSaveStatus(text, state = '') {
+        clearTimeout(statusTimer);
+        $settingsStatusText.textContent = text;
+        $settingsStatus.classList.remove('is-saving', 'is-error');
+        if (state === 'saving') $settingsStatus.classList.add('is-saving');
+        if (state === 'error') $settingsStatus.classList.add('is-error');
+      }
+
+      function timeLabel() {
+        return new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+      }
+
+      function hexToRgb(hex) {
+        const value = hex.replace('#', '');
+        return {
+          r: parseInt(value.slice(0, 2), 16),
+          g: parseInt(value.slice(2, 4), 16),
+          b: parseInt(value.slice(4, 6), 16)
+        };
+      }
+
+      function relativeLuminance(hex) {
+        const { r, g, b } = hexToRgb(hex);
+        const channel = (v) => {
+          const s = v / 255;
+          return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b);
+      }
+
+      function contrastRatio(a, b) {
+        const l1 = relativeLuminance(a);
+        const l2 = relativeLuminance(b);
+        const light = Math.max(l1, l2);
+        const dark = Math.min(l1, l2);
+        return (light + 0.05) / (dark + 0.05);
+      }
+
+      function isHex(value) {
+        return /^#[0-9a-f]{6}$/i.test(value);
+      }
+
+      function syncRange(input, output, seconds) {
+        input.value = String(seconds);
+        output.textContent = seconds + ' s';
+      }
+
+      function idleOrderValid(settings) {
+        return settings.idleWarnSeconds < settings.idleEndSeconds
+          && settings.idleWarnSeconds < settings.idleProcessSeconds;
+      }
+
+      function updateIdleSummary(settings = currentSettings) {
+        $idleSummary.textContent = `Nach dem Foto: ${settings.idleEndSeconds} s · mitten im Ablauf: ${settings.idleProcessSeconds} s · Warnung: ${settings.idleWarnSeconds} s.`;
+      }
+
+      function renderThemePreview(settings = currentSettings) {
+        const accent = settings.accentColor;
+        const secondary = settings.secondaryColor;
+        const background = settings.backgroundColor;
+        const accentLight = relativeLuminance(accent) > 0.55;
+        $themePreview.style.setProperty('--preview-bg', background);
+        $themePreview.style.setProperty('--preview-accent', accent);
+        $themePreview.style.setProperty('--preview-secondary', secondary);
+        $themePreview.style.setProperty('--preview-contrast', accentLight ? '#0b0c10' : '#ffffff');
+        $themePreviewBrand.textContent = settings.brandName || 'SnapBox';
+
+        const ratio = contrastRatio(accent, background);
+        const enough = ratio >= 3;
+        $contrastNote.classList.toggle('is-warning', !enough);
+        $contrastNote.textContent = enough
+          ? `Akzent auf Hintergrund: ${ratio.toFixed(1)}:1 — gut lesbar. Die Schrift im Button wird automatisch passend gewählt.`
+          : `Nur ${ratio.toFixed(1)}:1 Kontrast zwischen Akzent und Hintergrund. Bitte eine deutlichere Akzentfarbe wählen.`;
+      }
+
+      function renderAllSettings() {
+        updateUI(currentSettings.orientation);
+        updateLangUI(currentSettings.defaultLanguage);
+        updateRetentionUI(currentSettings.trashRetentionDays);
+        syncRange($idleEndRange, $idleEndValue, currentSettings.idleEndSeconds);
+        syncRange($idleProcessRange, $idleProcessValue, currentSettings.idleProcessSeconds);
+        syncRange($idleWarnRange, $idleWarnValue, currentSettings.idleWarnSeconds);
+        $qrTtlHours.value = String(currentSettings.qrTtlHours);
+        $captureModeOptions.forEach((btn) => {
+          btn.setAttribute('aria-pressed', String(btn.dataset.captureMode === currentSettings.defaultCaptureMode));
+        });
+        $countdownOptions.forEach((btn) => {
+          btn.setAttribute('aria-pressed', String(Number(btn.dataset.defaultCountdown) === currentSettings.defaultCountdownSeconds));
+        });
+        $defaultSoundToggle.setAttribute('aria-checked', String(currentSettings.defaultSound));
+        $defaultSoundText.textContent = currentSettings.defaultSound ? 'Ein' : 'Aus';
+        $cameraFacingMode.value = currentSettings.cameraFacingMode;
+        $brandName.value = currentSettings.brandName;
+        $accentColorPicker.value = currentSettings.accentColor;
+        $accentColorHex.value = currentSettings.accentColor;
+        $secondaryColorPicker.value = currentSettings.secondaryColor;
+        $secondaryColorHex.value = currentSettings.secondaryColor;
+        $backgroundColorPicker.value = currentSettings.backgroundColor;
+        $backgroundColorHex.value = currentSettings.backgroundColor;
+        $pageSizeOptions.forEach((btn) => {
+          btn.setAttribute('aria-pressed', String(Number(btn.dataset.pageSize) === currentSettings.galleryPageSize));
+        });
+        updateIdleSummary();
+        renderThemePreview();
+        $adminBrand.textContent = currentSettings.brandName;
+        document.title = currentSettings.brandName + ' — Admin Panel';
+      }
+
+      function applyServerSettings(data, { broadcast = false } = {}) {
+        if (!data) return;
+        SETTING_KEYS.forEach((key) => {
+          if (data[key] !== undefined) currentSettings[key] = data[key];
+        });
+        renderAllSettings();
+        try {
+          localStorage.setItem('snapbox_orientation', currentSettings.orientation);
+          localStorage.setItem('snapbox_default_language', currentSettings.defaultLanguage);
+        } catch (e) {}
+        if (broadcast && broadcastChannel) {
+          try {
+            broadcastChannel.postMessage({ type: 'settings_change', settings: { ...currentSettings } });
+          } catch (e) {}
+        }
+      }
+
+      async function persistSettings(patch, message) {
+        const previous = { ...currentSettings };
+        currentSettings = { ...currentSettings, ...patch };
+        renderAllSettings();
+        setSaveStatus('Wird gespeichert…', 'saving');
+        try {
+          const res = await fetch('/api/settings', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patch)
+          });
+          if (res.status === 401) {
+            window.location.href = '/admin';
+            return false;
+          }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Speichern fehlgeschlagen.');
+          if (data.settings) applyServerSettings(data.settings, { broadcast: true });
+          setSaveStatus('Gespeichert · ' + timeLabel());
+          showToast(message);
+          return true;
+        } catch (err) {
+          currentSettings = previous;
+          renderAllSettings();
+          setSaveStatus('Nicht gespeichert', 'error');
+          showToast(err.message || 'Speichern fehlgeschlagen — Verbindung prüfen.', true);
+          return false;
+        }
+      }
+
+      function setColorPreview(key, value) {
+        const preview = { ...currentSettings, [key]: value };
+        renderThemePreview(preview);
+      }
+
+      function colorField(picker, hexInput, key) {
+        const apply = (value, save) => {
+          if (!isHex(value)) {
+            if (save) {
+              showToast('Bitte einen Hex-Wert wie #ffd700 eingeben.', true);
+              renderAllSettings();
+            }
+            return;
+          }
+          const normalized = value.toLowerCase();
+          if (key === 'backgroundColor' && relativeLuminance(normalized) > MIN_BACKGROUND_LUMINANCE) {
+            if (save) {
+              showToast('Der Hintergrund muss dunkel bleiben, damit die weiße Schrift lesbar ist.', true);
+              renderAllSettings();
+            }
+            return;
+          }
+          picker.value = normalized;
+          hexInput.value = normalized;
+          if (save) {
+            persistSettings({ [key]: normalized }, 'Farbe gespeichert.');
+          } else {
+            setColorPreview(key, normalized);
+          }
+        };
+
+        picker.addEventListener('input', () => {
+          hexInput.value = picker.value;
+          setColorPreview(key, picker.value);
+        });
+        picker.addEventListener('change', () => apply(picker.value, true));
+        hexInput.addEventListener('input', () => {
+          if (isHex(hexInput.value)) {
+            picker.value = hexInput.value.toLowerCase();
+            setColorPreview(key, hexInput.value.toLowerCase());
+          }
+        });
+        hexInput.addEventListener('change', () => apply(hexInput.value.trim(), true));
+        hexInput.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            hexInput.blur();
+          }
+        });
       }
 
       // ---- Admin-Sitzung: Countdown, Auto-Logout und Idle-Timeout ----
@@ -1233,8 +2299,8 @@
       });
 
       function updateUI(orientation) {
-        currentOrientation = orientation;
-        const isLandscape = orientation === 'landscape';
+        currentOrientation = orientation === 'landscape' ? 'landscape' : 'portrait';
+        const isLandscape = currentOrientation === 'landscape';
 
         $cardPortrait.classList.toggle('is-active', !isLandscape);
         $cardPortrait.setAttribute('aria-checked', String(!isLandscape));
@@ -1248,41 +2314,12 @@
         $statOrientationSub.textContent = isLandscape ? '16:9 Breitbild (Tablet/Widescreen)' : '3:4 Hochkant (Smartphone/Säule)';
       }
 
-      async function setOrientation(orientation) {
-        if (orientation === currentOrientation) return;
-        updateUI(orientation);
-
-        // 1. Speichern in localStorage für sofortigen Tab-Sync
-        try {
-          localStorage.setItem('snapbox_orientation', orientation);
-        } catch (e) {}
-
-        // 2. BroadcastChannel für offene Tabs
-        if (broadcastChannel) {
-          try {
-            broadcastChannel.postMessage({ type: 'orientation_change', orientation });
-          } catch (e) {}
-        }
-
-        // 3. Im Backend speichern (/api/settings)
-        try {
-          const res = await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ orientation })
-          });
-          if (res.status === 401) {
-            window.location.href = '/admin';
-            return;
-          }
-          if (res.ok) {
-            showToast(orientation === 'landscape' ? 'Querformat aktiviert! Bildschirme synchronisiert.' : 'Hochformat aktiviert! Bildschirme synchronisiert.');
-          } else {
-            showToast('Einstellung konnte nicht gespeichert werden — bitte erneut versuchen.');
-          }
-        } catch (err) {
-          showToast('Einstellung konnte nicht gespeichert werden — Verbindung prüfen.');
-        }
+      function setOrientation(orientation) {
+        if (orientation === currentSettings.orientation) return;
+        persistSettings(
+          { orientation },
+          orientation === 'landscape' ? 'Querformat aktiviert — alle Terminals werden aktualisiert.' : 'Hochformat aktiviert — alle Terminals werden aktualisiert.'
+        );
       }
 
       $cardPortrait.addEventListener('click', () => setOrientation('portrait'));
@@ -1295,18 +2332,13 @@
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOrientation('landscape'); }
       });
 
-      // Lade aktuelle Einstellungen & Statistiken
-      
-      let currentDefaultLang = 'de';
       const $cardLangDe = document.getElementById('cardLangDe');
       const $cardLangEn = document.getElementById('cardLangEn');
       const $badgeLangDe = document.getElementById('badgeLangDe');
       const $badgeLangEn = document.getElementById('badgeLangEn');
 
       function updateLangUI(lang) {
-        currentDefaultLang = lang === 'en' ? 'en' : 'de';
-        const isDe = currentDefaultLang === 'de';
-
+        const isDe = lang !== 'en';
         $cardLangDe.classList.toggle('is-active', isDe);
         $cardLangDe.setAttribute('aria-checked', String(isDe));
         $badgeLangDe.textContent = isDe ? 'Aktiv ✓' : 'Wählen';
@@ -1316,38 +2348,12 @@
         $badgeLangEn.textContent = !isDe ? 'Aktiv ✓' : 'Wählen';
       }
 
-      async function setDefaultLanguage(lang) {
-        if (lang === currentDefaultLang) return;
-        updateLangUI(lang);
-
-        try {
-          localStorage.setItem('snapbox_default_language', lang);
-        } catch (e) {}
-
-        if (broadcastChannel) {
-          try {
-            broadcastChannel.postMessage({ type: 'default_language_change', defaultLanguage: lang });
-          } catch (e) {}
-        }
-
-        try {
-          const res = await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ defaultLanguage: lang })
-          });
-          if (res.status === 401) {
-            window.location.href = '/admin';
-            return;
-          }
-          if (res.ok) {
-            showToast(lang === 'en' ? 'Standardsprache auf English gesetzt!' : 'Standardsprache auf Deutsch gesetzt!');
-          } else {
-            showToast('Sprache konnte nicht gespeichert werden — bitte erneut versuchen.');
-          }
-        } catch (err) {
-          showToast('Sprache konnte nicht gespeichert werden — Verbindung prüfen.');
-        }
+      function setDefaultLanguage(lang) {
+        if (lang === currentSettings.defaultLanguage) return;
+        persistSettings(
+          { defaultLanguage: lang },
+          lang === 'en' ? 'Standardsprache auf English gesetzt.' : 'Standardsprache auf Deutsch gesetzt.'
+        );
       }
 
       $cardLangDe.addEventListener('click', () => setDefaultLanguage('de'));
@@ -1361,11 +2367,8 @@
       });
 
       // ---- Papierkorb-Aufbewahrung ----
-      let currentRetentionDays = 7;
-
       function updateRetentionUI(days) {
         const value = [7, 14, 30].includes(Number(days)) ? Number(days) : 7;
-        currentRetentionDays = value;
         $retentionOptions.forEach((btn) => {
           const active = Number(btn.dataset.days) === value;
           btn.classList.toggle('is-active', active);
@@ -1373,31 +2376,13 @@
         });
       }
 
-      async function setRetentionDays(days) {
+      function setRetentionDays(days) {
         const value = [7, 14, 30].includes(Number(days)) ? Number(days) : 7;
-        if (value === currentRetentionDays) return;
-        const previous = currentRetentionDays;
-        updateRetentionUI(value);
-
-        try {
-          const res = await fetch('/api/settings', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ trashRetentionDays: value })
-          });
-          if (res.status === 401) {
-            window.location.href = '/admin';
-            return;
-          }
-          if (!res.ok) throw new Error('HTTP ' + res.status);
-          if (broadcastChannel) {
-            try { broadcastChannel.postMessage({ type: 'retention_change', trashRetentionDays: value }); } catch (e) {}
-          }
-          showToast('Papierkorb-Aufbewahrung: ' + value + ' Tage.');
-        } catch (err) {
-          updateRetentionUI(previous);
-          showToast('Aufbewahrung konnte nicht gespeichert werden.');
-        }
+        if (value === currentSettings.trashRetentionDays) return;
+        persistSettings(
+          { trashRetentionDays: value },
+          'Papierkorb-Aufbewahrung: ' + value + ' Tage.'
+        );
       }
 
       $retentionOptions.forEach((btn) => {
@@ -1407,6 +2392,105 @@
             e.preventDefault();
             setRetentionDays(btn.dataset.days);
           }
+        });
+      });
+
+      // ---- Zeiten: Slider zeigen den Wert live, speichern beim Loslassen ----
+      function bindIdleRange(input, output, key) {
+        input.addEventListener('input', () => {
+          output.textContent = input.value + ' s';
+          updateIdleSummary({ ...currentSettings, [key]: Number(input.value) });
+        });
+        input.addEventListener('change', () => {
+          const value = Number(input.value);
+          const next = { ...currentSettings, [key]: value };
+          if (!idleOrderValid(next)) {
+            showToast('Die Warnzeit muss kürzer als beide Inaktivitätszeiten sein.', true);
+            renderAllSettings();
+            return;
+          }
+          persistSettings({ [key]: value }, 'Zeit gespeichert.');
+        });
+      }
+
+      bindIdleRange($idleEndRange, $idleEndValue, 'idleEndSeconds');
+      bindIdleRange($idleProcessRange, $idleProcessValue, 'idleProcessSeconds');
+      bindIdleRange($idleWarnRange, $idleWarnValue, 'idleWarnSeconds');
+
+      $qrTtlHours.addEventListener('change', () => {
+        const value = Number($qrTtlHours.value);
+        if (!Number.isInteger(value) || value < 1 || value > 168) {
+          showToast('QR-Links müssen zwischen 1 und 168 Stunden gültig sein.', true);
+          renderAllSettings();
+          return;
+        }
+        persistSettings({ qrTtlHours: value }, 'QR-Gültigkeit gespeichert.');
+      });
+
+      // ---- Aufnahme-Standards ----
+      $captureModeOptions.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          if (btn.dataset.captureMode === currentSettings.defaultCaptureMode) return;
+          persistSettings({ defaultCaptureMode: btn.dataset.captureMode }, 'Aufnahmemodus gespeichert.');
+        });
+      });
+
+      $countdownOptions.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const seconds = Number(btn.dataset.defaultCountdown);
+          if (seconds === currentSettings.defaultCountdownSeconds) return;
+          persistSettings({ defaultCountdownSeconds: seconds }, 'Countdown-Standard gespeichert.');
+        });
+      });
+
+      $defaultSoundToggle.addEventListener('click', () => {
+        const enabled = !currentSettings.defaultSound;
+        persistSettings({ defaultSound: enabled }, enabled ? 'Ton für neue Gäste eingeschaltet.' : 'Ton für neue Gäste ausgeschaltet.');
+      });
+
+      $cameraFacingMode.addEventListener('change', () => {
+        const value = $cameraFacingMode.value === 'user' ? 'user' : 'environment';
+        if (value === currentSettings.cameraFacingMode) return;
+        persistSettings({ cameraFacingMode: value }, 'Kamera-Auswahl gespeichert.');
+      });
+
+      // ---- Darstellung ----
+      $brandName.addEventListener('input', () => {
+        const name = $brandName.value.trim().slice(0, 32) || 'SnapBox';
+        renderThemePreview({ ...currentSettings, brandName: name });
+      });
+      $brandName.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); $brandName.blur(); }
+      });
+      $brandName.addEventListener('change', () => {
+        const name = $brandName.value.trim();
+        if (!name || name.length > 32 || /[<>]/.test(name)) {
+          showToast('Der Fotobox-Name muss 1–32 Zeichen lang sein.', true);
+          renderAllSettings();
+          return;
+        }
+        if (name === currentSettings.brandName) return;
+        persistSettings({ brandName: name }, 'Fotobox-Name gespeichert.');
+      });
+
+      colorField($accentColorPicker, $accentColorHex, 'accentColor');
+      colorField($secondaryColorPicker, $secondaryColorHex, 'secondaryColor');
+      colorField($backgroundColorPicker, $backgroundColorHex, 'backgroundColor');
+
+      $resetColorsBtn.addEventListener('click', () => {
+        persistSettings({
+          accentColor: DEFAULT_SETTINGS.accentColor,
+          secondaryColor: DEFAULT_SETTINGS.secondaryColor,
+          backgroundColor: DEFAULT_SETTINGS.backgroundColor
+        }, 'Standardfarben wiederhergestellt.');
+      });
+
+      // ---- Galerie ----
+      $pageSizeOptions.forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const size = Number(btn.dataset.pageSize);
+          if (size === currentSettings.galleryPageSize) return;
+          persistSettings({ galleryPageSize: size }, size + ' Fotos pro Galerie-Seite.');
         });
       });
 
@@ -1425,52 +2509,45 @@
       window.addEventListener('hashchange', scrollToRetentionHash);
 
       async function loadSettings() {
+        // Lokale Werte sofort anzeigen, damit das Panel nicht leer aufblitzt.
         try {
-          const localStored = localStorage.getItem('snapbox_orientation');
-          if (localStored === 'landscape' || localStored === 'portrait') {
-            updateUI(localStored);
-          }
+          const localOrientation = localStorage.getItem('snapbox_orientation');
+          const localLanguage = localStorage.getItem('snapbox_default_language');
+          if (localOrientation === 'landscape' || localOrientation === 'portrait') currentSettings.orientation = localOrientation;
+          if (localLanguage === 'en' || localLanguage === 'de') currentSettings.defaultLanguage = localLanguage;
         } catch (e) {}
+        renderAllSettings();
+        setSaveStatus('Einstellungen werden geladen…', 'saving');
 
         try {
-          const res = await fetch('/api/settings');
-          if (res.ok) {
-            const data = await res.json();
-            if (data.defaultLanguage) {
-              updateLangUI(data.defaultLanguage);
-              localStorage.setItem('snapbox_default_language', data.defaultLanguage);
-            }
-            if (data.orientation) {
-              updateUI(data.orientation);
-              localStorage.setItem('snapbox_orientation', data.orientation);
-            }
-            if (typeof data.trashRetentionDays === 'number') {
-              updateRetentionUI(data.trashRetentionDays);
-            }
-            if (data.server && data.server.networkUrl) {
-              networkUrl = data.server.networkUrl;
-            }
-          }
+          const res = await fetch('/api/settings', { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          applyServerSettings(data, { broadcast: false });
+          if (data.server && data.server.networkUrl) networkUrl = data.server.networkUrl;
+          setSaveStatus('Gespeichert · ' + timeLabel());
         } catch (err) {
           console.warn('Could not load settings from server:', err);
+          setSaveStatus('Einstellungen konnten nicht geladen werden', 'error');
+          showToast('Einstellungen konnten nicht geladen werden — Verbindung prüfen.', true);
         }
 
-        // Fotos zählen
-        fetch('/api/photos').then((r) => r.json()).then((items) => {
-          if (Array.isArray(items)) {
-            $statPhotoCount.textContent = items.length;
-          }
+        // Fotos zählen: Die Galerie-API liefert seit der Pagination ein Objekt
+        // mit total. limit=1 vermeidet den Download aller Bilder.
+        fetch('/api/photos?limit=1').then((r) => r.json()).then((data) => {
+          const count = Array.isArray(data) ? data.length : Number(data && data.total);
+          $statPhotoCount.textContent = Number.isFinite(count) ? String(count) : '—';
         }).catch(() => {
-          $statPhotoCount.textContent = '0';
+          $statPhotoCount.textContent = '—';
         });
 
         // Papierkorb zählen
         fetch('/api/trash/count').then((r) => r.json()).then((data) => {
           if (data && typeof data.count === 'number') {
-            $statTrashCount.textContent = data.count;
+            $statTrashCount.textContent = String(data.count);
           }
         }).catch(() => {
-          $statTrashCount.textContent = '0';
+          $statTrashCount.textContent = '—';
         });
 
         // Streak abrufen
