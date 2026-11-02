@@ -250,6 +250,51 @@ section.active { display: block; opacity: 1; }
   70%, 100% { box-shadow: 0 0 0 18px rgb(var(--c-accent-rgb) / 0); }
 }
 
+/* Galerie: reiner runder Icon-Button in der unteren Utility-Reihe, links
+   neben dem Sprachumschalter. Kein Text und kein Zähler — die Form ordnet
+   ihn sichtbar den übrigen Randbuttons zu, das Icon bleibt die Beschriftung. */
+.splash__gallery {
+  position: fixed;
+  right: calc(20px + 200px + 14px);
+  bottom: 20px;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 74px;
+  height: 74px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 50%;
+  background: rgba(10, 10, 10, 0.5);
+  color: var(--c-accent);
+  cursor: pointer;
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  transition: color var(--transition), border-color var(--transition),
+    background var(--transition), transform 0.2s ease;
+}
+.splash__gallery svg { width: 34px; height: 34px; }
+.splash__gallery:hover {
+  background: rgba(28, 30, 38, 0.86);
+  color: #fff;
+  border-color: rgb(var(--c-accent-rgb) / 0.6);
+  transform: translateY(-1px);
+}
+.splash__gallery:active { transform: scale(0.94); }
+.splash__gallery:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.55);
+}
+@media (max-width: 420px) {
+  .splash__gallery {
+    right: calc(20px + 160px + 12px);
+    width: 68px;
+    height: 68px;
+  }
+  .splash__gallery svg { width: 32px; height: 32px; }
+}
+
 
 /* ============================================================
    CAMERA
@@ -804,24 +849,17 @@ section.active { display: block; opacity: 1; }
   align-self: center;
 }
 
-/* The photo counter is pinned to the pill's corner instead of taking its own
-   slot, which keeps the pill narrow enough to stay clear of the shutter. */
-.camera__controls #galleryBtn { position: relative; }
-.camera__controls #galleryBtn .btn__badge {
-  position: absolute;
-  top: -8px;
-  right: -8px;
-  min-width: 19px;
-  height: 19px;
-  padding: 0 4px;
-  font-size: 0.68rem;
-  box-shadow: 0 0 0 3px var(--c-bg);
-}
-
 /* the side buttons share one height and sit on the shutter's centre line */
 .camera__controls > .btn--ghost,
 .camera__controls > .btn--capture {
   align-self: center;
+}
+
+/* Nach dem Entfernen des Galerie-Buttons bleibt der Sprachschalter im
+   Hochformat auf der rechten Seite der Leiste statt nach links zu rutschen. */
+.camera__controls > .lang-switch--portrait {
+  grid-column: 3;
+  justify-self: end;
 }
 
 
@@ -1480,67 +1518,6 @@ body.orientation-landscape #filterCanvas {
   width: 100%;
   height: 100%;
   object-fit: cover;
-}
-
-/* Galerie-Button im Querformat (oben links als Glas-Pill) */
-body.orientation-landscape #galleryBtn {
-  position: absolute;
-  top: 24px;
-  left: 24px;
-  z-index: 30;
-  height: 46px;
-  background: rgba(30, 32, 40, 0.78);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 14px;
-  padding: 0 18px 0 14px;
-  color: #ffffff;
-  font-size: 0.95rem;
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
-  margin: 0;
-  cursor: pointer;
-  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
-}
-
-body.orientation-landscape #galleryBtn:hover {
-  background: rgba(42, 45, 56, 0.9);
-  border-color: rgba(255, 255, 255, 0.25);
-  transform: translateY(-1px);
-}
-
-body.orientation-landscape #galleryBtn:active {
-  transform: scale(0.96);
-}
-
-body.orientation-landscape #galleryBtn .btn__icon svg {
-  width: 20px;
-  height: 20px;
-  stroke: #ffffff;
-  stroke-width: 2;
-}
-
-body.orientation-landscape #galleryBtn .btn__badge {
-  position: absolute;
-  top: -7px;
-  right: -7px;
-  min-width: 22px;
-  height: 22px;
-  background: var(--c-highlight);
-  color: #000000;
-  font-size: 0.75rem;
-  font-weight: 800;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #14151b;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
-  padding: 0 4px;
 }
 
 /* Großer gelber AUSLÖSER-Button im Querformat (mittig rechts) */

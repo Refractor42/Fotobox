@@ -23,8 +23,6 @@ const $galleryLoadMoreWrap = document.getElementById('galleryLoadMoreWrap');
 const $galleryLoadMore = document.getElementById('galleryLoadMore');
 const $video         = document.getElementById('cameraVideo');
 const $permission    = document.getElementById('permission');
-const $galleryBadge  = document.getElementById('galleryBadge');
-const $galleryBtn    = document.getElementById('galleryBtn');
 const $streakPill    = document.getElementById('streakPill');
 const $streakCount   = document.getElementById('streakCount');
 let currentStreak = 0;
@@ -39,6 +37,10 @@ const photoIndexIds = [];
 
 // --- State ---
 let currentState = 'splash';
+// Merkt sich, von wo die Galerie geöffnet wurde. Der Zurück-Weg führt
+// dadurch zum Startbildschirm, zum Endscreen oder in die Kamera — nie
+// pauschal an einen anderen Ort.
+let galleryReturnState = 'camera';
 let hasPhoto = false;
 let photoCount = 0;
 let videoPlaying = false;
@@ -159,6 +161,7 @@ const I18N = {
     stickerBigger: 'Sticker vergrößern',
     stickerRemove: 'Sticker entfernen',
     galleryBtn: 'Galerie',
+    galleryOpenAria: 'Galerie öffnen',
     galleryBack: 'Zurück',
     galleryTitle: 'Deine Fotos',
     galleryLoadMore: 'Mehr laden',
@@ -350,6 +353,7 @@ const I18N = {
     stickerBigger: 'Enlarge sticker',
     stickerRemove: 'Remove sticker',
     galleryBtn: 'Gallery',
+    galleryOpenAria: 'Open gallery',
     galleryBack: 'Back',
     galleryTitle: 'Your Photos',
     galleryLoadMore: 'Load more',
@@ -1072,7 +1076,7 @@ function startSession() {
 
   const tl = timeline();
   tl.to(['.splash__content--portrait', '.splash__content--kiosk', '.lang-switch--splash',
-    '.splash__brand', '.challenge-card', '.splash__sound'], {
+    '.splash__brand', '.challenge-card', '.splash__sound', '.splash__gallery'], {
     y: -24, opacity: 0, duration: 0.45, ease: 'power2.in'
   }).to($splash, {
     opacity: 0, duration: 0.01
@@ -1320,8 +1324,6 @@ function setControlsLocked(locked) {
   // Alles, was die Aufnahme verändern oder verlassen kann, wird wirklich
   // deaktiviert — nicht nur per pointer-events ausgeblendet. So verhalten
   // sich Maus, Tastatur und Screenreader gleich (HCI: Consistency).
-  $galleryBtn.classList.toggle('is-locked', locked);
-  $galleryBtn.disabled = locked;
   $timerChips.classList.toggle('is-locked', locked);
   $timerChips.querySelectorAll('button').forEach((btn) => { btn.disabled = locked; });
   ['kioskTimer', 'modeChips'].forEach((id) => {
@@ -2719,7 +2721,6 @@ let photoPageLoading = false;
 
 function setPhotoCount(count) {
   photoCount = Math.max(0, Number(count) || 0);
-  $galleryBadge.textContent = String(photoCount);
 }
 
 function setLoadMoreBusy(busy) {
@@ -2884,13 +2885,13 @@ function addToGallery(photoUrl, save = true, photoId = null, options = {}) {
     if (photoId) addPhotoIndexId(photoId);
     setPhotoCount(photoCount + 1);
     updateChallengeCard();
-    $galleryBadge.classList.add('has-new');
-    setTimeout(() => $galleryBadge.classList.remove('has-new'), 600);
   }
 
-  // success animation on gallery button
-  gsap.from($galleryBtn, {
-    scale: [1, 1.15, 1], duration: 0.5, ease: 'elastic.out(1, 0.6)'
+  // Dezente Rückmeldung an allen Galerie-Zugängen (Start und Endscreen).
+  document.querySelectorAll('[data-gallery-entry]').forEach((entry) => {
+    gsap.from(entry, {
+      scale: [1, 1.08, 1], duration: 0.5, ease: 'elastic.out(1, 0.6)'
+    });
   });
 }
 
@@ -2972,6 +2973,83 @@ function goTo(sectionName) {
       resetCameraView();
     });
   }
+}
+
+// Öffnet die Galerie von genau dem Screen, auf dem der Gast sie angetippt
+// hat. Der Kamera-Screen hat keinen eigenen Galerie-Button mehr; die Galerie
+// ist vom Startbildschirm und vom Endscreen erreichbar.
+function openGallery(source = null) {
+  if (currentState === 'gallery' || isCapturing) return;
+  const from = source || (currentState === 'splash'
+    ? 'splash'
+    : ($endScreen && !$endScreen.hidden ? 'end' : 'camera'));
+  galleryReturnState = from;
+
+  if (from === 'camera') {
+    const img = $camera.querySelector('.viewfinder img.stage-photo');
+    if (img) img.remove();
+    clearStickers();
+  }
+
+  const origin = from === 'splash' ? $splash : $camera;
+  gsap.to(origin, {
+    opacity: 0,
+    duration: 0.3,
+    ease: 'power2.in',
+    onComplete: () => {
+      origin.style.display = 'none';
+      goTo('gallery');
+      refreshTrashCount();
+      if ($galleryBack) $galleryBack.focus({ preventScroll: true });
+    }
+  });
+}
+
+// Zurück führt eine Ebene zurück: Papierkorb -> Galerie und Galerie -> der
+// Screen, von dem sie geöffnet wurde. Der Endscreen bleibt dabei erhalten.
+function closeGallery() {
+  if (currentState !== 'gallery') return;
+  if (trashOpen) {
+    toggleTrash(false);
+    return;
+  }
+
+  const backTo = galleryReturnState;
+  gsap.to($gallery, {
+    opacity: 0,
+    duration: 0.3,
+    ease: 'power2.in',
+    onComplete: () => {
+      $gallery.style.display = 'none';
+
+      if (backTo === 'splash') {
+        $splash.style.display = 'flex';
+        currentState = 'splash';
+        syncCancelHome();
+        if ($splashLang) $splashLang.hidden = false;
+        gsap.fromTo($splash, { opacity: 0 }, { opacity: 1, duration: 0.3, ease: 'power2.out' });
+        // Die zum Viewport passende Variante kann sich während des
+        // Übergangs ändern. Deshalb den tatsächlich sichtbaren Zugang
+        // fokussieren, nicht nur die beim Öffnen gültige Ausrichtung.
+        const entries = [...document.querySelectorAll('.splash__gallery')];
+        const entry = entries.find((el) => el.offsetWidth || el.offsetHeight) || entries[0];
+        if (entry) entry.focus({ preventScroll: true });
+        return;
+      }
+
+      if (backTo === 'end') {
+        $camera.style.display = 'block';
+        gsap.set($camera, { opacity: 1 });
+        currentState = 'camera';
+        syncCancelHome();
+        const entry = document.querySelector('.endscreen__action[data-end="gallery"]');
+        if (entry) entry.focus({ preventScroll: true });
+        return;
+      }
+
+      goTo('camera');
+    }
+  });
 }
 
 // ============================================================
@@ -3563,32 +3641,13 @@ document.querySelectorAll('[data-action]').forEach((el) => {
       case 'capture':
         runCaptureSequence();
         break;
-      case 'gallery':
-        if (currentState === 'camera' && !isCapturing) {
-          const img = $camera.querySelector('.viewfinder img.stage-photo');
-          if (img) img.remove();
-          clearStickers();
-          gsap.to($camera, {
-            opacity: 0, duration: 0.3, ease: 'power2.in',
-            onComplete: () => {
-              $camera.style.display = 'none';
-              goTo('gallery');
-              refreshTrashCount();
-            }
-          });
-        }
+      case 'open-gallery':
+        openGallery(el.dataset.gallerySource || null);
         break;
       case 'back-camera':
-        // Back kehrt genau EINE Ebene zurück: Papierkorb -> Fotoliste -> Kamera.
+        // Back kehrt genau EINE Ebene zurück: Papierkorb -> Galerie -> Ursprung.
         // Ein Sprung über zwei Ebenen verstößt gegen das gelernte Back-Modell.
-        if (trashOpen) {
-          toggleTrash(false);
-          break;
-        }
-        gsap.to($gallery, {
-          opacity: 0, duration: 0.3, ease: 'power2.in',
-          onComplete: () => { $gallery.style.display = 'none'; goTo('camera'); }
-        });
+        closeGallery();
         break;
       case 'toggle-trash':
         if (currentState === 'gallery') toggleTrash();
@@ -4319,6 +4378,7 @@ function showEndScreen(url) {
 
 function returnToIdle() {
   resetGuestCaptureSettings();
+  galleryReturnState = 'camera';
   if ($endScreen) $endScreen.hidden = true;
   $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping');
   setHomeMode('default');
@@ -4332,7 +4392,7 @@ function returnToIdle() {
   $splash.style.display = 'flex';
   // Beim Start wurden Brand, Challenge-Karte und Ton-Button ausgeblendet;
   // für den nächsten Gast müssen sie wieder sichtbar sein.
-  gsap.set(['.splash__brand', '.challenge-card', '.splash__sound', '.splash__content--kiosk'], { clearProps: 'all' });
+  gsap.set(['.splash__brand', '.challenge-card', '.splash__sound', '.splash__content--kiosk', '.splash__gallery'], { clearProps: 'all' });
   gsap.fromTo($splash, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
   gsap.fromTo('.splash__content--kiosk', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out', delay: 0.1, clearProps: 'all' });
   currentState = 'splash';
@@ -4388,6 +4448,8 @@ document.querySelectorAll('.endscreen__action').forEach((btn) => {
       shareEndPhoto();
     } else if (btn.dataset.end === 'print') {
       printEndPhoto();
+    } else if (btn.dataset.end === 'gallery') {
+      openGallery('end');
     }
   });
 });
@@ -4565,7 +4627,7 @@ window.addEventListener('load', async () => {
       && !$camera.classList.contains('is-ended')
       && $qrModal.hidden && $confirmModal.hidden) {
       e.preventDefault();
-      $galleryBtn.click();
+      openGallery('camera');
       return;
     }
 
@@ -4584,10 +4646,7 @@ window.addEventListener('load', async () => {
       if (trashOpen) { toggleTrash(false); return; }
       if (lightbox) { lightbox.remove(); lightbox = null; }
       if (currentState === 'gallery') {
-        gsap.to($gallery, {
-          opacity: 0, duration: 0.3, ease: 'power2.in',
-          onComplete: () => { $gallery.style.display = 'none'; goTo('camera'); }
-        });
+        closeGallery();
       }
     }
   });
@@ -4649,8 +4708,8 @@ function currentIdleStateKey() {
   if ($confirmModal && !$confirmModal.hidden) return 'confirm';
   if (lightbox) return 'lightbox';
   if (trashOpen) return 'trash';
-  if ($endScreen && !$endScreen.hidden) return 'end';
   if (currentState === 'gallery') return 'gallery';
+  if ($endScreen && !$endScreen.hidden) return 'end';
   if ($camera.classList.contains('is-reviewing') || $camera.classList.contains('is-stamping')) return 'review';
   return 'camera';
 }
