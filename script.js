@@ -94,17 +94,28 @@ const I18N = {
     endInsta: 'Instagram',
     endPrint: 'Drucken',
     sideFilter: 'Filter',
-    sideOverlay: 'Overlays',
+    sideOverlay: 'Overlay',
     sideStamp: 'Sticker',
+    sideMenuAria: 'Filter, Overlay und Sticker',
+    sideMenuTabsAria: 'Bereich wählen',
+    sideMenuToggleOpen: 'Menü',
+    sideMenuToggleClose: 'Schließen',
     tabFace: 'Gesicht',
     tabAll: 'Komplett',
     tabStandard: 'Standard',
     tabEvent: 'Event',
     tabEmoji: 'Emojis',
     tabUni: 'Hochschule',
+    stickerShapes: 'Aufkleber',
+    stickersNeedPhoto: 'Mach zuerst ein Foto — danach kannst du Sticker platzieren.',
+    stickerEmojiAria: 'Emoji {emoji} hinzufügen',
+    stickerOhren: 'Katzenohren',
+    stickerKrone: 'Krone',
+    stickerBrille: 'Sonnenbrille',
+    stickerHut: 'Partyhut',
     scrollHint: 'scrollen',
-    sideMenuShowAria: 'Filter- und Effektmenü ausklappen',
-    sideMenuHideAria: 'Filter- und Effektmenü einklappen',
+    sideMenuShowAria: 'Menü öffnen: Filter, Overlay und Sticker',
+    sideMenuHideAria: 'Menü schließen',
     scrollUpAria: 'Nach oben scrollen',
     scrollDownAria: 'Nach unten scrollen',
     overlayNone: 'Kein Rahmen',
@@ -281,15 +292,26 @@ const I18N = {
     sideFilter: 'Filters',
     sideOverlay: 'Overlays',
     sideStamp: 'Stickers',
+    sideMenuAria: 'Filters, overlays and stickers',
+    sideMenuTabsAria: 'Choose section',
+    sideMenuToggleOpen: 'Menu',
+    sideMenuToggleClose: 'Close',
     tabFace: 'Face',
     tabAll: 'Full image',
     tabStandard: 'Standard',
     tabEvent: 'Event',
     tabEmoji: 'Emojis',
     tabUni: 'University',
+    stickerShapes: 'Sticker shapes',
+    stickersNeedPhoto: 'Take a photo first — then you can place stickers.',
+    stickerEmojiAria: 'Add {emoji} emoji',
+    stickerOhren: 'Cat ears',
+    stickerKrone: 'Crown',
+    stickerBrille: 'Sunglasses',
+    stickerHut: 'Party hat',
     scrollHint: 'scroll',
-    sideMenuShowAria: 'Show filters and effects menu',
-    sideMenuHideAria: 'Hide filters and effects menu',
+    sideMenuShowAria: 'Open menu: filters, overlays and stickers',
+    sideMenuHideAria: 'Close menu',
     scrollUpAria: 'Scroll up',
     scrollDownAria: 'Scroll down',
     overlayNone: 'No frame',
@@ -476,7 +498,6 @@ function applyLanguage(lang) {
   if ($streakPill.classList.contains('visible')) renderStreak();
   // Kiosk-Menü und Challenge-Karte in der neuen Sprache nachziehen.
   if (document.getElementById('sideMenu')) {
-    if ($sideMenuHead) $sideMenuHead.textContent = t(sideConfig().head);
     syncSideMenuHint();
     renderSideTabs();
     renderSideMenu();
@@ -1230,7 +1251,7 @@ function setFeatureHidden(el, hidden) {
 function sideMenuContextAvailable(context) {
   if (context === 'filter') return appSettings.filtersEnabled !== false;
   if (context === 'overlay') return appSettings.overlaysEnabled !== false;
-  if (context === 'stamp') return appSettings.stickersEnabled !== false && hasPhoto;
+  if (context === 'stamp') return appSettings.stickersEnabled !== false;
   return false;
 }
 
@@ -1254,7 +1275,7 @@ function refreshSideMenu() {
     return;
   }
   setSideMenuVisible(true);
-  if (next !== sideContext) openSideMenu(next);
+  openSideMenu(next);
 }
 
 function applyFeatureAvailability() {
@@ -1317,10 +1338,11 @@ function setControlsLocked(locked) {
   const sideMenu = document.getElementById('sideMenu');
   if (sideMenu) {
     sideMenu.classList.toggle('is-locked', locked);
-    sideMenu.inert = locked;
+    sideMenu.inert = locked || !sideMenu.classList.contains('is-open');
     if (locked) sideMenu.setAttribute('aria-disabled', 'true');
     else sideMenu.removeAttribute('aria-disabled');
   }
+  if ($sideMenuToggle) $sideMenuToggle.disabled = locked;
   // Die Schublade verdeckt sonst die Vorschau während Countdown und
   // Verarbeitung.
   if (locked) setSideMenuOpen(false);
@@ -3591,10 +3613,11 @@ document.querySelectorAll('[data-action]').forEach((el) => {
 //  KIOSK-FLOW (UX-SKIZZEN): Seitenmenü, Overlays, Sticker, Endscreen
 // ============================================================
 const $sideMenu = document.getElementById('sideMenu');
-const $sideMenuHead = document.getElementById('sideMenuHead');
+const $sideMenuPanel = document.getElementById('sideMenuPanel');
 const $sideMenuSubhead = document.getElementById('sideMenuSubhead');
 const $sideMenuTabs = document.getElementById('sideMenuTabs');
 const $sideMenuList = document.getElementById('sideMenuList');
+const $sideViewport = document.querySelector('.side-menu__viewport');
 const $sideScrollUp = document.getElementById('sideScrollUp');
 const $sideScrollDown = document.getElementById('sideScrollDown');
 const $sideMenuToggle = document.getElementById('sideMenuToggle');
@@ -3602,44 +3625,66 @@ const $sideRail = document.getElementById('sideRail');
 const $endScreen = document.getElementById('endScreen');
 const $cancelHome = document.getElementById('cancelHome');
 
-// Seitenmenü als Schublade: Ausfahren legt Filter/Overlays/Sticker über die
+// Ein einziges Randmenü mit drei gleichrangigen Bereichen. Die Unterteilung
+// in Gesicht/Komplett bzw. Standard/Event/Hochschule passiert als sichtbare
+// Abschnittsüberschrift innerhalb der Liste, nicht als zweite Reiterreihe.
+const SIDE_SECTIONS = [
+  { id: 'filter', labelKey: 'sideFilter' },
+  { id: 'overlay', labelKey: 'sideOverlay' },
+  { id: 'stamp', labelKey: 'sideStamp' }
+];
+const SHAPE_STICKERS = [
+  { kind: 'ohren', labelKey: 'stickerOhren', ariaKey: 'stickerOhrenAria' },
+  { kind: 'krone', labelKey: 'stickerKrone', ariaKey: 'stickerKroneAria' },
+  { kind: 'brille', labelKey: 'stickerBrille', ariaKey: 'stickerBrilleAria' },
+  { kind: 'hut', labelKey: 'stickerHut', ariaKey: 'stickerHutAria' }
+];
+
+function sideTabElementId(context) {
+  return 'sideTab-' + context;
+}
+
+// Seitenmenü als Schublade: Ausfahren legt Filter/Overlay/Sticker über die
 // Vorschau, Einklappen gibt dem Foto wieder die volle Breite.
-function setSideMenuOpen(open) {
+function setSideMenuOpen(open, options = {}) {
   if (!$sideMenu || !$sideMenuToggle) return;
-  const next = !!open && !$sideMenu.classList.contains('feature-disabled');
+  const wasOpen = $sideMenu.classList.contains('is-open');
+  const focusWasInside = $sideMenu.contains(document.activeElement);
+  const next = !!open
+    && !$sideMenu.classList.contains('feature-disabled')
+    && !$sideMenu.classList.contains('is-locked');
   $sideMenu.classList.toggle('is-open', next);
+  $sideMenu.inert = !next;
   $sideMenuToggle.setAttribute('aria-expanded', String(next));
   const ariaKey = next ? 'sideMenuHideAria' : 'sideMenuShowAria';
   $sideMenuToggle.dataset.i18nAria = ariaKey;
   $sideMenuToggle.setAttribute('aria-label', t(ariaKey));
+  const toggleLabel = $sideMenuToggle.querySelector('.side-menu-toggle__label');
+  if (toggleLabel) {
+    const labelKey = next ? 'sideMenuToggleClose' : 'sideMenuToggleOpen';
+    toggleLabel.dataset.i18n = labelKey;
+    toggleLabel.textContent = t(labelKey);
+  }
+  if (!next && wasOpen && focusWasInside) {
+    $sideMenuToggle.focus({ preventScroll: true });
+  } else if (next && options.focus) {
+    focusActiveSideTab();
+  }
+}
+
+function focusActiveSideTab() {
+  const active = document.getElementById(sideTabElementId(sideContext));
+  if (active) active.focus({ preventScroll: true });
 }
 
 if ($sideMenuToggle) {
   $sideMenuToggle.addEventListener('click', () => {
-    setSideMenuOpen(!$sideMenu.classList.contains('is-open'));
+    const opening = !$sideMenu.classList.contains('is-open');
+    setSideMenuOpen(opening, { focus: opening });
   });
 }
 
-const SIDE_CONFIG = {
-  filter: {
-    head: 'sideFilter',
-    defaultTab: 'face',
-    tabs: [['face', 'tabFace'], ['all', 'tabAll']]
-  },
-  overlay: {
-    head: 'sideOverlay',
-    defaultTab: 'standard',
-    tabs: [['standard', 'tabStandard'], ['event', 'tabEvent'], ['uni', 'tabUni']]
-  },
-  stamp: {
-    head: 'sideStamp',
-    defaultTab: 'emoji',
-    tabs: [['emoji', 'tabEmoji'], ['uni', 'tabUni']]
-  }
-};
-
 let sideContext = 'filter';
-let sideTab = 'face';
 let currentOverlay = null;
 // Bildpixel-Layout des zuletzt erzeugten Fotostreifens, damit das Overlay in
 // der Vorschau und im gespeicherten Foto je Einzelbild sitzt.
@@ -3778,147 +3823,244 @@ function renderSplashChain() {
   chain.appendChild(track);
 }
 
-function sideConfig() {
-  return SIDE_CONFIG[sideContext] || SIDE_CONFIG.filter;
-}
-
 function syncSideMenuHint() {
   if (!$sideMenuSubhead) return;
-  const show = sideContext === 'stamp';
+  const show = sideContext === 'stamp' && hasPhoto;
   $sideMenuSubhead.textContent = show ? t('stickerDragHint') : '';
   $sideMenuSubhead.hidden = !show;
 }
 
-function openSideMenu(context, tab) {
+function openSideMenu(context) {
   if (!$sideMenu) return;
   context = chooseSideMenuContext(context);
-  if (!SIDE_CONFIG[context]) {
+  if (!context || !SIDE_SECTIONS.some((section) => section.id === context)) {
     setSideMenuVisible(false);
     return;
   }
+  const previous = sideContext;
   setSideMenuVisible(true);
   sideContext = context;
-  const config = SIDE_CONFIG[context];
-  const wanted = tab || config.defaultTab;
-  sideTab = config.tabs.some((pair) => pair[0] === wanted) ? wanted : config.defaultTab;
   $sideMenu.dataset.context = context;
-  $sideMenuHead.textContent = t(config.head);
   syncSideMenuHint();
   renderSideTabs();
   renderSideMenu();
+  if (previous !== context && $sideViewport) $sideViewport.scrollTop = 0;
+}
+
+function selectSideContext(context, options = {}) {
+  if (!sideMenuContextAvailable(context)) return;
+  // Der Sticker-Reiter ist zugleich der Sticker-Bearbeitungsmodus. Beim
+  // Verlassen bleiben bereits gesetzte Sticker erhalten (kein stiller Verlust).
+  if (context === 'stamp' && hasPhoto && !$camera.classList.contains('is-stamping')) {
+    openStampMode({ focusDone: false });
+  } else if (context !== 'stamp' && $camera.classList.contains('is-stamping')) {
+    closeStampMode(true, { keepMenuOpen: true });
+    openSideMenu(context);
+  } else {
+    openSideMenu(context);
+  }
+  if (options.focusTab !== false) focusActiveSideTab();
+}
+
+function handleSideTabKeydown(event) {
+  const tabs = [...$sideMenuTabs.querySelectorAll('.side-tab')];
+  const index = tabs.indexOf(event.currentTarget);
+  if (index === -1) return;
+  let nextIndex = null;
+  if (event.key === 'ArrowRight' || event.key === 'ArrowDown') nextIndex = (index + 1) % tabs.length;
+  else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') nextIndex = (index - 1 + tabs.length) % tabs.length;
+  else if (event.key === 'Home') nextIndex = 0;
+  else if (event.key === 'End') nextIndex = tabs.length - 1;
+  if (nextIndex === null) return;
+  event.preventDefault();
+  const next = tabs[nextIndex];
+  if (next) selectSideContext(next.dataset.tab);
 }
 
 function renderSideTabs() {
   if (!$sideMenuTabs) return;
+  const available = SIDE_SECTIONS.filter((section) => sideMenuContextAvailable(section.id));
+  if (!available.some((section) => section.id === sideContext)) {
+    sideContext = available[0] ? available[0].id : 'filter';
+  }
   $sideMenuTabs.innerHTML = '';
-  sideConfig().tabs.forEach(([id, labelKey]) => {
+  available.forEach((section) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'side-tab';
-    btn.dataset.tab = id;
+    btn.id = sideTabElementId(section.id);
+    btn.dataset.tab = section.id;
     btn.setAttribute('role', 'tab');
-    const active = id === sideTab;
+    btn.setAttribute('aria-controls', 'sideMenuPanel');
+    const active = section.id === sideContext;
     btn.classList.toggle('is-active', active);
     btn.setAttribute('aria-selected', String(active));
-    btn.textContent = t(labelKey);
-    btn.addEventListener('click', () => {
-      sideTab = id;
-      renderSideTabs();
-      renderSideMenu();
-    });
+    btn.tabIndex = active ? 0 : -1;
+    btn.textContent = t(section.labelKey);
+    btn.addEventListener('click', () => selectSideContext(section.id));
+    btn.addEventListener('keydown', handleSideTabKeydown);
     $sideMenuTabs.appendChild(btn);
   });
+  if ($sideMenuPanel) {
+    const active = available.find((section) => section.id === sideContext);
+    if (active) $sideMenuPanel.setAttribute('aria-labelledby', sideTabElementId(active.id));
+    else $sideMenuPanel.removeAttribute('aria-labelledby');
+  }
+}
+
+function appendSideGroup(groupKey, labelKey, build) {
+  if (!$sideMenuList) return;
+  const group = document.createElement('div');
+  group.className = 'side-menu__group';
+  group.setAttribute('role', 'group');
+  const heading = document.createElement('p');
+  heading.className = 'side-menu__section';
+  heading.id = 'sideGroup-' + groupKey;
+  heading.textContent = t(labelKey);
+  group.setAttribute('aria-labelledby', heading.id);
+  group.appendChild(heading);
+  const before = group.children.length;
+  build(group);
+  if (group.children.length > before) $sideMenuList.appendChild(group);
+}
+
+function appendSideEmpty(messageKey) {
+  if (!$sideMenuList) return;
+  const empty = document.createElement('div');
+  empty.className = 'side-menu__empty';
+  empty.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 7h3l2-2h6l2 2h3a1 1 0 0 1 1 1v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>';
+  const text = document.createElement('p');
+  text.textContent = t(messageKey);
+  empty.appendChild(text);
+  $sideMenuList.appendChild(empty);
 }
 
 function renderSideMenu() {
   if (!$sideMenuList) return;
   $sideMenuList.innerHTML = '';
 
-  if (sideContext === 'filter' && sideTab === 'face') {
-    const filters = window.SnapBoxFilters ? window.SnapBoxFilters.FILTERS : [];
-    filters.forEach((filter) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'side-menu__item';
-      btn.dataset.value = filter.id;
-      btn.setAttribute('role', 'option');
-      const active = !!filterEngine && filterEngine.getFilter() === filter.id;
-      btn.classList.toggle('is-selected', active);
-      btn.setAttribute('aria-selected', String(active));
-      if (filter.emoji) {
-        const emoji = document.createElement('span');
-        emoji.className = 'side-menu__emoji';
-        emoji.textContent = filter.emoji;
-        btn.appendChild(emoji);
-      }
-      const label = document.createElement('span');
-      label.textContent = faceLabel(filter);
-      btn.appendChild(label);
-      btn.addEventListener('click', () => {
-        if (!filterEngine) return;
-        filterEngine.setFilter(filter.id);
-        updateSideSelection();
+  if (sideContext === 'filter') {
+    const filters = (filterEngine && window.SnapBoxFilters) ? window.SnapBoxFilters.FILTERS : [];
+    if (filters.length) {
+      appendSideGroup('face', 'tabFace', (group) => {
+        filters.forEach((filter) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'side-menu__item';
+          btn.dataset.kind = 'face';
+          btn.dataset.value = filter.id;
+          const active = !!filterEngine && filterEngine.getFilter() === filter.id;
+          btn.classList.toggle('is-selected', active);
+          btn.setAttribute('aria-pressed', String(active));
+          if (filter.emoji) {
+            const emoji = document.createElement('span');
+            emoji.className = 'side-menu__emoji';
+            emoji.textContent = filter.emoji;
+            btn.appendChild(emoji);
+          }
+          const label = document.createElement('span');
+          label.textContent = faceLabel(filter);
+          btn.appendChild(label);
+          btn.addEventListener('click', () => {
+            if (!filterEngine) return;
+            filterEngine.setFilter(filter.id);
+            updateSideSelection();
+          });
+          group.appendChild(btn);
+        });
       });
-      $sideMenuList.appendChild(btn);
-    });
-  } else if (sideContext === 'filter') {
-    const labels = { standard: 'filterStandard', sw: 'filterSw', vintage: 'filterVintage', knackig: 'filterKnackig' };
-    Object.keys(FILTERS).forEach((id) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'side-menu__item side-menu__item--overlay';
-      btn.dataset.value = id;
-      btn.setAttribute('role', 'option');
-      const active = currentFilter === id;
-      btn.classList.toggle('is-selected', active);
-      btn.setAttribute('aria-selected', String(active));
-      btn.textContent = t(labels[id] || id);
-      btn.addEventListener('click', () => {
-        currentFilter = id;
-        applyFilterSelection();
-        updateSideSelection();
+    }
+    appendSideGroup('color', 'tabAll', (group) => {
+      const labels = { standard: 'filterStandard', sw: 'filterSw', vintage: 'filterVintage', knackig: 'filterKnackig' };
+      Object.keys(FILTERS).forEach((id) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'side-menu__item side-menu__item--overlay';
+        btn.dataset.kind = 'color';
+        btn.dataset.value = id;
+        const active = currentFilter === id;
+        btn.classList.toggle('is-selected', active);
+        btn.setAttribute('aria-pressed', String(active));
+        btn.textContent = t(labels[id] || id);
+        btn.addEventListener('click', () => {
+          currentFilter = id;
+          applyFilterSelection();
+          updateSideSelection();
+        });
+        group.appendChild(btn);
       });
-      $sideMenuList.appendChild(btn);
     });
   } else if (sideContext === 'overlay') {
-    [NO_OVERLAY_OPTION, ...(OVERLAYS[sideTab] || [])].forEach((overlay) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'side-menu__item side-menu__item--overlay';
-      btn.dataset.value = overlay.id;
-      btn.setAttribute('role', 'option');
-      const isNone = overlay.id === NO_OVERLAY_ID;
-      const active = isNone ? !currentOverlay : (!!currentOverlay && currentOverlay.id === overlay.id);
-      btn.classList.toggle('is-selected', active);
-      btn.setAttribute('aria-selected', String(active));
-      const thumb = document.createElement('span');
-      thumb.className = 'side-menu__thumb';
-      const thumbImg = document.createElement('img');
-      thumbImg.src = overlay.src;
-      thumbImg.alt = '';
-      thumbImg.loading = 'lazy';
-      thumb.appendChild(thumbImg);
-      btn.appendChild(thumb);
-      const label = document.createElement('span');
-      label.className = 'side-menu__label';
-      label.textContent = overlayLabel(overlay);
-      btn.appendChild(label);
-      btn.addEventListener('click', () => setOverlay(overlay.id));
-      $sideMenuList.appendChild(btn);
+    [['standard', 'tabStandard'], ['event', 'tabEvent'], ['uni', 'tabUni']].forEach(([key, labelKey]) => {
+      const overlays = key === 'standard' ? [NO_OVERLAY_OPTION, ...(OVERLAYS[key] || [])] : (OVERLAYS[key] || []);
+      appendSideGroup('overlay-' + key, labelKey, (group) => {
+        overlays.forEach((overlay) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'side-menu__item side-menu__item--overlay';
+          btn.dataset.kind = 'overlay';
+          btn.dataset.value = overlay.id;
+          const isNone = overlay.id === NO_OVERLAY_ID;
+          const active = isNone ? !currentOverlay : (!!currentOverlay && currentOverlay.id === overlay.id);
+          btn.classList.toggle('is-selected', active);
+          btn.setAttribute('aria-pressed', String(active));
+          const thumb = document.createElement('span');
+          thumb.className = 'side-menu__thumb';
+          const thumbImg = document.createElement('img');
+          thumbImg.src = overlay.src;
+          thumbImg.alt = '';
+          thumbImg.loading = 'lazy';
+          thumb.appendChild(thumbImg);
+          btn.appendChild(thumb);
+          const label = document.createElement('span');
+          label.className = 'side-menu__label';
+          label.textContent = overlayLabel(overlay);
+          btn.appendChild(label);
+          btn.addEventListener('click', () => setOverlay(overlay.id));
+          group.appendChild(btn);
+        });
+      });
     });
   } else if (sideContext === 'stamp') {
-    (STAMPS[sideTab] || []).forEach((stamp) => {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'side-menu__item';
-      btn.setAttribute('aria-label', stamp.glyph);
-      const glyph = document.createElement('span');
-      glyph.className = 'side-menu__glyph';
-      glyph.textContent = stamp.glyph;
-      btn.appendChild(glyph);
-      btn.addEventListener('click', () => addEmojiStamp(stamp.glyph));
-      $sideMenuList.appendChild(btn);
-    });
+    if (!hasPhoto) {
+      appendSideEmpty('stickersNeedPhoto');
+    } else {
+      appendSideGroup('sticker-shapes', 'stickerShapes', (group) => {
+        SHAPE_STICKERS.forEach((sticker) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'side-menu__item side-menu__item--shape';
+          btn.setAttribute('aria-label', t(sticker.ariaKey));
+          const glyph = document.createElement('span');
+          glyph.className = 'side-menu__glyph';
+          const source = $stickerPalette.querySelector('[data-sticker="' + sticker.kind + '"] svg');
+          if (source) glyph.appendChild(source.cloneNode(true));
+          btn.appendChild(glyph);
+          const label = document.createElement('span');
+          label.className = 'side-menu__label';
+          label.textContent = t(sticker.labelKey);
+          btn.appendChild(label);
+          btn.addEventListener('click', () => addSticker(sticker.kind));
+          group.appendChild(btn);
+        });
+      });
+      [['emoji', 'tabEmoji'], ['uni', 'tabUni']].forEach(([key, labelKey]) => {
+        appendSideGroup('stamp-' + key, labelKey, (group) => {
+          (STAMPS[key] || []).forEach((stamp) => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'side-menu__item';
+            btn.setAttribute('aria-label', t('stickerEmojiAria', { emoji: stamp.glyph }));
+            const glyph = document.createElement('span');
+            glyph.className = 'side-menu__glyph';
+            glyph.textContent = stamp.glyph;
+            btn.appendChild(glyph);
+            btn.addEventListener('click', () => addEmojiStamp(stamp.glyph));
+            group.appendChild(btn);
+          });
+        });
+      });
+    }
   }
 
   requestAnimationFrame(updateScrollHints);
@@ -3926,41 +4068,42 @@ function renderSideMenu() {
 
 function updateSideSelection() {
   if (!$sideMenuList) return;
-  $sideMenuList.querySelectorAll('.side-menu__item').forEach((el) => {
+  $sideMenuList.querySelectorAll('.side-menu__item[data-kind]').forEach((el) => {
+    const kind = el.dataset.kind;
     const value = el.dataset.value;
     let active = false;
-    if (sideContext === 'filter' && sideTab === 'face') {
+    if (kind === 'face') {
       active = !!filterEngine && filterEngine.getFilter() === value;
-    } else if (sideContext === 'filter') {
+    } else if (kind === 'color') {
       active = currentFilter === value;
-    } else if (sideContext === 'overlay') {
+    } else if (kind === 'overlay') {
       active = value === NO_OVERLAY_ID ? !currentOverlay : (!!currentOverlay && currentOverlay.id === value);
     }
     el.classList.toggle('is-selected', active);
-    el.setAttribute('aria-selected', String(active));
+    el.setAttribute('aria-pressed', String(active));
   });
 }
 
 function updateScrollHints() {
-  const viewport = document.querySelector('.side-menu__viewport');
-  if (!viewport || !$sideScrollUp || !$sideScrollDown) return;
-  $sideScrollUp.classList.toggle('is-enabled', viewport.scrollTop > 2);
-  $sideScrollDown.classList.toggle('is-enabled', viewport.scrollTop + viewport.clientHeight < viewport.scrollHeight - 2);
+  if (!$sideViewport || !$sideScrollUp || !$sideScrollDown) return;
+  const canUp = $sideViewport.scrollTop > 2;
+  const canDown = $sideViewport.scrollTop + $sideViewport.clientHeight < $sideViewport.scrollHeight - 2;
+  $sideScrollUp.classList.toggle('is-enabled', canUp);
+  $sideScrollDown.classList.toggle('is-enabled', canDown);
+  $sideScrollUp.disabled = !canUp;
+  $sideScrollDown.disabled = !canDown;
 }
 
 if ($sideScrollUp) {
   $sideScrollUp.addEventListener('click', () => {
-    const viewport = document.querySelector('.side-menu__viewport');
-    if (viewport) viewport.scrollBy({ top: -viewport.clientHeight * 0.8, behavior: 'smooth' });
+    if ($sideViewport) $sideViewport.scrollBy({ top: -$sideViewport.clientHeight * 0.8, behavior: 'smooth' });
   });
 }
 if ($sideScrollDown) {
   $sideScrollDown.addEventListener('click', () => {
-    const viewport = document.querySelector('.side-menu__viewport');
-    if (viewport) viewport.scrollBy({ top: viewport.clientHeight * 0.8, behavior: 'smooth' });
+    if ($sideViewport) $sideViewport.scrollBy({ top: $sideViewport.clientHeight * 0.8, behavior: 'smooth' });
   });
 }
-const $sideViewport = document.querySelector('.side-menu__viewport');
 if ($sideViewport) $sideViewport.addEventListener('scroll', updateScrollHints, { passive: true });
 window.addEventListener('resize', () => {
   updateScrollHints();
@@ -3987,7 +4130,9 @@ function setOverlay(id) {
     return;
   }
   const found = findOverlay(id);
-  currentOverlay = currentOverlay && currentOverlay.id === id ? null : (found || null);
+  // Erneutes Tippen auf den bereits gewählten Rahmen darf ihn nicht
+  // stillschweigend entfernen; dafür gibt es die sichtbare Option „Kein Rahmen“.
+  currentOverlay = found || null;
   renderOverlayPreview();
   updateSideSelection();
   repositionStickers();
@@ -4127,23 +4272,27 @@ function addEmojiStamp(glyph) {
   selectSticker(st);
 }
 
-function openStampMode() {
+function openStampMode(options = {}) {
   if (!hasPhoto || !appSettings.stickersEnabled) return;
-  stampSnapshot = activeStickers.slice();
-  $camera.classList.add('is-stamping');
+  if (!$camera.classList.contains('is-stamping')) {
+    stampSnapshot = activeStickers.slice();
+    $camera.classList.add('is-stamping');
+  }
   const actions = document.getElementById('reviewActions');
   const stampActions = document.getElementById('stampActions');
   if (actions) actions.hidden = true;
   if (stampActions) stampActions.hidden = false;
-  openSideMenu('stamp', 'emoji');
+  openSideMenu('stamp');
   // Sticker werden nur im Menü gewählt; ohne die Schublade gäbe es hier
   // nichts zu tun.
   setSideMenuOpen(true);
-  const done = document.getElementById('stampDone');
-  if (done) done.focus();
+  if (options.focusDone !== false) {
+    const done = document.getElementById('stampDone');
+    if (done) done.focus();
+  }
 }
 
-function closeStampMode(keep) {
+function closeStampMode(keep, options = {}) {
   if (!keep) {
     [...activeStickers].forEach((st) => {
       if (!stampSnapshot.includes(st)) removeSticker(st);
@@ -4155,7 +4304,7 @@ function closeStampMode(keep) {
   const stampActions = document.getElementById('stampActions');
   if (actions) actions.hidden = false;
   if (stampActions) stampActions.hidden = true;
-  if (isKioskLayout()) {
+  if (isKioskLayout() && !options.keepMenuOpen) {
     openSideMenu('overlay');
     setSideMenuOpen(false);
   }
@@ -4167,7 +4316,7 @@ function deleteSelectedStamp() {
 }
 
 const $landscapeStamp = document.getElementById('landscapeStamp');
-if ($landscapeStamp) $landscapeStamp.addEventListener('click', openStampMode);
+if ($landscapeStamp) $landscapeStamp.addEventListener('click', () => openStampMode());
 const $stampCancel = document.getElementById('stampCancel');
 if ($stampCancel) $stampCancel.addEventListener('click', () => closeStampMode(false));
 const $stampDone = document.getElementById('stampDone');

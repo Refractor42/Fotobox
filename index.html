@@ -196,18 +196,19 @@
         </div>
       </div>
 
-      <!-- Kontextmenü rechts: Filter, Overlays oder Sticker -->
-      <aside class="side-menu" id="sideMenu" data-context="filter" aria-label="Filter und Effekte">
-        <div class="side-menu__head" id="sideMenuHead">Filter</div>
-        <p class="side-menu__subhead" id="sideMenuSubhead" hidden></p>
-        <div class="side-menu__tabs" id="sideMenuTabs" role="tablist"></div>
-        <div class="side-menu__viewport">
-          <div class="side-menu__list" id="sideMenuList" role="listbox" aria-label="Auswahl"></div>
-        </div>
-        <div class="side-menu__hints">
-          <button class="side-menu__arrow" id="sideScrollUp" type="button" aria-label="Nach oben scrollen" data-i18n-aria="scrollUpAria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 15l6-6 6 6"></path></svg></button>
-          <span class="side-menu__hint" data-i18n="scrollHint">scroll</span>
-          <button class="side-menu__arrow" id="sideScrollDown" type="button" aria-label="Nach unten scrollen" data-i18n-aria="scrollDownAria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"></path></svg></button>
+      <!-- Einziges Randmenü: Filter, Overlay und Sticker in einer Fläche -->
+      <aside class="side-menu" id="sideMenu" data-context="filter" aria-label="Filter, Overlay und Sticker" data-i18n-aria="sideMenuAria">
+        <div class="side-menu__tabs" id="sideMenuTabs" role="tablist" aria-label="Bereich wählen" data-i18n-aria="sideMenuTabsAria"></div>
+        <div class="side-menu__panel" id="sideMenuPanel" role="tabpanel">
+          <p class="side-menu__subhead" id="sideMenuSubhead" hidden></p>
+          <div class="side-menu__viewport">
+            <div class="side-menu__list" id="sideMenuList"></div>
+          </div>
+          <div class="side-menu__hints">
+            <button class="side-menu__arrow" id="sideScrollUp" type="button" aria-label="Nach oben scrollen" data-i18n-aria="scrollUpAria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 15l6-6 6 6"></path></svg></button>
+            <span class="side-menu__hint" data-i18n="scrollHint">scrollen</span>
+            <button class="side-menu__arrow" id="sideScrollDown" type="button" aria-label="Nach unten scrollen" data-i18n-aria="scrollDownAria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 9l6 6 6-6"></path></svg></button>
+          </div>
         </div>
       </aside>
     </div>
@@ -392,6 +393,7 @@
   <div class="side-rail" id="sideRail" hidden>
     <button class="side-menu-toggle" id="sideMenuToggle" type="button" aria-controls="sideMenu" aria-expanded="false" aria-label="Filter- und Effektmenü ausklappen" data-i18n-aria="sideMenuShowAria" hidden>
       <svg class="side-menu-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+      <span class="side-menu-toggle__label" data-i18n="sideMenuToggleOpen">Menü</span>
     </button>
     <div class="side-rail__divider" aria-hidden="true"></div>
     <div class="side-rail__home">
