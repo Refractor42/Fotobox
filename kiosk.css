@@ -512,9 +512,11 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
 }
 .cancel-home.is-done:hover .cancel-home__disc { background: var(--c-success); }
 .cancel-home:active .cancel-home__disc { transform: scale(0.95); }
-.cancel-home:focus-visible { outline: none; }
-.cancel-home:focus-visible .cancel-home__disc {
-  box-shadow: 0 0 0 4px rgb(var(--c-highlight-rgb) / 0.55);
+.cancel-home:focus { outline: none; }
+/* Neutraler Fokusring, aber nur bei Tastaturbedienung. Nach einem Tippen oder
+   Klick würde der programmatische Fokus sonst wie ein Auswahlrahmen wirken. */
+body.is-keyboard-nav .cancel-home:focus .cancel-home__disc {
+  box-shadow: 0 0 0 2px var(--c-bg), 0 0 0 6px rgba(232, 234, 240, 0.9);
 }
 
 

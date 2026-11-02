@@ -1974,12 +1974,12 @@ body.orientation-landscape .gallery__grid {
 .settings-modal__card {
   position: relative;
   width: 100%;
-  max-width: 430px;
-  max-height: min(88vh, 720px);
+  max-width: 560px;
+  max-height: min(92vh, 780px);
   overflow-y: auto;
   padding: 1.6rem;
   border: 1px solid rgba(255 255 255 / 0.12);
-  border-radius: var(--radius-lg);
+  border-radius: 24px;
   background: #161616;
   box-shadow: 0 24px 64px rgba(0 0 0 / 0.6);
 }
@@ -1996,34 +1996,27 @@ body.orientation-landscape .gallery__grid {
   border-radius: 50%;
   background: transparent;
   color: var(--c-text-2);
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   line-height: 1;
   cursor: pointer;
   transition: color var(--transition), background var(--transition);
 }
 .settings-modal__close:hover { color: var(--c-text); background: var(--c-surface-2); }
 .settings-modal__close:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.5); }
-.settings-modal__title { font-size: 1.2rem; font-weight: 700; margin-bottom: 0.4rem; }
-.settings-modal__hint { color: var(--c-text-2); font-size: 0.88rem; line-height: 1.5; margin-bottom: 1.1rem; }
-.settings-modal__label {
-  margin-bottom: 0.5rem;
-  color: var(--c-text-3);
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.cvd-options { display: flex; flex-direction: column; gap: 8px; }
+.settings-modal__title { font-size: 1.75rem; font-weight: 700; margin-bottom: 0.35rem; letter-spacing: -0.02em; }
+.settings-modal__hint { color: var(--c-text-2); font-size: 1.15rem; line-height: 1.5; margin-bottom: 1.4rem; }
+.cvd-options { display: flex; flex-direction: column; gap: 12px; }
 .cvd-option {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
   width: 100%;
-  padding: 11px 14px;
+  padding: 16px 20px;
   border: 1px solid rgba(255 255 255 / 0.12);
-  border-radius: var(--radius-sm);
-  background: var(--c-surface);
+  border-radius: 16px;
+  background: rgba(255 255 255 / 0.035);
   color: var(--c-text);
   font: inherit;
   text-align: left;
@@ -2031,21 +2024,60 @@ body.orientation-landscape .gallery__grid {
   transition: background var(--transition), border-color var(--transition);
 }
 .cvd-option:hover { background: var(--c-surface-2); }
-.cvd-option__note { color: var(--c-text-2); font-size: 0.78rem; }
+.cvd-option__copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 auto; }
+.cvd-option__name { font-size: 1.25rem; font-weight: 700; line-height: 1.2; }
+.cvd-option__note { color: var(--c-text-2); font-size: 1rem; line-height: 1.4; white-space: pre-line; }
+.cvd-option__swatch {
+  --swatch-1: #3c3c3c;
+  --swatch-2: #8a8a8a;
+  --swatch-3: #dddddd;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 2px;
+  flex: 0 0 auto;
+  width: 92px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: 0 0 0 1px rgba(255 255 255 / 0.14);
+}
+.cvd-option__swatch span {
+  display: block;
+  background: var(--swatch-1);
+  border-radius: 5px;
+}
+.cvd-option__swatch span:nth-child(2) { background: var(--swatch-2); }
+.cvd-option__swatch span:nth-child(3) { background: var(--swatch-3); }
+.cvd-option__swatch--standard { --swatch-1: #ff2020; --swatch-2: #00e23f; --swatch-3: #1f47ff; }
+.cvd-option__swatch--protan { --swatch-1: #2a5fb8; --swatch-2: #d9a800; --swatch-3: #262b32; }
+.cvd-option__swatch--deuter { --swatch-1: #2f7bff; --swatch-2: #ffe21a; --swatch-3: #d6dae1; }
+.cvd-option__swatch--tritan { --swatch-1: #ff1f4a; --swatch-2: #00e0c8; --swatch-3: #ff1fd6; }
+.cvd-option__swatch--mono { --swatch-1: #484848; --swatch-2: #8a8a8a; --swatch-3: #f2f2f2; }
 .cvd-option[aria-checked="true"] {
-  border-color: rgb(var(--c-accent-rgb) / 0.85);
+  padding: 15px 19px;
+  border: 2px solid rgb(var(--c-accent-rgb) / 0.9);
   background: rgb(var(--c-accent-rgb) / 0.12);
 }
 .cvd-option[aria-checked="true"] .cvd-option__name { color: var(--c-accent); }
 .cvd-option:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.5); }
+@media (max-width: 480px) {
+  .settings-modal__card { padding: 1.35rem; }
+  .settings-modal__title { font-size: 1.5rem; }
+  .settings-modal__hint { font-size: 1.05rem; margin-bottom: 1.1rem; }
+  .cvd-option { padding: 14px 16px; gap: 12px; }
+  .cvd-option[aria-checked="true"] { padding: 13px 15px; }
+  .cvd-option__name { font-size: 1.1rem; }
+  .cvd-option__note { font-size: 0.95rem; }
+  .cvd-option__swatch { width: 74px; height: 38px; }
+}
 
 /* ---- Farbsehschwächen-Schemata ------------------------------------
    Protanopie und Deuteranopie teilen sich die Rot-Grün-Achse: Blau
-   übernimmt Akzent und „ausgewählt/annehmen“, Orange die Warnungen.
-   Die beiden unterscheiden sich also nicht in der Farbe, sondern
-   darin, welcher Befund gewählt wurde — die Palette ist für beide
-   gleich sicher. Tritanopie meidet Blau/Gelb (Magenta + Minze),
-   Monochrom verzichtet ganz auf Farbton und arbeitet mit Helligkeit. */
+   übernimmt Akzent und „ausgewählt/annehmen“, Gelb/Orange die Warnungen.
+   Protanopie erhält zusätzlich eine leicht angehobene Helligkeit,
+   Deuteranopie bleibt bei der natürlichen Helligkeit. Tritanopie meidet
+   Blau/Gelb (Magenta + Minze), Monochrom verzichtet ganz auf Farbton
+   und arbeitet mit Helligkeit. */
 html[data-cvd="protan"],
 html[data-cvd="deuter"] {
   --c-context-filter:    #334155;
@@ -2071,6 +2103,26 @@ html[data-cvd="deuter"] {
   --c-alert-rgb: 245 158 11;
   --c-alert-text: #fbbf24;
   --c-alert-soft: #fde68a;
+}
+/* Protanopie: Die Palette wird leicht aufgehellt, weil warme Signalfarben
+   bei reduzierter Rotempfindlichkeit dunkler wahrgenommen werden. Deuteranopie
+   behält dagegen die natürliche Helligkeit der gemeinsamen Palette. */
+html[data-cvd="protan"] {
+  --c-accent: #a6d9ff;
+  --c-accent-rgb: 166 217 255;
+  --c-accent-dark: #7bbdeb;
+  --c-accent-2: #ffd489;
+  --c-highlight: #a6d9ff;
+  --c-highlight-rgb: 166 217 255;
+  --c-highlight-edge: #7bbdeb;
+  --c-highlight-edge-rgb: 123 189 235;
+  --c-danger-soft: #fca36b;
+  --c-success: #7cb8fb;
+  --c-success-rgb: 124 184 251;
+  --c-alert: #f7b23a;
+  --c-alert-rgb: 247 178 58;
+  --c-alert-text: #fcd15c;
+  --c-alert-soft: #feecb0;
 }
 html[data-cvd="tritan"] {
   --c-context-filter:    #4b5563;

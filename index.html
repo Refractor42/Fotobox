@@ -471,28 +471,44 @@
     <div class="settings-modal__card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-describedby="settingsHint">
       <button class="settings-modal__close" id="settingsClose" type="button" aria-label="Einstellungen schließen" data-i18n-aria="settingsCloseAria">×</button>
       <h3 class="settings-modal__title" id="settingsTitle" data-i18n="settingsTitle">Einstellungen</h3>
-      <p class="settings-modal__hint" id="settingsHint" data-i18n="cvdHint">Farbmodus für Farbsehschwächen — die Wahl gilt sofort und nur für diese Sitzung.</p>
-      <p class="settings-modal__label" id="cvdLabel" data-i18n="cvdGroupLabel">Farbmodus</p>
-      <div class="cvd-options" id="cvdOptions" role="radiogroup" aria-labelledby="cvdLabel">
+      <p class="settings-modal__hint" id="settingsHint" data-i18n="cvdHint">Farbmodus für Sehschwächen</p>
+      <div class="cvd-options" id="cvdOptions" role="radiogroup" aria-label="Farbmodus" data-i18n-aria="cvdGroupLabel">
         <button class="cvd-option" type="button" role="radio" aria-checked="true" tabindex="0" data-cvd="standard">
-          <span class="cvd-option__name" data-i18n="cvdStandard">Standard</span>
-          <span class="cvd-option__note" data-i18n="cvdStandardNote">Kräftiger Gold-Akzent</span>
+          <span class="cvd-option__copy">
+            <span class="cvd-option__name" data-i18n="cvdStandard">Standard</span>
+            <span class="cvd-option__note" data-i18n="cvdStandardNote">Volles Farbspektrum (Normales Sehen)</span>
+          </span>
+          <span class="cvd-option__swatch cvd-option__swatch--standard" aria-hidden="true"><span></span><span></span><span></span></span>
         </button>
         <button class="cvd-option" type="button" role="radio" aria-checked="false" tabindex="-1" data-cvd="protan">
-          <span class="cvd-option__name" data-i18n="cvdProtan">Protanopie</span>
-          <span class="cvd-option__note" data-i18n="cvdProtanNote">Rotsehschwäche — Blau statt Rot/Grün</span>
+          <span class="cvd-option__copy">
+            <span class="cvd-option__name" data-i18n="cvdProtan">Rot-Grün-Schwäche (Typ 1)</span>
+            <span class="cvd-option__note" data-i18n="cvdProtanNote">Protanopie — Rotschwäche
+(angepasste Helligkeit)</span>
+          </span>
+          <span class="cvd-option__swatch cvd-option__swatch--protan" aria-hidden="true"><span></span><span></span><span></span></span>
         </button>
         <button class="cvd-option" type="button" role="radio" aria-checked="false" tabindex="-1" data-cvd="deuter">
-          <span class="cvd-option__name" data-i18n="cvdDeuter">Deuteranopie</span>
-          <span class="cvd-option__note" data-i18n="cvdDeuterNote">Grünsehschwäche — Blau statt Rot/Grün</span>
+          <span class="cvd-option__copy">
+            <span class="cvd-option__name" data-i18n="cvdDeuter">Rot-Grün-Schwäche (Typ 2)</span>
+            <span class="cvd-option__note" data-i18n="cvdDeuterNote">Deuteranopie — Grünschwäche
+(natürliche Helligkeit)</span>
+          </span>
+          <span class="cvd-option__swatch cvd-option__swatch--deuter" aria-hidden="true"><span></span><span></span><span></span></span>
         </button>
         <button class="cvd-option" type="button" role="radio" aria-checked="false" tabindex="-1" data-cvd="tritan">
-          <span class="cvd-option__name" data-i18n="cvdTritan">Tritanopie</span>
-          <span class="cvd-option__note" data-i18n="cvdTritanNote">Blausehschwäche — Magenta statt Blau/Gelb</span>
+          <span class="cvd-option__copy">
+            <span class="cvd-option__name" data-i18n="cvdTritan">Blau-Gelb-Schwäche</span>
+            <span class="cvd-option__note" data-i18n="cvdTritanNote">Tritanopie</span>
+          </span>
+          <span class="cvd-option__swatch cvd-option__swatch--tritan" aria-hidden="true"><span></span><span></span><span></span></span>
         </button>
         <button class="cvd-option" type="button" role="radio" aria-checked="false" tabindex="-1" data-cvd="mono">
-          <span class="cvd-option__name" data-i18n="cvdMono">Monochrom</span>
-          <span class="cvd-option__note" data-i18n="cvdMonoNote">Achromatopsie — nur Helligkeit</span>
+          <span class="cvd-option__copy">
+            <span class="cvd-option__name" data-i18n="cvdMono">Monochrom</span>
+            <span class="cvd-option__note" data-i18n="cvdMonoNote">Graustufen (Achromatopsie)</span>
+          </span>
+          <span class="cvd-option__swatch cvd-option__swatch--mono" aria-hidden="true"><span></span><span></span><span></span></span>
         </button>
       </div>
     </div>

@@ -221,18 +221,18 @@ const I18N = {
     settingsTitle: 'Einstellungen',
     settingsOpenAria: 'Einstellungen öffnen',
     settingsCloseAria: 'Einstellungen schließen',
-    cvdHint: 'Farbmodus für Farbsehschwächen — die Wahl gilt sofort und nur für diese Sitzung.',
+    cvdHint: 'Farbmodus für Sehschwächen',
     cvdGroupLabel: 'Farbmodus',
     cvdStandard: 'Standard',
-    cvdStandardNote: 'Farben aus dem Admin-Panel',
-    cvdProtan: 'Protanopie',
-    cvdProtanNote: 'Rotsehschwäche — Blau statt Rot/Grün',
-    cvdDeuter: 'Deuteranopie',
-    cvdDeuterNote: 'Grünsehschwäche — Blau statt Rot/Grün',
-    cvdTritan: 'Tritanopie',
-    cvdTritanNote: 'Blausehschwäche — Magenta statt Blau/Gelb',
+    cvdStandardNote: 'Volles Farbspektrum (Normales Sehen)',
+    cvdProtan: 'Rot-Grün-Schwäche (Typ 1)',
+    cvdProtanNote: 'Protanopie — Rotschwäche\n(angepasste Helligkeit)',
+    cvdDeuter: 'Rot-Grün-Schwäche (Typ 2)',
+    cvdDeuterNote: 'Deuteranopie — Grünschwäche\n(natürliche Helligkeit)',
+    cvdTritan: 'Blau-Gelb-Schwäche',
+    cvdTritanNote: 'Tritanopie',
     cvdMono: 'Monochrom',
-    cvdMonoNote: 'Achromatopsie — nur Helligkeit',
+    cvdMonoNote: 'Graustufen (Achromatopsie)',
     streakAriaOne: 'Foto-Streak: 1 Tag, {s}',
     streakAriaMany: 'Foto-Streak: {n} Tage, {s}',
     streakTaken: 'Foto heute gemacht',
@@ -413,18 +413,18 @@ const I18N = {
     settingsTitle: 'Settings',
     settingsOpenAria: 'Open settings',
     settingsCloseAria: 'Close settings',
-    cvdHint: 'Colour mode for colour vision deficiency — applied immediately and only for this session.',
+    cvdHint: 'Colour mode for vision deficiencies',
     cvdGroupLabel: 'Colour mode',
     cvdStandard: 'Default',
-    cvdStandardNote: 'Colours from the admin panel',
-    cvdProtan: 'Protanopia',
-    cvdProtanNote: 'Red-weak — blue instead of red/green',
-    cvdDeuter: 'Deuteranopia',
-    cvdDeuterNote: 'Green-weak — blue instead of red/green',
-    cvdTritan: 'Tritanopia',
-    cvdTritanNote: 'Blue-weak — magenta instead of blue/yellow',
+    cvdStandardNote: 'Full colour spectrum (normal vision)',
+    cvdProtan: 'Red-green deficiency (Type 1)',
+    cvdProtanNote: 'Protanopia — red-weak\n(adjusted brightness)',
+    cvdDeuter: 'Red-green deficiency (Type 2)',
+    cvdDeuterNote: 'Deuteranopia — green-weak\n(natural brightness)',
+    cvdTritan: 'Blue-yellow deficiency',
+    cvdTritanNote: 'Tritanopia',
     cvdMono: 'Monochrome',
-    cvdMonoNote: 'Achromatopsia — luminance only',
+    cvdMonoNote: 'Greyscale (achromatopsia)',
     streakAriaOne: 'Photo streak: 1 day, {s}',
     streakAriaMany: 'Photo streak: {n} days, {s}',
     streakTaken: 'photo taken today',
@@ -3119,6 +3119,7 @@ function askConfirm(options = {}) {
     $confirmOk.textContent = options.ok || t('confirmOk');
     $confirmCancel.textContent = options.cancel || t('confirmCancel');
     $confirmModal.hidden = false;
+    if (options.warningSound) playDeleteWarning();
     gsap.from($confirmModal.querySelector('.modal__card'), {
       y: 24, opacity: 0, scale: 0.96, duration: 0.3, ease: 'power2.out', clearProps: 'all'
     });
@@ -3267,7 +3268,7 @@ function buildTrashCard(item) {
   // Nur die wirklich zerstörerische Aktion fragt nach — das Trash-Löschen
   // selbst bleibt ohne Dialog und über den Toast rückgängig machbar.
   purgeBtn.addEventListener('click', async () => {
-    if (await askConfirm()) purgeTrashedPhoto(item);
+    if (await askConfirm({ warningSound: true })) purgeTrashedPhoto(item);
   });
   actions.appendChild(purgeBtn);
 
@@ -3627,6 +3628,39 @@ function playCountdownTick(isFinal) {
   }
 }
 
+// Kurze, tiefe Warnung für endgültiges Löschen oder Verwerfen. Sie erklingt
+// nur beim Öffnen des jeweiligen Bestätigungsdialogs und bleibt bei
+// stummgeschaltetem Ton aus.
+function playDeleteWarning() {
+  if (!soundEnabled || isCapturing) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    const start = ctx.currentTime + 0.005;
+    const notes = [
+      { at: 0, freq: 392 },
+      { at: 0.145, freq: 311 }
+    ];
+    notes.forEach(({ at, freq }) => {
+      const t = start + at;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.15, t + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.13);
+
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.14);
+    });
+  } catch (e) {
+    /* audio not available */
+  }
+}
+
 
 // ============================================================
 //  EVENT LISTENERS
@@ -3676,6 +3710,16 @@ const $sideMenuToggle = document.getElementById('sideMenuToggle');
 const $sideRail = document.getElementById('sideRail');
 const $endScreen = document.getElementById('endScreen');
 const $cancelHome = document.getElementById('cancelHome');
+
+// Der Home-Button wird nach Aufnahmeaktionen programmatisch fokussiert.
+// Nur bei Tastaturbedienung soll daraus ein sichtbarer Fokusring werden;
+// nach Touch oder Maus bleibt der Kreis ruhig.
+document.addEventListener('keydown', () => {
+  document.body.classList.add('is-keyboard-nav');
+}, true);
+document.addEventListener('pointerdown', () => {
+  document.body.classList.remove('is-keyboard-nav');
+}, true);
 
 // Ein einziges Randmenü mit drei Bereichen, die je nach Schritt verfügbar
 // sind: Kamera = Filter, Review = Overlay und Sticker. Die Unterteilung in
@@ -4469,7 +4513,8 @@ if ($cancelHome) {
         title: t('discardTitle'),
         text: t('discardText'),
         ok: t('discardConfirm'),
-        cancel: t('discardCancel')
+        cancel: t('discardCancel'),
+        warningSound: true
       });
       if (!confirmed) {
         $cancelHome.focus();
