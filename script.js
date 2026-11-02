@@ -1050,7 +1050,7 @@ function animateSplashIn() {
 }
 
 // Start des Kiosk-Flows: Splash ausblenden, Kamera starten. Wird vom
-// Swipe-up, vom Start-Button und von der Leertaste aufgerufen.
+// Swipe-up, vom Start-Button sowie von Leertaste und PageUp/PageDown aufgerufen.
 function startSession() {
   if (currentState === 'camera') return;
   unlockAudio(); // create the AudioContext inside the user gesture
@@ -4367,20 +4367,59 @@ window.addEventListener('load', async () => {
   // keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     const target = e.target;
+    // Der Punkt auf Kiosk-Fernbedienungen ist Abbrechen/Home.
+    const dotKey = e.key === '.' || e.key === 'Decimal'
+      || e.code === 'Period' || e.code === 'NumpadDecimal';
     // Einstellungen offen: nur der Dialog selbst reagiert, damit Leertaste
     // und Enter nicht dahinter die Sitzung starten (Tastaturbedienbarkeit).
     if ($settingsModal && !$settingsModal.hidden) {
-      if (e.key === 'Escape') { e.preventDefault(); closeSettings(); }
+      if (e.key === 'Escape' || dotKey) { e.preventDefault(); closeSettings(); }
       return;
     }
     if (target && target.closest && target.closest('input, textarea, select, [contenteditable="true"]')) return;
     const onButton = !!(target && target.closest && target.closest('button, [role="button"]'));
+
+    // Punkt: Dialoge abbrechen, sonst dieselbe Aktion wie der Home-Button.
+    if (dotKey) {
+      e.preventDefault();
+      if (!$qrModal.hidden) { closeQrDialog(); return; }
+      if (!$confirmModal.hidden) { closeConfirm(false); return; }
+      if (lightbox) { lightbox.remove(); lightbox = null; return; }
+      if (currentState !== 'splash' && $cancelHome) $cancelHome.click();
+      return;
+    }
 
     // Vollbild ein/aus — unabhängig vom aktuellen Screen.
     if (e.code === 'KeyF' && e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) {
       e.preventDefault();
       toggleFullscreen();
       return;
+    }
+
+    // Viele Kiosk-Fernauslöser senden PageUp/PageDown statt Leertaste.
+    // PageUp ist Einzelfoto + Auslöser, PageDown Fotostreifen + Auslöser.
+    // Auf dem Startbildschirm starten sie die Sitzung direkt im passenden Modus.
+    const pageShutter = e.key === 'PageUp' || e.key === 'PageDown';
+    if (pageShutter) {
+      const pageMode = e.key === 'PageUp' ? 'single' : 'strip';
+      if (currentState === 'splash') {
+        captureMode = pageMode;
+        applyModeSelection();
+        e.preventDefault();
+        startSession();
+        return;
+      }
+      if (currentState === 'camera' && !isCapturing
+        && !$camera.classList.contains('is-reviewing')
+        && !$camera.classList.contains('is-ended')
+        && $qrModal.hidden && $confirmModal.hidden) {
+        captureMode = pageMode;
+        applyModeSelection();
+        e.preventDefault();
+        unlockAudio();
+        runCaptureSequence();
+        return;
+      }
     }
 
     if (e.key === ' ' && currentState === 'splash') {
