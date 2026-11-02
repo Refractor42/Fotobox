@@ -84,8 +84,6 @@ const I18N = {
     captureCancelAria: 'Aufnahme abbrechen',
     acceptAria: 'Foto annehmen',
     btnAccept: 'Annehmen',
-    btnStamp: 'Sticker',
-    stampOpenAria: 'Sticker auswählen',
     stampCancel: 'Abbrechen',
     stampDone: 'Fertig',
     stampDelete: 'Sticker löschen',
@@ -280,8 +278,6 @@ const I18N = {
     captureCancelAria: 'Cancel capture',
     acceptAria: 'Accept photo',
     btnAccept: 'Accept',
-    btnStamp: 'Sticker',
-    stampOpenAria: 'Choose sticker',
     stampCancel: 'Cancel',
     stampDone: 'Done',
     stampDelete: 'Delete sticker',
@@ -1245,19 +1241,29 @@ function setFeatureHidden(el, hidden) {
   if (el) el.classList.toggle('feature-disabled', hidden);
 }
 
-// Kiosk-Seitenmenü: nur Bereiche anbieten, die der Admin freigegeben hat.
-// Sticker brauchen ein Foto, damit das Menü nicht schon im Sucher Sticker
-// auf die Live-Vorschau legt.
-function sideMenuContextAvailable(context) {
+// Kiosk-Seitenmenü: Auf der Kamera gibt es nur Filter, im Review nur
+// Overlay und Sticker. So bleibt jeder Screen auf seine Aufgabe beschränkt.
+function sideMenuStageIds() {
+  const inReview = $camera.classList.contains('is-reviewing')
+    || $camera.classList.contains('is-stamping');
+  return inReview ? ['overlay', 'stamp'] : ['filter'];
+}
+
+function sideMenuFeatureEnabled(context) {
   if (context === 'filter') return appSettings.filtersEnabled !== false;
   if (context === 'overlay') return appSettings.overlaysEnabled !== false;
   if (context === 'stamp') return appSettings.stickersEnabled !== false;
   return false;
 }
 
+function sideMenuContextAvailable(context) {
+  return sideMenuStageIds().includes(context) && sideMenuFeatureEnabled(context);
+}
+
 function chooseSideMenuContext(preferred) {
-  if (sideMenuContextAvailable(preferred)) return preferred;
-  return ['filter', 'overlay', 'stamp'].find(sideMenuContextAvailable) || null;
+  const available = sideMenuStageIds().filter(sideMenuFeatureEnabled);
+  if (available.includes(preferred)) return preferred;
+  return available[0] || null;
 }
 
 function setSideMenuVisible(visible) {
@@ -1288,7 +1294,6 @@ function applyFeatureAvailability() {
   setFeatureHidden(document.getElementById('filterTray'), !filtersOn);
   setFeatureHidden(document.getElementById('stickerToggle'), !stickersOn);
   setFeatureHidden(document.getElementById('stickerTray'), !stickersOn);
-  setFeatureHidden(document.getElementById('landscapeStamp'), !stickersOn);
 
   if (!filtersOn) {
     if (filterEngine && filterEngine.getFilter() !== 'none') filterEngine.setFilter('none');
@@ -3625,8 +3630,9 @@ const $sideRail = document.getElementById('sideRail');
 const $endScreen = document.getElementById('endScreen');
 const $cancelHome = document.getElementById('cancelHome');
 
-// Ein einziges Randmenü mit drei gleichrangigen Bereichen. Die Unterteilung
-// in Gesicht/Komplett bzw. Standard/Event/Hochschule passiert als sichtbare
+// Ein einziges Randmenü mit drei Bereichen, die je nach Schritt verfügbar
+// sind: Kamera = Filter, Review = Overlay und Sticker. Die Unterteilung in
+// Gesicht/Komplett bzw. Standard/Event/Hochschule passiert als sichtbare
 // Abschnittsüberschrift innerhalb der Liste, nicht als zweite Reiterreihe.
 const SIDE_SECTIONS = [
   { id: 'filter', labelKey: 'sideFilter' },
@@ -3673,8 +3679,11 @@ function setSideMenuOpen(open, options = {}) {
 }
 
 function focusActiveSideTab() {
-  const active = document.getElementById(sideTabElementId(sideContext));
-  if (active) active.focus({ preventScroll: true });
+  const tab = document.getElementById(sideTabElementId(sideContext));
+  // Ein einzelner Bereich braucht keine Reiterreihe; dann ist der erste
+  // Menüpunkt der sinnvolle Fokus nach dem Öffnen.
+  const target = tab || ($sideMenuList && $sideMenuList.querySelector('.side-menu__item'));
+  if (target) target.focus({ preventScroll: true });
 }
 
 if ($sideMenuToggle) {
@@ -3883,7 +3892,21 @@ function renderSideTabs() {
   if (!available.some((section) => section.id === sideContext)) {
     sideContext = available[0] ? available[0].id : 'filter';
   }
+  // Bei nur einem verfügbaren Bereich wäre eine Reiterreihe mit einem
+  // einzigen Reiter nur zusätzliche Bedienlast. Sie erscheint erst, wenn
+  // wirklich zwischen Bereichen gewählt werden kann (Review: Overlay/Sticker).
+  const showTabs = available.length > 1;
+  $sideMenuTabs.hidden = !showTabs;
   $sideMenuTabs.innerHTML = '';
+  if (!showTabs) {
+    if ($sideMenuPanel) {
+      $sideMenuPanel.removeAttribute('aria-labelledby');
+      if (available[0]) $sideMenuPanel.setAttribute('aria-label', t(available[0].labelKey));
+      else $sideMenuPanel.removeAttribute('aria-label');
+    }
+    return;
+  }
+  if ($sideMenuPanel) $sideMenuPanel.removeAttribute('aria-label');
   available.forEach((section) => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -4315,8 +4338,6 @@ function deleteSelectedStamp() {
   if (activeStickers.length) removeSticker(activeStickers[activeStickers.length - 1]);
 }
 
-const $landscapeStamp = document.getElementById('landscapeStamp');
-if ($landscapeStamp) $landscapeStamp.addEventListener('click', () => openStampMode());
 const $stampCancel = document.getElementById('stampCancel');
 if ($stampCancel) $stampCancel.addEventListener('click', () => closeStampMode(false));
 const $stampDone = document.getElementById('stampDone');

@@ -715,7 +715,8 @@ body.orientation-landscape .side-rail .cancel-home {
   text-align: center;
 }
 
-/* Drei gleichrangige Hauptreiter: immer sichtbar, nie als Untermenü. */
+/* Hauptreiter erscheinen nur, wenn es in der aktuellen Phase wirklich
+   eine Wahl gibt. In der Kamera bleibt die Filterliste ohne Reiterleiste. */
 .side-menu__tabs {
   display: grid;
   grid-auto-flow: column;
