@@ -240,9 +240,8 @@ body.orientation-landscape .splash__chain {
   border-radius: 50%;
   animation: tapPulse 1.8s ease-out infinite;
 }
-/* Die Vorlage zeigt nur den ruhigen weißen Punkt; der pulsierende Ring
-   würde neben dem Titel wie ein zusätzliches Icon wirken. */
-body.orientation-landscape .splash__tap-ring { display: none; }
+/* Der Ring pulsiert wie vor dem Redesign und macht den Start-Hinweis
+   als Tipp-Affordance erkennbar. Der Punkt bleibt dabei ruhig. */
 body.orientation-landscape .splash__tap-dot {
   width: 11px;
   height: 11px;

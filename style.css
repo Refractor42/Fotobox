@@ -2022,6 +2022,10 @@ body.orientation-landscape .gallery__grid {
   flex-direction: column;
   align-items: center;
   gap: 10px;
+  /* Feste Breite: Das Label wechselt zwischen „Sehschwächen“ und „Vision“.
+     Ohne feste Breite richtet sich der zentrierte Augenkreis nach der
+     Textbreite und springt beim Sprachwechsel um einige Pixel. */
+  width: 116px;
   padding: 4px 6px;
   border: 0;
   background: none;
@@ -2050,17 +2054,25 @@ body.orientation-landscape .gallery__grid {
   font-weight: 800;
   letter-spacing: 0.005em;
   line-height: 1;
+  white-space: nowrap;
   color: #fff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 2px 12px rgba(0, 0, 0, 0.7);
 }
-.splash__settings:hover .splash__settings-icon {
+/* Beim Antippen erscheint nur ein schmaler gelber Ring um den runden
+   Button; das Augensymbol wechselt dabei von Weiß auf Gelb. */
+.splash__settings:hover .splash__settings-icon,
+.splash__settings:active .splash__settings-icon,
+.splash__settings:focus-visible .splash__settings-icon {
   background: rgba(28, 30, 38, 0.86);
-  border-color: rgb(var(--c-accent-rgb) / 0.65);
+  border-color: var(--c-accent);
+  color: var(--c-accent);
+  box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.22);
   transform: translateY(-1px);
 }
+.splash__settings:active .splash__settings-icon { transform: scale(0.96); }
 .splash__settings:focus-visible { outline: none; }
 .splash__settings:focus-visible .splash__settings-icon {
-  box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.5);
+  box-shadow: 0 0 0 4px rgb(var(--c-accent-rgb) / 0.5);
 }
 @media (max-width: 420px) {
   .splash__settings-icon { width: 64px; height: 64px; }
