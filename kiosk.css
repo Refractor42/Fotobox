@@ -558,7 +558,6 @@ body.orientation-landscape .review-actions {
 .round-action:focus-visible { outline: none; }
 .round-action:focus-visible .round-action__icon { box-shadow: 0 0 0 4px rgb(var(--c-highlight-rgb) / 0.55); }
 .round-action--accept .round-action__icon { border-color: var(--c-success); color: var(--c-success); }
-.round-action--cancel .round-action__icon { border-color: var(--c-danger-soft); color: var(--c-danger-soft); }
 
 /* --- Seitenmenü ----------------------------------------------------
    Als Schublade: standardmäßig außerhalb des Bildes, nur der Griff am

@@ -84,9 +84,6 @@ const I18N = {
     captureCancelAria: 'Aufnahme abbrechen',
     acceptAria: 'Foto annehmen',
     btnAccept: 'Annehmen',
-    stampCancel: 'Abbrechen',
-    stampDone: 'Fertig',
-    stampDelete: 'Sticker löschen',
     btnDone: 'Fertig',
     endQr: 'QR-Code',
     endInsta: 'Instagram',
@@ -278,9 +275,6 @@ const I18N = {
     captureCancelAria: 'Cancel capture',
     acceptAria: 'Accept photo',
     btnAccept: 'Accept',
-    stampCancel: 'Cancel',
-    stampDone: 'Done',
-    stampDelete: 'Delete sticker',
     btnDone: 'Done',
     endQr: 'QR Code',
     endInsta: 'Instagram',
@@ -1305,7 +1299,7 @@ function applyFeatureAvailability() {
   }
 
   if (!stickersOn) {
-    if ($camera.classList.contains('is-stamping')) closeStampMode(true);
+    if ($camera.classList.contains('is-stamping')) closeStampMode();
     if (activeStickers.length) clearStickers();
     if (openReviewTool === 'stickers') closeReviewTools();
   }
@@ -1439,8 +1433,6 @@ function showReview() {
     // Im Querformat liegen die Aktionen unter dem Foto und das Menü rechts.
     $review.hidden = true;
     const actions = document.getElementById('reviewActions');
-    const stamps = document.getElementById('stampActions');
-    if (stamps) stamps.hidden = true;
     if (actions) {
       actions.hidden = false;
       gsap.from(actions, { y: 16, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
@@ -1459,9 +1451,7 @@ function showReview() {
 function hideReview() {
   $review.hidden = true;
   const actions = document.getElementById('reviewActions');
-  const stamps = document.getElementById('stampActions');
   if (actions) actions.hidden = true;
-  if (stamps) stamps.hidden = true;
   $camera.classList.remove('is-reviewing', 'is-stamping');
   syncCancelHome();
   closeReviewTools();
@@ -2558,9 +2548,7 @@ function resetCameraView() {
   const endScreen = document.getElementById('endScreen');
   if (endScreen) endScreen.hidden = true;
   const reviewActions = document.getElementById('reviewActions');
-  const stampActions = document.getElementById('stampActions');
   if (reviewActions) reviewActions.hidden = true;
-  if (stampActions) stampActions.hidden = true;
   if (isKioskLayout()) {
     openSideMenu('filter');
     setSideMenuOpen(false);
@@ -3698,7 +3686,6 @@ let currentOverlay = null;
 // Bildpixel-Layout des zuletzt erzeugten Fotostreifens, damit das Overlay in
 // der Vorschau und im gespeicherten Foto je Einzelbild sitzt.
 let lastStripLayout = null;
-let stampSnapshot = [];
 let endPhotoUrl = null;
 
 // Bild-Overlays im 16:9-Format (1280×720, transparente Bildmitte). Sie liegen
@@ -3858,12 +3845,12 @@ function openSideMenu(context) {
 
 function selectSideContext(context, options = {}) {
   if (!sideMenuContextAvailable(context)) return;
-  // Der Sticker-Reiter ist zugleich der Sticker-Bearbeitungsmodus. Beim
-  // Verlassen bleiben bereits gesetzte Sticker erhalten (kein stiller Verlust).
+  // Der Sticker-Reiter öffnet die Sticker-Auswahl. Die untere Leiste bleibt
+  // dabei unverändert bei „Neu aufnehmen“ und „Annehmen“.
   if (context === 'stamp' && hasPhoto && !$camera.classList.contains('is-stamping')) {
-    openStampMode({ focusDone: false });
+    openStampMode();
   } else if (context !== 'stamp' && $camera.classList.contains('is-stamping')) {
-    closeStampMode(true, { keepMenuOpen: true });
+    closeStampMode({ keepMenuOpen: true });
     openSideMenu(context);
   } else {
     openSideMenu(context);
@@ -4295,55 +4282,21 @@ function addEmojiStamp(glyph) {
   selectSticker(st);
 }
 
-function openStampMode(options = {}) {
+function openStampMode() {
   if (!hasPhoto || !appSettings.stickersEnabled) return;
-  if (!$camera.classList.contains('is-stamping')) {
-    stampSnapshot = activeStickers.slice();
-    $camera.classList.add('is-stamping');
-  }
-  const actions = document.getElementById('reviewActions');
-  const stampActions = document.getElementById('stampActions');
-  if (actions) actions.hidden = true;
-  if (stampActions) stampActions.hidden = false;
+  $camera.classList.add('is-stamping');
   openSideMenu('stamp');
-  // Sticker werden nur im Menü gewählt; ohne die Schublade gäbe es hier
-  // nichts zu tun.
+  // Sticker werden nur im Menü gewählt; die Review-Aktionen bleiben sichtbar.
   setSideMenuOpen(true);
-  if (options.focusDone !== false) {
-    const done = document.getElementById('stampDone');
-    if (done) done.focus();
-  }
 }
 
-function closeStampMode(keep, options = {}) {
-  if (!keep) {
-    [...activeStickers].forEach((st) => {
-      if (!stampSnapshot.includes(st)) removeSticker(st);
-    });
-  }
-  stampSnapshot = [];
+function closeStampMode(options = {}) {
   $camera.classList.remove('is-stamping');
-  const actions = document.getElementById('reviewActions');
-  const stampActions = document.getElementById('stampActions');
-  if (actions) actions.hidden = false;
-  if (stampActions) stampActions.hidden = true;
   if (isKioskLayout() && !options.keepMenuOpen) {
     openSideMenu('overlay');
     setSideMenuOpen(false);
   }
 }
-
-function deleteSelectedStamp() {
-  if (selectedSticker) { removeSticker(selectedSticker); return; }
-  if (activeStickers.length) removeSticker(activeStickers[activeStickers.length - 1]);
-}
-
-const $stampCancel = document.getElementById('stampCancel');
-if ($stampCancel) $stampCancel.addEventListener('click', () => closeStampMode(false));
-const $stampDone = document.getElementById('stampDone');
-if ($stampDone) $stampDone.addEventListener('click', () => closeStampMode(true));
-const $stampDelete = document.getElementById('stampDelete');
-if ($stampDelete) $stampDelete.addEventListener('click', deleteSelectedStamp);
 
 function showEndScreen(url) {
   endPhotoUrl = url;
