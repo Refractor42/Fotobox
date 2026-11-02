@@ -57,17 +57,19 @@ body.orientation-landscape .splash__gallery:hover {
   color: var(--c-highlight);
 }
 
+/* Marke sitzt im Querformat als Beschriftung im Start-Button (sie ersetzt
+   dort „Fotobox starten“) und ist nochmals 50 % größer als zuvor. */
 body.orientation-landscape .splash__brand {
   display: block;
-  position: absolute;
-  max-width: 38vw;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  top: clamp(20px, 3vh, 42px);
-  left: clamp(24px, 3vw, 54px);
+  position: static;
+  max-width: min(72vw, 1100px);
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+  line-height: 1.02;
   z-index: 5;
-  font-size: clamp(1.1rem, 1.4vw, 1.6rem);
+  font-size: clamp(4.95rem, 6.3vw, 7.2rem);
+  text-shadow: none;
   font-weight: 800;
   letter-spacing: -0.02em;
   background: linear-gradient(135deg, var(--c-accent) 30%, var(--c-accent-2) 90%);

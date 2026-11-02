@@ -4480,6 +4480,15 @@ if ($cancelHome) {
     resetToStartScreen();
   });
 }
+// Klick irgendwo auf dem Startbildschirm startet die Fotobox. Buttons
+// behalten ihre eigene Funktion (Galerie, Ton, Einstellungen, Sprache) —
+// der Start-Button läuft ohnehin über seinen data-action-Handler.
+$splash.addEventListener('click', (e) => {
+  if (currentState !== 'splash') return;
+  if (e.target.closest('button, a, input, select, textarea, label, [role="button"]')) return;
+  startSession();
+});
+
 // Swipe up auf dem Startbildschirm (Touch) plus Klick auf die Affordance.
 let splashGestureStart = null;
 $splash.addEventListener('pointerdown', (e) => {
