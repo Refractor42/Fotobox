@@ -1839,16 +1839,22 @@ body.orientation-landscape #camera.is-reviewing #review {
   margin: 0;
 }
 
-/* Galerie im Querformat */
+/* Galerie im Querformat: eigener Scrollbereich links der rechten Schiene,
+   damit Schiene und Start-Button nie über dem Inhalt liegen. */
 body.orientation-landscape section.gallery {
-  max-width: 1200px;
-  width: 94%;
-  margin: 0 auto;
-  /* 7rem unten: die letzte Reihe bleibt frei vom großen Home-Button. */
-  padding: 2.5rem 1.5rem 7rem;
+  position: fixed;
+  inset: 0 var(--rail-w) 0 0;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  /* Inhalt bleibt bei max. 1200 px zentriert, die Schiene bleibt frei. */
+  padding-top: 2.5rem;
+  padding-bottom: 2.5rem;
+  padding-left: max(clamp(24px, 3vw, 56px), calc((100vw - var(--rail-w) - 1200px) / 2));
+  padding-right: max(clamp(20px, 2.4vw, 44px), calc((100vw - var(--rail-w) - 1200px) / 2));
   /* Der Body ist im Querformat auf 100vh fixiert und darf nicht scrollen.
      Galerie und Papierkorb brauchen deshalb einen eigenen Scrollbereich. */
-  height: 100dvh;
+  height: auto;
   overflow-y: auto;
   overscroll-behavior: contain;
 }

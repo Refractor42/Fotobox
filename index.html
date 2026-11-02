@@ -386,23 +386,31 @@
     </div>
   </section>
 
-  <!-- Globaler Start-/Exit-Button: auf jedem Screen außer dem Startbildschirm
-       an derselben Stelle unten rechts. Auf dem Endscreen wird er zur
-       Abschlussaktion „Fertig“, während der Aufnahme zu „Abbrechen“. -->
-  <button class="cancel-home" id="cancelHome" type="button" aria-label="Zum Startbildschirm" data-i18n-aria="startHomeAria" hidden>
-    <span class="cancel-home__disc" aria-hidden="true">
-      <svg class="cancel-home__icon cancel-home__icon--home" viewBox="0 0 24 24" focusable="false">
-        <path fill="currentColor" d="M12 3.1 2.5 11.4h2.6v9.5h5.2v-5.7h3.4v5.7h5.2v-9.5h2.6z"></path>
-      </svg>
-      <svg class="cancel-home__icon cancel-home__icon--cancel" viewBox="0 0 24 24" focusable="false">
-        <path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"></path>
-      </svg>
-      <svg class="cancel-home__icon cancel-home__icon--done" viewBox="0 0 24 24" focusable="false">
-        <path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M4 12.5l5 5L20 6.5"></path>
-      </svg>
-    </span>
-    <span class="cancel-home__label" data-i18n="startHomeLabel">Start</span>
-  </button>
+  <!-- Rechte Schiene: oben der Griff für Filter/Overlays/Sticker, unten
+       durch eine Trennlinie abgesetzt der globale Start-Button. In Galerie
+       und Papierkorb bleibt der Griff weg, Linie und Start bleiben. -->
+  <div class="side-rail" id="sideRail" hidden>
+    <button class="side-menu-toggle" id="sideMenuToggle" type="button" aria-controls="sideMenu" aria-expanded="false" aria-label="Filter- und Effektmenü ausklappen" data-i18n-aria="sideMenuShowAria" hidden>
+      <svg class="side-menu-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"></path></svg>
+    </button>
+    <div class="side-rail__divider" aria-hidden="true"></div>
+    <div class="side-rail__home">
+      <button class="cancel-home" id="cancelHome" type="button" aria-label="Zum Startbildschirm" data-i18n-aria="startHomeAria" hidden>
+        <span class="cancel-home__disc" aria-hidden="true">
+          <svg class="cancel-home__icon cancel-home__icon--home" viewBox="0 0 24 24" focusable="false">
+            <path fill="currentColor" d="M12 3.1 2.5 11.4h2.6v9.5h5.2v-5.7h3.4v5.7h5.2v-9.5h2.6z"></path>
+          </svg>
+          <svg class="cancel-home__icon cancel-home__icon--cancel" viewBox="0 0 24 24" focusable="false">
+            <path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"></path>
+          </svg>
+          <svg class="cancel-home__icon cancel-home__icon--done" viewBox="0 0 24 24" focusable="false">
+            <path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M4 12.5l5 5L20 6.5"></path>
+          </svg>
+        </span>
+        <span class="cancel-home__label" data-i18n="startHomeLabel">Start</span>
+      </button>
+    </div>
+  </div>
 
   <!-- Gallery -->
   <section class="gallery" id="gallery">

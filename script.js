@@ -103,6 +103,8 @@ const I18N = {
     tabEmoji: 'Emojis',
     tabUni: 'Hochschule',
     scrollHint: 'scrollen',
+    sideMenuShowAria: 'Filter- und Effektmenü ausklappen',
+    sideMenuHideAria: 'Filter- und Effektmenü einklappen',
     scrollUpAria: 'Nach oben scrollen',
     scrollDownAria: 'Nach unten scrollen',
     overlayNone: 'Kein Rahmen',
@@ -286,6 +288,8 @@ const I18N = {
     tabEmoji: 'Emojis',
     tabUni: 'University',
     scrollHint: 'scroll',
+    sideMenuShowAria: 'Show filters and effects menu',
+    sideMenuHideAria: 'Hide filters and effects menu',
     scrollUpAria: 'Scroll up',
     scrollDownAria: 'Scroll down',
     overlayNone: 'No frame',
@@ -477,6 +481,7 @@ function applyLanguage(lang) {
     renderSideTabs();
     renderSideMenu();
     updateChallengeCard();
+    setSideMenuOpen($sideMenu.classList.contains('is-open'));
   }
   syncGalleryContext();
 }
@@ -1237,8 +1242,8 @@ function chooseSideMenuContext(preferred) {
 function setSideMenuVisible(visible) {
   if (!$sideMenu) return;
   $sideMenu.classList.toggle('feature-disabled', !visible);
-  const stage = $camera.querySelector('.camera__stage');
-  if (stage) stage.classList.toggle('has-no-side-menu', !visible);
+  setFeatureHidden($sideMenuToggle, !visible);
+  if (!visible) setSideMenuOpen(false);
 }
 
 function refreshSideMenu() {
@@ -1316,6 +1321,9 @@ function setControlsLocked(locked) {
     if (locked) sideMenu.setAttribute('aria-disabled', 'true');
     else sideMenu.removeAttribute('aria-disabled');
   }
+  // Die Schublade verdeckt sonst die Vorschau während Countdown und
+  // Verarbeitung.
+  if (locked) setSideMenuOpen(false);
 }
 
 // Das Review-Panel bleibt während der Bearbeitung sichtbar: „Save“ ist
@@ -1324,13 +1332,20 @@ function isKioskLayout() {
   return document.body.classList.contains('orientation-landscape');
 }
 
-// Der globale Start-Button sitzt auf jedem Screen an derselben Stelle:
-// unten rechts, bündig mit der rechten Kante des Seitenmenüs. Damit springt
-// er weder beim Review-Wechsel noch beim Wechsel in Galerie, Papierkorb oder
-// Endscreen.
+// Der globale Start-Button sitzt auf jedem Screen an derselben Stelle in der
+// rechten Schiene. In der Kameraansicht teilt er sie sich mit dem Griff fürs
+// Seitenmenü; in der Galerie bleibt darüber nur die Trennlinie stehen.
 function syncCancelHome() {
   if (!$cancelHome) return;
-  $cancelHome.hidden = currentState === 'splash';
+  const onSplash = currentState === 'splash';
+  $cancelHome.hidden = onSplash;
+  if ($sideRail) $sideRail.hidden = onSplash;
+  if ($sideMenuToggle) {
+    const showToggle = !onSplash && currentState === 'camera'
+      && !$camera.classList.contains('is-ended');
+    if (!showToggle) setSideMenuOpen(false);
+    $sideMenuToggle.hidden = !showToggle;
+  }
 }
 
 // Derselbe Button hat drei Zustände: normal „Start“, während der Aufnahme
@@ -2519,7 +2534,10 @@ function resetCameraView() {
   const stampActions = document.getElementById('stampActions');
   if (reviewActions) reviewActions.hidden = true;
   if (stampActions) stampActions.hidden = true;
-  if (isKioskLayout()) openSideMenu('filter');
+  if (isKioskLayout()) {
+    openSideMenu('filter');
+    setSideMenuOpen(false);
+  }
   currentFilter = 'standard';
   applyFilterSelection();
 
@@ -3579,8 +3597,28 @@ const $sideMenuTabs = document.getElementById('sideMenuTabs');
 const $sideMenuList = document.getElementById('sideMenuList');
 const $sideScrollUp = document.getElementById('sideScrollUp');
 const $sideScrollDown = document.getElementById('sideScrollDown');
+const $sideMenuToggle = document.getElementById('sideMenuToggle');
+const $sideRail = document.getElementById('sideRail');
 const $endScreen = document.getElementById('endScreen');
 const $cancelHome = document.getElementById('cancelHome');
+
+// Seitenmenü als Schublade: Ausfahren legt Filter/Overlays/Sticker über die
+// Vorschau, Einklappen gibt dem Foto wieder die volle Breite.
+function setSideMenuOpen(open) {
+  if (!$sideMenu || !$sideMenuToggle) return;
+  const next = !!open && !$sideMenu.classList.contains('feature-disabled');
+  $sideMenu.classList.toggle('is-open', next);
+  $sideMenuToggle.setAttribute('aria-expanded', String(next));
+  const ariaKey = next ? 'sideMenuHideAria' : 'sideMenuShowAria';
+  $sideMenuToggle.dataset.i18nAria = ariaKey;
+  $sideMenuToggle.setAttribute('aria-label', t(ariaKey));
+}
+
+if ($sideMenuToggle) {
+  $sideMenuToggle.addEventListener('click', () => {
+    setSideMenuOpen(!$sideMenu.classList.contains('is-open'));
+  });
+}
 
 const SIDE_CONFIG = {
   filter: {
@@ -4098,6 +4136,9 @@ function openStampMode() {
   if (actions) actions.hidden = true;
   if (stampActions) stampActions.hidden = false;
   openSideMenu('stamp', 'emoji');
+  // Sticker werden nur im Menü gewählt; ohne die Schublade gäbe es hier
+  // nichts zu tun.
+  setSideMenuOpen(true);
   const done = document.getElementById('stampDone');
   if (done) done.focus();
 }
@@ -4114,7 +4155,10 @@ function closeStampMode(keep) {
   const stampActions = document.getElementById('stampActions');
   if (actions) actions.hidden = false;
   if (stampActions) stampActions.hidden = true;
-  if (isKioskLayout()) openSideMenu('overlay');
+  if (isKioskLayout()) {
+    openSideMenu('overlay');
+    setSideMenuOpen(false);
+  }
 }
 
 function deleteSelectedStamp() {
@@ -4142,6 +4186,7 @@ function showEndScreen(url) {
     wrap.appendChild(img);
   }
   if ($endScreen) $endScreen.hidden = false;
+  setSideMenuOpen(false);
   $camera.classList.add('is-ended');
   $camera.classList.remove('is-reviewing', 'is-stamping');
   setHomeMode('done');
@@ -4363,6 +4408,12 @@ window.addEventListener('load', async () => {
     }
 
     if (e.key === 'Escape') {
+      if ($sideMenu && $sideMenu.classList.contains('is-open')) {
+        e.preventDefault();
+        setSideMenuOpen(false);
+        if ($sideMenuToggle) $sideMenuToggle.focus({ preventScroll: true });
+        return;
+      }
       if (isCapturing) { e.preventDefault(); cancelCapture(); return; }
       if (!$qrModal.hidden) { closeQrDialog(); return; }
       if (!$confirmModal.hidden) { closeConfirm(false); return; }

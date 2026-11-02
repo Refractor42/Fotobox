@@ -14,7 +14,13 @@
 .capture-bar,
 .review-actions,
 .side-menu,
+.side-menu-toggle,
 .endscreen { display: none; }
+/* Die rechte Schiene ist nur im Querformat ein eigenes Element; im
+   Hochformat bleiben Start-Button und Layout unverändert. */
+.side-rail { display: contents; }
+.side-rail__divider { display: none; }
+.side-rail__home { display: contents; }
 .stage-left { display: contents; }
 .kiosk-hide { display: none !important; }
 
@@ -227,7 +233,13 @@ body.orientation-landscape .splash__sound {
 .splash__sound:hover { background: rgba(38, 40, 48, 0.9); transform: scale(1.05); }
 .splash__sound svg { width: 46px; height: 46px; }
 
-/* --- Kamera-Bühne: Vorschau links, Menü rechts --------------------- */
+/* --- Kamera-Bühne: Vorschau in voller Breite, Menü als Schublade ---- */
+/* Rechts bleibt die schmale Schiene für Menü-Griff und Start-Button frei. */
+body.orientation-landscape section.camera {
+  inset: 0 var(--rail-w) 0 0;
+  width: auto;
+}
+
 body.orientation-landscape .camera__stage {
   position: absolute;
   inset: 0;
@@ -237,24 +249,20 @@ body.orientation-landscape .camera__stage {
   margin: 0;
   padding: clamp(14px, 1.5vw, 24px);
   display: grid;
-  grid-template-columns: minmax(0, 1fr) clamp(280px, 24vw, 380px);
-  /* Zeile 1: Vorschau + Menü, Zeile 2: Steuerleiste / Review-Aktionen.
-     Die Fußleiste hat eine feste Höhe, damit Vorschau, Menü, Scrollbar
-     und Start-Button beim Wechsel in den Review nicht springen. */
+  /* Das Seitenmenü liegt als Schublade über der Vorschau, deshalb bekommt
+     das Foto immer die volle Breite. */
+  grid-template-columns: minmax(0, 1fr);
+  /* Zeile 1: Vorschau, Zeile 2: Steuerleiste / Review-Aktionen. Die
+     Fußleiste hat eine feste Höhe, damit Vorschau und Steuerleiste beim
+     Wechsel in den Review nicht springen. */
   grid-template-rows: minmax(0, 1fr) var(--stage-bottom-h);
-  gap: clamp(10px, 1.1vw, 18px) clamp(14px, 1.4vw, 24px);
+  gap: var(--stage-gap-y) clamp(14px, 1.4vw, 24px);
   align-items: stretch;
   background: #08090c;
   border-radius: 0;
   box-shadow: none;
   overflow: hidden;
   aspect-ratio: auto;
-}
-
-/* Ohne Filter, Overlays und Sticker bleibt kein Seitenmenü übrig; dann
-   bekommt die Bildvorschau die volle Breite statt einer leeren Spalte. */
-body.orientation-landscape .camera__stage.has-no-side-menu {
-  grid-template-columns: minmax(0, 1fr);
 }
 
 body.orientation-landscape .stage-left { display: contents; }
@@ -318,7 +326,11 @@ body.orientation-landscape .capture-bar {
   padding: 0 6px 0 12px;
 }
 body.orientation-landscape .capture-bar > .capture-switch:first-of-type { grid-column: 1; grid-row: 1; justify-self: start; }
-body.orientation-landscape .capture-bar > .capture-switch:last-of-type { grid-column: 3; grid-row: 1; justify-self: end; }
+body.orientation-landscape .capture-bar > .capture-switch:last-of-type {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+}
 #camera.is-reviewing .capture-bar,
 #camera.is-ended .capture-bar { display: none; }
 
@@ -414,14 +426,18 @@ body.orientation-landscape .capture-bar > .capture-switch:last-of-type { grid-co
 .kiosk-shutter:disabled .kiosk-shutter__disc { transform: none; }
 
 /* --- Globaler Start-Button ---------------------------------------
-   Größe und Ring entsprechen den runden Review-/Sticker-Aktionen.
-   Die sichtbare Beschriftung sitzt wie bei den anderen Aktionen unter
-   dem Kreis; der Kreis selbst bleibt die 44+ px große Touchfläche. */
+   Der Button sitzt unten in der rechten Schiene. Die sichtbare
+   Beschriftung steht unter dem Kreis; der Kreis selbst bleibt die
+   44+ px große Touchfläche. */
 :root {
   --stage-pad: clamp(14px, 1.5vw, 24px);
+  --stage-gap-y: clamp(10px, 1.1vw, 18px);
   --stage-bottom-h: clamp(96px, 9vw, 126px);
   --menu-w: clamp(280px, 24vw, 380px);
+  /* Start-Button so groß wie die runden Review-/Sticker-Aktionen; die
+     Schiene wächst mit, damit der Kreis nicht am Rand klebt. */
   --home-size: clamp(58px, 5.6vw, 78px);
+  --rail-w: calc(var(--home-size) + 18px);
   --action-gap: 8px;
   --action-label-size: clamp(12px, 0.95vw, 15px);
   --action-label-line: 1.25;
@@ -544,18 +560,34 @@ body.orientation-landscape .review-actions {
 .round-action--accept .round-action__icon { border-color: var(--c-success); color: var(--c-success); }
 .round-action--cancel .round-action__icon { border-color: var(--c-danger-soft); color: var(--c-danger-soft); }
 
-/* --- Seitenmenü ---------------------------------------------------- */
+/* --- Seitenmenü ----------------------------------------------------
+   Als Schublade: standardmäßig außerhalb des Bildes, nur der Griff am
+   rechten Rand bleibt sichtbar. So behält das Foto die volle Breite. */
 body.orientation-landscape .side-menu {
-  grid-area: 1 / 2;
+  position: absolute;
+  top: var(--stage-pad);
+  right: 0;
+  bottom: calc(var(--stage-pad) + var(--stage-bottom-h) + var(--stage-gap-y));
+  width: var(--menu-w);
+  z-index: 40;
   display: flex;
   flex-direction: column;
   min-height: 0;
-  border-radius: 14px;
+  border-radius: 14px 0 0 14px;
   overflow: hidden;
   background: #17181d;
   border: 1px solid rgba(255, 255, 255, 0.09);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.4);
-  transition: opacity 0.2s ease;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translateX(100%);
+  transition: transform 0.32s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.2s ease, visibility 0.32s;
+}
+body.orientation-landscape .side-menu.is-open {
+  visibility: visible;
+  pointer-events: auto;
+  transform: translateX(0);
+  box-shadow: -24px 12px 60px rgba(0, 0, 0, 0.55);
 }
 
 /* Während der Aufnahme ist auch das Seitenmenü gesperrt: Ein Filterwechsel
@@ -563,6 +595,88 @@ body.orientation-landscape .side-menu {
 body.orientation-landscape .side-menu.is-locked {
   opacity: 0.4;
   pointer-events: none;
+}
+
+/* --- Rechte Schiene ---------------------------------------------------
+   Dünner Streifen am rechten Rand: oben der Griff, mit dem das Seitenmenü
+   herausfährt, unten durch eine Linie abgetrennt der Start-Button. */
+body.orientation-landscape .side-rail {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  width: var(--rail-w);
+  background: #0b0c10;
+  border-left: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+/* Der ganze obere Streifen ist die Touchfläche zum Aus- und Einklappen. */
+body.orientation-landscape .side-menu-toggle {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: #b9bec9;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+body.orientation-landscape .side-menu-toggle:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+body.orientation-landscape .side-menu-toggle:active { background: rgba(255, 255, 255, 0.1); }
+body.orientation-landscape .side-menu-toggle:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgb(var(--c-highlight-rgb) / 0.65);
+}
+body.orientation-landscape .side-menu-toggle[aria-expanded="true"] {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--c-highlight);
+}
+.side-menu-toggle__icon {
+  width: clamp(16px, 1.4vw, 22px);
+  height: clamp(16px, 1.4vw, 22px);
+  transition: transform 0.32s ease;
+}
+body.orientation-landscape .side-menu-toggle[aria-expanded="true"] .side-menu-toggle__icon {
+  transform: rotate(180deg);
+}
+
+body.orientation-landscape .side-rail__divider {
+  display: block;
+  flex: 0 0 auto;
+  width: calc(100% - 20px);
+  height: 1px;
+  /* auto: hält Linie und Start-Button auch dann unten, wenn der Menü-Griff
+     (wie in der Galerie) ausgeblendet ist und keinen Platz mehr füllt. */
+  margin: auto 10px 0;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+body.orientation-landscape .side-rail__home {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  padding: clamp(10px, 1.2vw, 18px) 0;
+}
+
+/* Der Start-Button sitzt in der Schiene statt über dem Inhalt. */
+body.orientation-landscape .side-rail .cancel-home {
+  position: static;
+  right: auto;
+  bottom: auto;
 }
 .side-menu__head {
   padding: clamp(10px, 1.1vw, 16px);
@@ -798,10 +912,8 @@ body.orientation-landscape .endscreen {
 @media (max-width: 1100px) and (orientation: landscape) {
   :root {
     --menu-w: clamp(240px, 26vw, 300px);
+    /* gleiche Größe wie .round-action__icon in diesem Breakpoint */
     --home-size: clamp(52px, 5.8vw, 68px);
-  }
-  body.orientation-landscape .camera__stage {
-    grid-template-columns: minmax(0, 1fr) clamp(240px, 26vw, 300px);
   }
   .splash__start-label { font-size: clamp(1.7rem, 3.2vw, 2.5rem); }
   body.orientation-landscape .challenge-card { width: clamp(220px, 24vw, 280px); }
