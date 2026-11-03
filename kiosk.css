@@ -1358,19 +1358,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
    ein unsichtbarer Streifen, in dem hereinscrollende Kreise nicht gemalt
    werden; den Abstand hält jetzt das Band über seinen eigenen Innenabstand. */
 .bar-slot--menu .bar-slot__inner { padding-inline: 0; }
-/* Der Zurücksetzen-Kreis steht fest am linken Rand der Pille und scrollt
-   nicht mit — nur das Band daneben bewegt sich. */
-.bar-filter-pin {
-  position: relative;
-  z-index: 3;
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  padding-left: var(--slot-pad-x, 20px);
-}
-.bar-filter-divider--pin { flex: 0 0 auto; margin: 4px clamp(4px, 0.5vw, 8px); }
-/* Band samt Wisch-Hinweis: der Finger bezieht sich nur auf den scrollbaren
-   Teil der Pille, nicht auf den festen Kreis. */
+/* Band samt Wisch-Hinweis. */
 .bar-filter-band {
   position: relative;
   display: flex;
@@ -1458,9 +1446,9 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   scrollbar-width: none;
   scroll-snap-type: x proximity;
   touch-action: pan-x;
-  /* Links nur ein kleiner Abstand zum Trenner: der Rand der Pille liegt
-     jetzt hinter dem festen Kreis, nicht mehr hinter dem ersten Filter. */
-  padding: 2px var(--slot-pad-x, 20px) 2px clamp(2px, 0.4vw, 5px);
+  /* Symmetrischer Abstand zum Pillenrand: der erste Filter startet nicht
+     in der Rundung. */
+  padding: 2px var(--slot-pad-x, 20px);
   /* Das Band schneidet in derselben Kapselform ab wie die Pille, damit
      hereinscrollende Kreise nicht neben dem Glas überstehen. */
   border-radius: 999px;
@@ -1587,13 +1575,6 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 .dot-chip__disc--sw { background: linear-gradient(135deg, #ffffff 0%, #9aa1ad 48%, #101116 100%); }
 .dot-chip__disc--vintage { background: linear-gradient(135deg, #f4e3c2 0%, #c9a06a 55%, #6b4a2f 100%); }
 .dot-chip__disc--knackig { background: linear-gradient(135deg, #4ee1a0 0%, #2f7dff 55%, #ff3d81 100%); }
-/* Zurücksetzen: gleiche Form wie die Filter, aber neutral statt Farbverlauf,
-   damit der Kreis als Aktion lesbar bleibt. */
-.dot-chip--reset .dot-chip__disc {
-  border-color: rgba(255, 255, 255, 0.4);
-  background: rgba(255, 255, 255, 0.14);
-  font-size: clamp(15px, 1.3vw, 20px);
-}
 .dot-chip:hover .dot-chip__disc {
   /* Kein Scale mehr: der Kreis hat in der Pille nur wenige Pixel Luft und
      würde oben/unten abgeschnitten. Helligkeit + Rand statt Größe. */
@@ -1622,11 +1603,6 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
    Sticker-Modus blendet sie aus, weil dort die Sticker-Pille die Auswahl
    übernimmt. */
 #camera.is-stamping .bar-slot--menu { display: none; }
-
-/* Rahmen: Vorschaubild ohne Beschriftung, Kachel statt Kreis. */
-.bar-slot--menu[data-mode="overlays"] .bar-filter-pin,
-.bar-slot--menu[data-mode="overlays"] .bar-filter-divider--pin { display: none; }
-.bar-slot--menu[data-mode="overlays"] .bar-filter-list { padding-left: var(--slot-pad-x, 20px); }
 
 /* ============================================================
    REVIEW-LEISTE
@@ -1856,8 +1832,8 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 /* ============================================================
    UI 2 — feste Leisten-Variante (data-ui="2" auf <html>)
    Gleiche Leiste, gleiche Knöpfe; die beiden Menüs liegen über dem
-   Bild und wachsen vom jeweiligen Knopf nach außen: Filter nach links,
-   Optionen nach rechts, jeweils bis kurz vor die Bildkante. Auslöser
+   Bild und wachsen vom jeweiligen Knopf nach außen: Optionen nach links,
+   Filter nach rechts, jeweils bis kurz vor die Bildkante. Auslöser
    und Knöpfe bleiben dabei stehen.
    ============================================================ */
 html[data-ui="2"] .capture-bar {
@@ -1867,7 +1843,7 @@ html[data-ui="2"] .capture-bar {
      ableiten: halbe Auslöserbreite + 2,5 Abstände + ein Abstand +
      Knopfbreite, dazu der kleine Rand zur Bildkante. Davon geht die Luft
      zum eigenen Knopf ab; links zusätzlich der Platz des Start-Knopfes,
-     damit das Filter-Menü nicht in ihn hineinläuft. */
+     damit das linke Menü nicht in ihn hineinläuft. */
   --ui2-slot-air: calc(var(--bar-gap) + var(--bar-slot-gap));
   --ui2-home-space: calc(var(--home-size) + var(--stage-pad) + var(--bar-edge-inset) * 2 + var(--bar-gap));
   --ui2-pill-w: calc(50% - var(--bar-shutter-size) / 2 - var(--bar-side-size) - var(--bar-gap) * 3.5 - var(--bar-edge-inset) - var(--ui2-slot-air));
@@ -1886,22 +1862,26 @@ html[data-ui="2"] .bar-slot {
   pointer-events: none;
   transition: opacity 0.22s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* Filter: rechte Kante am Filter-Knopf, wächst nach links bis vor den
+/* Optionen: rechte Kante am Options-Knopf, wächst nach links bis vor den
    Start-Knopf. */
-html[data-ui="2"] .bar-slot--menu {
+html[data-ui="2"] .bar-slot--options {
   left: var(--ui2-home-space);
   right: auto;
   width: var(--ui2-pill-w-home);
   transform: translateX(16px);
 }
-/* Optionen: linke Kante neben dem Options-Knopf, rechte Kante an der
+/* Filter: linke Kante am Filter-Knopf, wächst nach rechts bis an die
    Bildkante. */
-html[data-ui="2"] .bar-slot--options {
+html[data-ui="2"] .bar-slot--menu {
   right: var(--bar-edge-inset);
   left: auto;
   width: var(--ui2-pill-w);
   transform: translateX(-16px);
 }
+/* Die Knöpfe tauschen die Seite: Optionen links, Filter rechts. Die
+   Panels folgen ihnen über die Regeln oben. */
+html[data-ui="2"] .capture-bar > .side-menu-toggle { order: 5; }
+html[data-ui="2"] .bar-options > #captureOptionsToggle { order: 1; }
 html[data-ui="2"] .bar-slot.is-open {
   opacity: 1;
   transform: none;

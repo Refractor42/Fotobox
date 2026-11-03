@@ -3952,7 +3952,6 @@ var barMenuReady = false;
 
 function barMenuPanelEl() { return document.getElementById('barMenuPanel'); }
 function barMenuListEl() { return document.getElementById('barMenuList'); }
-function barFilterPinEl() { return document.getElementById('barFilterPin'); }
 
 const BAR_COLOR_FILTERS = {
   standard: 'filterStandard',
@@ -4239,36 +4238,6 @@ function barMenuChip(kind, value, disc, label) {
   return btn;
 }
 
-// Der feste Kreis links setzt beide Filterarten auf einmal zurück: Farb- und
-// Gesichtsfilter wieder auf „Standard“ bzw. „Original“.
-function resetBarFilters() {
-  if (!appSettings.filtersEnabled) return;
-  currentFilter = 'standard';
-  applyFilterSelection();
-  if (filterEngine) filterEngine.setFilter('none');
-  syncFaceFilterSelection();
-  updateBarMenuSelection();
-  updateSideSelection();
-}
-
-function barResetChip() {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'dot-chip dot-chip--reset';
-  btn.setAttribute('aria-label', t('barFilterReset'));
-  const discEl = document.createElement('span');
-  discEl.className = 'dot-chip__disc';
-  discEl.setAttribute('aria-hidden', 'true');
-  discEl.textContent = '↺';
-  const labelEl = document.createElement('span');
-  labelEl.className = 'dot-chip__label';
-  labelEl.textContent = t('barFilterReset');
-  discEl.appendChild(labelEl);
-  btn.appendChild(discEl);
-  btn.addEventListener('click', resetBarFilters);
-  return btn;
-}
-
 // Rahmen als reine Bildquadrate: kein Text, nur das Vorschaubild.
 function barOverlayTile(overlay) {
   const btn = document.createElement('button');
@@ -4317,11 +4286,6 @@ function renderBarMenu() {
   const overlaysMode = barMenuShowsOverlays();
   const panel = barMenuPanelEl();
   if (panel) panel.dataset.mode = overlaysMode ? 'overlays' : 'filters';
-  const pin = barFilterPinEl();
-  if (pin) {
-    pin.innerHTML = '';
-    if (!overlaysMode) pin.appendChild(barResetChip());
-  }
   list.innerHTML = '';
   if (overlaysMode) {
     renderBarOverlays(list);

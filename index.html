@@ -167,10 +167,9 @@
         </div>
       </div>
 
-        <!-- Untere Steuerleiste: Filter links, Auslöser mittig, Countdown und
-             Modus gemeinsam hinter einem Button rechts. Der Start-Button
-             schwebt über der linken Ecke, damit das Foto die volle Breite
-             bekommt. -->
+        <!-- Untere Steuerleiste: Countdown und Modus links, Auslöser mittig,
+             Filter rechts. Der Start-Button schwebt über der linken Ecke,
+             damit das Foto die volle Breite bekommt. -->
         <div class="capture-bar" id="captureBar">
           <button class="bar-btn side-menu-toggle" id="sideMenuToggle" type="button" aria-controls="barMenuPanel" aria-expanded="false" aria-label="Filter anzeigen" data-i18n-aria="barFiltersShowAria" hidden>
             <span class="bar-btn__icon" aria-hidden="true">
@@ -192,10 +191,6 @@
                Auslöser beim Öffnen animiert nach rechts. -->
           <div class="bar-slot bar-slot--menu" id="barMenuPanel" aria-hidden="true" inert>
             <div class="bar-slot__inner">
-              <!-- Fester Kreis am linken Rand: setzt alle Filter zurück und
-                   bleibt stehen, egal wie weit das Band gescrollt ist. -->
-              <div class="bar-filter-pin" id="barFilterPin"></div>
-              <span class="bar-filter-divider bar-filter-divider--pin" aria-hidden="true"></span>
               <div class="bar-filter-band">
                 <div class="bar-filter-list" id="barMenuList" role="group" aria-label="Filter" data-i18n-aria="barMenuAria"></div>
                 <!-- Wisch-Hinweis: fährt beim Aufklappen über das Band und
