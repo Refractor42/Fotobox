@@ -4983,9 +4983,9 @@ function renderOverlayPreview() {
   if (!stage) return;
   measureOverlaySafeArea(currentOverlay);
 
-  // Ist das Foto noch nicht dekodiert, wären die Maße 0 und das Overlay
-  // würde unsichtbar in der Ecke sitzen. Nach dem Laden neu berechnen.
-  if (!stage.naturalWidth || !stage.naturalHeight) {
+  // Nur die Fotocollage wird vollständig (contain) gezeigt und braucht die
+  // dekodierten Maße. Das Einzelfoto bleibt dagegen formatfüllend.
+  if (stage.classList.contains('stage-photo--strip') && (!stage.naturalWidth || !stage.naturalHeight)) {
     stage.style.objectFit = 'contain';
     if (!stage.dataset.overlayLoadHooked) {
       stage.dataset.overlayLoadHooked = '1';
@@ -5031,33 +5031,14 @@ function renderOverlayPreview() {
     return;
   }
 
-  // Einzelfoto: Für die Auswahl wird das ganze Foto gezeigt (contain), damit
-  // der Rahmen ringsum sichtbar ist; das Overlay deckt exakt diese Fläche.
-  stage.style.objectFit = 'contain';
+  // Einzelfoto: Das Foto bleibt formatfüllend (cover); der Rahmen wird auf
+  // dieselbe sichtbare Fläche gelegt, statt das Foto auf 16:9 zu verkleinern.
+  // Dadurch springt die Bildgröße beim Rahmenwechsel nicht.
+  stage.style.objectFit = 'cover';
   const img = document.createElement('img');
   img.className = 'photo-overlay';
   img.src = currentOverlay.src;
   img.alt = '';
-  const vf = viewfinder.getBoundingClientRect();
-  if (stage.naturalWidth && stage.naturalHeight && vf.width && vf.height) {
-    const fit = Math.min(vf.width / stage.naturalWidth, vf.height / stage.naturalHeight);
-    const w = stage.naturalWidth * fit;
-    const h = stage.naturalHeight * fit;
-    img.style.left = Math.round((vf.width - w) / 2) + 'px';
-    img.style.top = Math.round((vf.height - h) / 2) + 'px';
-    img.style.width = Math.round(w) + 'px';
-    img.style.height = Math.round(h) + 'px';
-  } else {
-    // Bühne noch nicht vermessen (z. B. direkt nach dem Aufbau): erst die
-    // volle Fläche nutzen und nach dem nächsten Layout neu berechnen.
-    img.style.width = '100%';
-    img.style.height = '100%';
-    requestAnimationFrame(() => {
-      if (!currentOverlay) return;
-      const rect = viewfinder.getBoundingClientRect();
-      if (rect.width && rect.height) renderOverlayPreview();
-    });
-  }
   viewfinder.appendChild(img);
 }
 
