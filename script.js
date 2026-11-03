@@ -3902,8 +3902,9 @@ function setStampMenuOpen(open) {
   if (next) {
     stampScrollHintTimer = window.setTimeout(() => {
       stampScrollHintTimer = 0;
-      hintListScroll(stampListEl());
-      playListScrollHint(stampListEl(), swipeHint);
+      if (playListScrollHint(stampListEl(), swipeHint, 'stamp')) {
+        hintListScroll(stampListEl());
+      }
     }, 460);
   }
 }
@@ -4216,6 +4217,9 @@ function syncBarToggleLabel() {
 // Rand neu sichtbare Bereich wird nicht fertig gezeichnet (rechts).
 var filterScrollHintTimer = 0;
 var stampScrollHintTimer = 0;
+// Der Wisch-Hinweis ist eine einmalige Orientierungshilfe: Filter, Rahmen
+// und Sticker zeigen ihn pro Gast-Erlebnis nur beim ersten Öffnen.
+var listScrollHintsShown = { filter: false, overlay: false, stamp: false };
 var filterScrollPulse = 0;
 var filterScrollPulseCleanup = null;
 
@@ -4287,20 +4291,41 @@ function hideListScrollHint(hint) {
   if (hint) hint.classList.remove('is-playing');
 }
 
-function playListScrollHint(list, hint) {
-  if (!list || !hint) return;
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  if (list.scrollWidth <= list.clientWidth + 2) return;
+// Beim nächsten Gast-Erlebnis dürfen die Hinweise wieder einmal erscheinen.
+function resetListScrollHints() {
+  listScrollHintsShown.filter = false;
+  listScrollHintsShown.overlay = false;
+  listScrollHintsShown.stamp = false;
+  if (filterScrollHintTimer) {
+    window.clearTimeout(filterScrollHintTimer);
+    filterScrollHintTimer = 0;
+  }
+  if (stampScrollHintTimer) {
+    window.clearTimeout(stampScrollHintTimer);
+    stampScrollHintTimer = 0;
+  }
+  hideListScrollHint(document.getElementById('barSwipeHint'));
+  hideListScrollHint(document.getElementById('stampSwipeHint'));
+  endFilterScrollPulse();
+}
+
+function playListScrollHint(list, hint, onceKey) {
+  if (!list || !hint) return false;
+  if (onceKey && listScrollHintsShown[onceKey]) return false;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  if (list.scrollWidth <= list.clientWidth + 2) return false;
   // Weg an der Bandbreite ausrichten: je breiter die Pille, desto weiter
   // fährt der Finger, aber gedeckelt, damit er in der Pille bleibt.
   const travel = Math.round(Math.max(120, Math.min(300, list.clientWidth * 0.42)));
   hint.style.setProperty('--hint-travel', travel + 'px');
   hint.classList.remove('is-playing');
-  // Reflow erzwingen, damit die Animation bei jedem Öffnen neu startet.
+  // Reflow erzwingen, damit die Animation beim ersten Anzeigen startet.
   void hint.offsetWidth;
   hint.classList.add('is-playing');
+  if (onceKey) listScrollHintsShown[onceKey] = true;
   window.clearTimeout(filterHintHideTimer);
   filterHintHideTimer = window.setTimeout(() => hideListScrollHint(hint), 2250);
+  return true;
 }
 
 // Menü und Optionen sind Geschwister: Es ist immer nur eines offen.
@@ -4332,13 +4357,19 @@ function setBarMenuOpen(open) {
   if (!next) hideListScrollHint(filterHint);
   if (next) {
     updateBarMenuSelection();
+    // Filter und Rahmen teilen sich das Band, zählen für den einmaligen
+    // Hinweis aber getrennt.
+    const hintKey = barMenuShowsOverlays() ? 'overlay' : 'filter';
     // Erst nach dem Aufklappen messen: während die Pille wächst, ist die
     // sichtbare Breite des Bandes noch nicht die endgültige.
-    filterScrollHintTimer = window.setTimeout(() => {
-      filterScrollHintTimer = 0;
-      hintListScroll(barMenuListEl());
-      playListScrollHint(barMenuListEl(), filterHint);
-    }, 460);
+    if (!listScrollHintsShown[hintKey]) {
+      filterScrollHintTimer = window.setTimeout(() => {
+        filterScrollHintTimer = 0;
+        if (playListScrollHint(barMenuListEl(), filterHint, hintKey)) {
+          hintListScroll(barMenuListEl());
+        }
+      }, 460);
+    }
   }
 }
 
@@ -5119,6 +5150,9 @@ function showEndScreen(url) {
 function returnToIdle() {
   endPhotoSession();
   resetGuestCaptureSettings();
+  // Der Startbildschirm beginnt ein neues Gast-Erlebnis: Beim nächsten
+  // Öffnen zeigen Filter, Rahmen und Sticker ihren Hinweis wieder einmal.
+  resetListScrollHints();
   galleryReturnState = 'camera';
   if ($endScreen) $endScreen.hidden = true;
   $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping', 'is-finishing');
