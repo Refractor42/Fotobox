@@ -1564,11 +1564,8 @@ function cancelCapture() {
   // Laufende asynchrone Schritte (Countdown, Verarbeitung) invalidieren.
   captureRunId += 1;
   finishCountdown(false);
+  hideCountdown();
   hideStripProgress();
-  gsap.killTweensOf($countdown);
-  gsap.set($countdown, { scale: 1, opacity: 0 });
-  $countdown.style.opacity = '0';
-  $countdown.setAttribute('aria-hidden', 'true');
   gsap.killTweensOf([...$corners, $viewfinderFrame]);
   gsap.killTweensOf($processing);
   gsap.killTweensOf($flash);
@@ -1588,6 +1585,8 @@ function cancelCapture() {
 }
 
 function showReview() {
+  // Ein Countdown darf nie über dem fertigen Foto stehen bleiben.
+  stopCountdown();
   $camera.classList.add('is-reviewing');
   // Die Pille der Leiste zeigt ab jetzt die Rahmen statt der Filter.
   renderBarMenu();
@@ -2515,6 +2514,9 @@ async function runStripCapture(runId) {
 async function runCaptureSequence() {
   if (currentState !== 'camera') return;
   if (isCapturing) return;
+  // Während ein Foto zum Annehmen/Neuaufnehmen offen ist, darf kein
+  // weiterer Countdown darüberlaufen (z. B. durch einen Fernauslöser).
+  if ($camera.classList.contains('is-reviewing') || $camera.classList.contains('is-ended')) return;
   if (!stream || !$video.srcObject) {
     showPermissionPrompt();
     return;
@@ -2596,12 +2598,37 @@ async function composeStrip(frames) {
   return canvas.toDataURL('image/jpeg', 0.92);
 }
 
+// Blendet die Countdown-Anzeige sofort und dauerhaft aus. Das ist bewusst
+// strenger als nur `opacity: 0`: Auch ein hängender GSAP-Tween oder ein
+// abgebrochener Lauf kann die Ziffer so nicht über dem Review stehen lassen.
+function hideCountdown() {
+  gsap.killTweensOf($countdown);
+  gsap.set($countdown, { scale: 1, opacity: 0 });
+  $countdown.style.opacity = '0';
+  $countdown.style.visibility = 'hidden';
+  $countdown.setAttribute('aria-hidden', 'true');
+}
+
+// Beendet einen laufenden Countdown samt Timern und blendet ihn aus.
+function stopCountdown() {
+  if (countdownState) {
+    const state = countdownState;
+    countdownState = null;
+    state.timers.forEach((id) => clearTimeout(id));
+    state.resolve(false);
+  }
+  hideCountdown();
+}
+
 function finishCountdown(completed) {
-  if (!countdownState) return;
+  if (!countdownState) {
+    hideCountdown();
+    return;
+  }
   const state = countdownState;
   countdownState = null;
   state.timers.forEach((id) => clearTimeout(id));
-  $countdown.setAttribute('aria-hidden', 'true');
+  hideCountdown();
   state.resolve(completed);
 }
 
@@ -2619,6 +2646,7 @@ function runCountdown(runId) {
     };
 
     gsap.killTweensOf($countdown);
+    $countdown.style.visibility = 'visible';
     $countdown.style.opacity = '1';
     $countdown.setAttribute('aria-hidden', 'false');
 
@@ -2738,9 +2766,7 @@ function resetCameraView() {
 
   gsap.set($processing, { opacity: 0 });
   gsap.set($flash, { opacity: 0 });
-  gsap.killTweensOf($countdown);
-  gsap.set($countdown, { scale: 1, opacity: 0 });
-  $countdown.style.opacity = '0';
+  hideCountdown();
 
   // no photo shown anymore
   hasPhoto = false;

@@ -476,6 +476,7 @@ section.active { display: block; opacity: 1; }
   color: var(--c-accent);
   text-shadow: 0 4px 24px rgba(0 0 0 / 0.65), 0 0 30px rgb(var(--c-accent-rgb) / 0.4);
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   letter-spacing: -0.05em;
   line-height: 1;
@@ -855,6 +856,9 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
 #camera.is-reviewing .filter-group {
   display: none;
 }
+/* Ein Rest des Aufnahme-Countdowns darf über dem fertigen Foto nicht
+   sichtbar bleiben — auch wenn ein Lauf abgebrochen wurde. */
+#camera.is-reviewing .countdown { display: none !important; }
 #camera.is-reviewing .camera__stage { margin-bottom: 0.9rem; }
 
 /* Sticker-Overlays auf dem Review-Foto (Direkte Manipulation) */
