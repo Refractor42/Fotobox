@@ -391,6 +391,56 @@ function isAdmin(req) {
   return verifyAdminSession(parseCookies(req)[ADMIN_COOKIE]);
 }
 
+// ---- Gäste-Sitzung ----
+// Löschen ist nur während einer laufenden Gäste-Sitzung erlaubt, und nur für
+// Fotos, die in genau dieser Sitzung hochgeladen wurden. Die Sitzung beginnt
+// mit dem Startbildschirm-Start und endet beim Zurückspringen dorthin. Gäste
+// löschen endgültig und haben keinen Papierkorb; der Papierkorb gehört
+// ausschließlich zum Admin-Panel.
+const PHOTO_SESSION_HEADER = 'x-photo-session';
+const PHOTO_SESSION_MS = 4 * 60 * 60 * 1000;
+const photoSessions = new Map();
+
+function getPhotoSession(req) {
+  const token = String(req.headers[PHOTO_SESSION_HEADER] || '').trim();
+  if (!/^[a-f0-9]{32,64}$/.test(token)) return null;
+  const session = photoSessions.get(token);
+  if (!session) return null;
+  if (session.expiresAt < Date.now()) {
+    photoSessions.delete(token);
+    return null;
+  }
+  return session;
+}
+
+function endPhotoSession(req) {
+  const token = String(req.headers[PHOTO_SESSION_HEADER] || '').trim();
+  if (token) photoSessions.delete(token);
+}
+
+async function handlePhotoSessionApi(req, res) {
+  if (req.method === 'POST') {
+    const token = crypto.randomBytes(24).toString('hex');
+    photoSessions.set(token, {
+      expiresAt: Date.now() + PHOTO_SESSION_MS,
+      photoIds: new Set()
+    });
+    return sendJson(res, 201, { token });
+  }
+  if (req.method === 'DELETE') {
+    endPhotoSession(req);
+    return sendJson(res, 200, { ok: true });
+  }
+  return sendJson(res, 405, { error: 'Method not allowed' });
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, session] of photoSessions) {
+    if (session.expiresAt < now) photoSessions.delete(token);
+  }
+}, 15 * 60 * 1000).unref();
+
 function setAdminCookie(req, res) {
   const secure = req.socket.encrypted ? '; Secure' : '';
   res.setHeader(
@@ -583,6 +633,7 @@ async function handlePhotosApi(req, res) {
 
     if (req.method === 'POST') {
       const { image, id } = JSON.parse(await readBody(req, 15 * 1024 * 1024));
+      const session = getPhotoSession(req);
       const match = typeof image === 'string' && image.match(/^data:image\/jpeg;base64,(.+)$/);
       if (!match) {
         return sendJson(res, 400, { error: 'Invalid image' });
@@ -611,6 +662,8 @@ async function handlePhotosApi(req, res) {
         },
         body: Buffer.from(match[1], 'base64')
       });
+      // Nur Fotos dieser Sitzung dürfen vom Gast später gelöscht werden.
+      if (session) session.photoIds.add(key);
       // The photo is stored, so advance the global streak. A streak failure
       // must not report the upload as failed; the client skips the toast.
       let streak = null;
@@ -625,13 +678,27 @@ async function handlePhotosApi(req, res) {
     if (req.method === 'DELETE') {
       const params = new URL(req.url, 'http://localhost').searchParams;
       const id = params.get('id') || '';
+      const admin = isAdmin(req);
+      const session = getPhotoSession(req);
+      // Gäste dürfen nur während ihrer laufenden Sitzung löschen. Danach ist
+      // die Aktion ausschließlich im Admin-Panel möglich.
+      if (!admin && !session) {
+        return sendJson(res, 403, { error: 'Deleting is only allowed during a guest session' });
+      }
       // Only photo objects inside the photos/ prefix may be deleted.
       if (!new RegExp(`^${PHOTO_PREFIX}(${PHOTO_NAME})$`).test(id)) {
         return sendJson(res, 400, { error: 'Invalid id' });
       }
-      // purge=1: endgültig löschen (verworfene, nie angenommene Aufnahme).
-      if (params.get('purge') === '1') {
+      // Gäste dürfen ausschließlich Fotos löschen, die in ihrer aktuellen
+      // Sitzung aufgenommen wurden — nicht den Bestand früherer Gäste.
+      if (!admin && !session.photoIds.has(id)) {
+        return sendJson(res, 403, { error: 'Photo does not belong to this session' });
+      }
+      // Gäste löschen endgültig: Es gibt für sie keinen Papierkorb. Das
+      // Admin-Panel verschiebt Fotos weiterhin in den Papierkorb.
+      if (params.get('purge') === '1' || session) {
         await supabaseFetch(cfg, `/object/${encodeURIComponent(cfg.bucket)}/${id}`, { method: 'DELETE' });
+        if (session) session.photoIds.delete(id);
         return sendJson(res, 200, { ok: true, purged: true });
       }
       const name = id.slice(PHOTO_PREFIX.length);
@@ -661,6 +728,10 @@ async function handleTrashCountApi(req, res) {
     if (req.method !== 'GET') {
       return sendJson(res, 405, { error: 'Method not allowed' });
     }
+    // Der Papierkorb ist ausschließlich im Admin-Panel sichtbar.
+    if (!isAdmin(req)) {
+      return sendJson(res, 403, { error: 'Admin PIN required' });
+    }
     await purgeExpiredTrash();
     const cfg = getSupabaseConfig();
     const names = await listJpgNames(cfg, TRASH_PREFIX);
@@ -678,6 +749,10 @@ async function handleTrashApi(req, res) {
     const params = new URL(req.url, 'http://localhost').searchParams;
     const id = params.get('id') || '';
     const trashIdRe = new RegExp(`^${TRASH_PREFIX}(\\d{10,})-(${PHOTO_NAME})$`);
+    // Der Papierkorb ist ausschließlich im Admin-Panel sichtbar.
+    if (!isAdmin(req)) {
+      return sendJson(res, 403, { error: 'Admin PIN required' });
+    }
 
     if (req.method === 'GET') {
       await purgeExpiredTrash();
@@ -1018,6 +1093,9 @@ const requestHandler = (req, res) => {
   const route = req.url.split('?')[0];
   if (route === '/api/photos') {
     return handlePhotosApi(req, res);
+  }
+  if (route === '/api/photo-session') {
+    return handlePhotoSessionApi(req, res);
   }
   if (route === '/api/streak') {
     return handleStreakApi(req, res);

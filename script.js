@@ -183,10 +183,7 @@ const I18N = {
     galleryTitle: 'Deine Fotos',
     galleryLoadMore: 'Mehr laden',
     galleryLoading: 'Wird geladen…',
-    galleryTrash: 'Papierkorb',
     galleryEmpty: 'Noch keine Fotos — mach dein erstes Foto!',
-    trashRetentionText: 'Neu gelöschte Fotos werden nach {n} Tagen endgültig gelöscht.',
-    trashEmpty: 'Der Papierkorb ist leer.',
     confirmTitle: 'Endgültig löschen?',
     confirmText: 'Das Foto wird für immer gelöscht und kann nicht wiederhergestellt werden.',
     confirmCancel: 'Abbrechen',
@@ -212,21 +209,11 @@ const I18N = {
     toastEditError: 'Änderungen konnten nicht gespeichert werden.',
     toastEditErrorKeep: 'Änderungen konnten nicht gespeichert werden — Foto bleibt unverändert.',
     toastEditedSaveError: 'Bearbeitetes Foto konnte nicht gespeichert werden — Original bleibt erhalten.',
-    toastTrashed: 'Foto in den Papierkorb verschoben.',
-    toastUndo: 'Rückgängig',
     toastDeleteError: 'Foto konnte nicht gelöscht werden — Verbindung prüfen.',
-    toastRestored: 'Foto wiederhergestellt.',
-    toastRestoreError: 'Wiederherstellen fehlgeschlagen — das Foto bleibt im Papierkorb.',
-    toastRestoreError2: 'Foto konnte nicht wiederhergestellt werden.',
+    toastDeleteSessionOnly: 'Fotos lassen sich nur während einer laufenden Sitzung löschen.',
+    toastDeleted: 'Foto gelöscht.',
+    toastEditAction: 'Wiederherstellen und zurück zum Bearbeiten',
     toastLoadError: 'Gespeicherte Fotos konnten nicht geladen werden.',
-    trashLoadError: 'Papierkorb konnte nicht geladen werden.',
-    toastPurged: 'Foto endgültig gelöscht.',
-    toastPurgeError: 'Foto konnte nicht endgültig gelöscht werden.',
-    trashRestoreBtn: 'Wiederherstellen',
-    trashPurgeBtn: 'Endgültig löschen',
-    trashDaysLeftOne: 'noch 1 Tag',
-    trashDaysLeftMany: 'noch {n} Tage',
-    trashImgAlt: 'Gelöschtes Foto',
     capturedPhotoAlt: 'Aufgenommenes Foto',
     photoPreviewAlt: 'Foto-Vorschau',
     deletePhotoAria: 'Foto löschen',
@@ -393,10 +380,7 @@ const I18N = {
     galleryTitle: 'Your Photos',
     galleryLoadMore: 'Load more',
     galleryLoading: 'Loading…',
-    galleryTrash: 'Trash',
     galleryEmpty: 'No photos yet. Capture your first memory!',
-    trashRetentionText: 'Newly deleted photos are permanently removed after {n} days.',
-    trashEmpty: 'The trash is empty.',
     confirmTitle: 'Delete permanently?',
     confirmText: 'This photo will be deleted forever and cannot be recovered.',
     confirmCancel: 'Cancel',
@@ -422,21 +406,11 @@ const I18N = {
     toastEditError: 'Changes could not be saved.',
     toastEditErrorKeep: 'Changes could not be saved — the photo stays unchanged.',
     toastEditedSaveError: 'Edited photo could not be saved — the original is kept.',
-    toastTrashed: 'Photo moved to trash.',
-    toastUndo: 'Undo',
     toastDeleteError: 'Photo could not be deleted — check the connection.',
-    toastRestored: 'Photo restored.',
-    toastRestoreError: 'Restore failed — the photo stays in the trash.',
-    toastRestoreError2: 'Photo could not be restored.',
+    toastDeleteSessionOnly: 'Photos can only be deleted during an active session.',
+    toastDeleted: 'Photo deleted.',
+    toastEditAction: 'Restore and return to editing',
     toastLoadError: 'Saved photos could not be loaded.',
-    trashLoadError: 'Trash could not be loaded.',
-    toastPurged: 'Photo deleted permanently.',
-    toastPurgeError: 'Photo could not be deleted permanently.',
-    trashRestoreBtn: 'Restore',
-    trashPurgeBtn: 'Delete permanently',
-    trashDaysLeftOne: '1 day left',
-    trashDaysLeftMany: '{n} days left',
-    trashImgAlt: 'Deleted photo',
     capturedPhotoAlt: 'Captured photo',
     photoPreviewAlt: 'Photo preview',
     deletePhotoAria: 'Delete photo',
@@ -518,7 +492,6 @@ function applyLanguage(lang) {
   // Ein laufender Kamera-Versuch behält seine Beschriftung beim Sprachwechsel.
   const permissionBtn = $permission && $permission.querySelector('[data-action="retry-camera"]');
   if (permissionBtn) permissionBtn.textContent = t(permissionBtn.disabled ? 'permissionOpening' : 'permissionBtn');
-  renderTrashRetention(); // dynamische Aufbewahrungsdauer (Serverwert)
   // Beschriftungen der Gesichtsfilter-Chips in der aktiven Sprache nachziehen
   if ($filterBar && window.SnapBoxFilters) {
     $filterBar.querySelectorAll('.timer__chip').forEach((chip) => {
@@ -539,7 +512,6 @@ function applyLanguage(lang) {
     updateChallengeCard();
     setSideMenuOpen($sideMenu.classList.contains('is-open'));
   }
-  syncGalleryContext();
 }
 
 document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
@@ -847,14 +819,6 @@ function applyOrientation(orientation) {
   } catch (e) {}
 }
 
-// Aufbewahrungsdauer aus den Server-Einstellungen (Admin-geschützt).
-let serverRetentionDays = appSettings.trashRetentionDays;
-
-function renderTrashRetention() {
-  const el = document.getElementById('trashRetentionText');
-  if (el) el.textContent = t('trashRetentionText', { n: serverRetentionDays });
-}
-
 function applyAppSettings(data) {
   appSettings = normalizeAppSettings(data, appSettings);
   applyThemeSettings(appSettings);
@@ -869,16 +833,11 @@ function applyAppSettings(data) {
     try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
     if (currentState === 'splash') applyLanguage(defaultLang);
   }
-  if (appSettings.trashRetentionDays !== serverRetentionDays) {
-    serverRetentionDays = appSettings.trashRetentionDays;
-    renderTrashRetention();
-  }
   cacheAppSettings(appSettings);
 }
 
 // Sofort initial anwenden
 applyOrientation(currentOrientation);
-renderTrashRetention();
 
 // Synchronisation zwischen Tabs über BroadcastChannel
 if ('BroadcastChannel' in window) {
@@ -896,13 +855,6 @@ if ('BroadcastChannel' in window) {
         defaultLang = event.data.defaultLanguage === 'en' ? 'en' : 'de';
         try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
         applyLanguage(defaultLang);
-      }
-      if (event.data.type === 'retention_change') {
-        const retention = Number(event.data.trashRetentionDays);
-        if ([7, 14, 30].includes(retention)) {
-          serverRetentionDays = retention;
-          renderTrashRetention();
-        }
       }
     };
   } catch (e) {}
@@ -1205,6 +1157,7 @@ function animateSplashIn() {
 // Swipe-up, vom Start-Button sowie von Leertaste und PageUp/PageDown aufgerufen.
 function startSession() {
   if (currentState === 'camera') return;
+  beginPhotoSession();
   unlockAudio(); // create the AudioContext inside the user gesture
   currentState = 'camera';
   initCamera(); // request camera immediately to preserve user-gesture context
@@ -1663,8 +1616,8 @@ function closeReviewTools() {
 $stickerToggle.addEventListener('click', () => setReviewTool('stickers'));
 $filterToggle.addEventListener('click', () => setReviewTool('filters'));
 
-// Wirft das aktuell angezeigte Foto weg (in den Papierkorb, mit Undo-Toast)
-// und setzt die Kameraansicht zurück — vom Review-„Neu aufnehmen" genutzt.
+// Wirft das aktuell angezeigte Foto endgültig weg und setzt die Kameraansicht
+// zurück — vom Review-„Neu aufnehmen" genutzt.
 function discardCurrentPhoto() {
   if (!hasPhoto) return;
   if (lastPhoto) {
@@ -1683,11 +1636,11 @@ function discardCurrentPhoto() {
 }
 
 // Home-Abbruch vor „Annehmen“: Die Aufnahme wurde nie bestätigt und wird
-// deshalb endgültig verworfen statt in den Papierkorb zu wandern.
+// deshalb endgültig verworfen.
 function discardUnacceptedPhoto() {
   if (!hasPhoto) return;
   if (lastPhoto) {
-    deletePhoto(lastPhoto.card, lastPhoto.id, { permanent: true });
+    deletePhoto(lastPhoto.card, lastPhoto.id);
     lastPhoto = null;
   }
 }
@@ -2397,7 +2350,7 @@ async function saveEditedPhoto(options = {}) {
   try {
     const res = await fetch('/api/photos', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...photoSessionHeaders() },
       body: JSON.stringify({ image: edited, id: lastPhoto.id })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -2806,7 +2759,7 @@ const pendingOps = new Set();
 function savePhotoToServer(photoUrl) {
   return fetch('/api/photos', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...photoSessionHeaders() },
     body: JSON.stringify({ image: photoUrl })
   }).then((res) => {
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -2822,43 +2775,105 @@ function savePhotoToServer(photoUrl) {
     });
 }
 
-// Moves a photo to the trash (Papierkorb) on the server, removes its card and
-// offers an undo toast. With options.permanent the object is deleted for good
-// (unaccepted captures aborted via the Home button). Without a server id the
-// photo was never saved, so only the card is removed.
-async function deletePhoto(card, photoId, options = {}) {
-  const permanent = options.permanent === true;
+// ============================================================
+//  GÄSTE-SITZUNG
+//  Löschen ist nur zwischen Startbildschirm und Zurückspringen erlaubt.
+//  Gäste löschen endgültig und haben keinen Papierkorb; dieser existiert nur
+//  noch im Admin-Panel.
+// ============================================================
+const PHOTO_SESSION_HEADER = 'X-Photo-Session';
+let photoSessionToken = null;
+// Nur diese IDs wurden in der laufenden Sitzung aufgenommen. Die Galerie
+// zeigt weiterhin alle Fotos, Löschbuttons bekommen aber nur diese Karten.
+const sessionPhotoIds = new Set();
+
+function clearSessionDeleteButtons() {
+  document.querySelectorAll('.gallery__delete').forEach((btn) => btn.remove());
+}
+
+function photoSessionHeaders(extra = {}) {
+  return photoSessionToken
+    ? { ...extra, [PHOTO_SESSION_HEADER]: photoSessionToken }
+    : extra;
+}
+
+async function beginPhotoSession() {
+  if (photoSessionToken) return photoSessionToken;
+  try {
+    const res = await fetch('/api/photo-session', { method: 'POST', cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data || !data.token) throw new Error('Missing token');
+    // Falls inzwischen schon wieder zum Startbildschirm zurückgesprungen
+    // wurde, gehört diese Antwort zu keiner aktiven Sitzung mehr.
+    if (currentState === 'splash') {
+      fetch('/api/photo-session', {
+        method: 'DELETE',
+        headers: { [PHOTO_SESSION_HEADER]: data.token },
+        keepalive: true
+      }).catch(() => {});
+      return null;
+    }
+    photoSessionToken = data.token;
+    sessionPhotoIds.clear();
+    clearSessionDeleteButtons();
+    document.body.classList.add('photo-session-active');
+    return photoSessionToken;
+  } catch (err) {
+    console.warn('Guest session could not be started:', err);
+    return null;
+  }
+}
+
+function endPhotoSession() {
+  document.body.classList.remove('photo-session-active');
+  const token = photoSessionToken;
+  photoSessionToken = null;
+  sessionPhotoIds.clear();
+  clearSessionDeleteButtons();
+  if (token) {
+    fetch('/api/photo-session', {
+      method: 'DELETE',
+      headers: { [PHOTO_SESSION_HEADER]: token },
+      keepalive: true
+    }).catch(() => {});
+  }
+}
+
+// Gäste löschen endgültig — es gibt für sie keinen Papierkorb. Die Toast-
+// Aktion öffnet das Foto stattdessen wieder im Sticker-/Overlay-Editor.
+// Without a server id the photo was never saved, so only the card is removed.
+async function deletePhoto(card, photoId) {
+  if (!photoSessionToken) {
+    showToast(t('toastDeleteSessionOnly'), { error: true });
+    return;
+  }
   if (!photoId) {
-    // Noch kein Server-Objekt: Die ID kommt ggf. erst nach dem Upload. Merken,
-    // damit der Save-Callback die Datei dann endgültig löscht.
-    if (permanent && card) card.dataset.discardPermanent = '1';
+    // Noch kein Server-Objekt: Die ID kommt ggf. erst nach dem Upload. Der
+    // Save-Callback löscht die Datei dann, sobald sie existiert.
     removeCard(card);
     return;
   }
-  const key = (permanent ? 'purge:' : 'trash:') + photoId;
+  const key = 'delete:' + photoId;
   if (pendingOps.has(key)) return;
   pendingOps.add(key);
-  const image = card.querySelector('img') ? card.querySelector('img').src : null;
+  const image = card && card.querySelector('img') ? card.querySelector('img').src : null;
   try {
-    // Die Aufbewahrungsdauer setzt der Server aus den Admin-Einstellungen.
-    const query = 'id=' + encodeURIComponent(photoId) + (permanent ? '&purge=1' : '');
+    const query = 'id=' + encodeURIComponent(photoId) + '&purge=1';
     const res = await fetch('/api/photos?' + query, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: photoSessionHeaders()
     });
-    // 404 = bereits gelöscht/verschoben (Doppelklick-Race) — gilt als Erfolg
+    // 404 = bereits gelöscht (Doppelklick-Race) — gilt als Erfolg
     if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
-    const data = res.status === 404 ? {} : await res.json();
     removeCard(card);
-    // Verworfene, nie angenommene Fotos landen nicht im Papierkorb.
-    if (permanent) return;
-    refreshTrashCount();
-    if (data.trashId) {
-      showToast(t('toastTrashed'), {
-        actionLabel: t('toastUndo'),
-        onAction: () => restoreFromTrash(data.trashId, image)
+    if (image) {
+      showToast(t('toastDeleted'), {
+        actionLabel: t('toastEditAction'),
+        onAction: () => openPhotoInReview(image)
       });
     } else {
-      showToast(t('toastTrashed'));
+      showToast(t('toastDeleted'));
     }
   } catch (err) {
     console.warn('Photo could not be deleted:', err);
@@ -2868,25 +2883,50 @@ async function deletePhoto(card, photoId, options = {}) {
   }
 }
 
-// Undo path: moves the object back on the server and re-adds the card locally.
-async function restoreFromTrash(trashId, image) {
-  const key = 'restore:' + trashId;
-  if (pendingOps.has(key)) return;
-  pendingOps.add(key);
-  try {
-    const res = await fetch('/api/trash?id=' + encodeURIComponent(trashId), { method: 'POST' });
-    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
-    const data = res.status === 404 ? {} : await res.json().catch(() => ({}));
-    if (image && data.id) addToGallery(image, false, data.id);
-    else loadPhotosFromServer(); // 404-Fall: Zustand vom Server nachladen
-    refreshTrashCount();
-    showToast(t('toastRestored'));
-  } catch (err) {
-    console.warn('Photo could not be restored:', err);
-    showToast(t('toastRestoreError'), { error: true });
-  } finally {
-    pendingOps.delete(key);
-  }
+// Öffnet ein gelöschtes Foto erneut im Sticker-/Overlay-Screen. Es wird als
+// neue Aufnahme angelegt; erst „Annehmen“ übernimmt es wieder in die Galerie.
+function openPhotoInReview(imageUrl) {
+  if (!imageUrl || isCapturing || !photoSessionToken) return;
+  if (lightbox) { lightbox.remove(); lightbox = null; }
+
+  $gallery.style.display = 'none';
+  $camera.style.display = 'block';
+  $camera.style.opacity = '1';
+  if ($endScreen) $endScreen.hidden = true;
+  currentState = 'camera';
+  $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping', 'is-finishing');
+  setSideMenuOpen(false);
+  setBarMenuOpen(false);
+  setStampMenuOpen(false);
+  setCaptureOptionsOpen(false);
+  setControlsLocked(true);
+  setHomeMode('default');
+  syncCancelHome();
+
+  const existing = $camera.querySelector('.viewfinder img.stage-photo');
+  if (existing) existing.remove();
+  clearStickers();
+  currentOverlay = null;
+  lastStripLayout = null;
+  renderOverlayPreview();
+  currentFilter = 'standard';
+  applyFilterSelection();
+
+  // Neue Karte anlegen, damit Annehmen/Neu aufnehmen wie nach einer echten
+  // Aufnahme funktioniert. Der Upload läuft bereits im Hintergrund.
+  addToGallery(imageUrl);
+
+  const img = document.createElement('img');
+  img.className = 'stage-photo';
+  img.src = imageUrl;
+  img.style.cssText = `
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; background: #000; opacity: 1; border-radius: 0;
+    filter: grayscale(0%) contrast(1);
+  `;
+  $camera.querySelector('.viewfinder').appendChild(img);
+  hasPhoto = true;
+  showReview();
 }
 
 function removeCard(card) {
@@ -2909,14 +2949,16 @@ function removeCard(card) {
   renderSplashChain();
 }
 
-// Adds a delete button to a gallery card.
+// Adds a delete button only to photos captured in the current session.
 function attachDelete(card, photoId) {
+  if (!photoSessionToken || !sessionPhotoIds.has(photoId)) return;
+  if (card.querySelector('.gallery__delete')) return;
   const btn = document.createElement('button');
   btn.className = 'gallery__delete';
   btn.type = 'button';
   btn.setAttribute('aria-label', t('deletePhotoAria'));
   btn.title = t('deletePhotoAria');
-  // Papierkorb statt ×: Die Aktion löscht, sie schließt nichts.
+  // Mülleimer statt ×: Die Aktion löscht das Foto endgültig.
   btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -2945,8 +2987,7 @@ function setLoadMoreBusy(busy) {
 function updateGalleryLoadMore() {
   if (!$galleryLoadMoreWrap || !$galleryLoadMore) return;
   const hasCards = !!$galleryGrid.querySelector('.gallery__card');
-  $galleryLoadMoreWrap.hidden = trashOpen
-    || !hasCards
+  $galleryLoadMoreWrap.hidden = !hasCards
     || (!photoHasMore && !photoPageLoading);
   $galleryLoadMore.disabled = photoPageLoading;
 }
@@ -2960,7 +3001,7 @@ function resetGalleryFeed() {
   photoHasMore = false;
   photoPageLoading = false;
   setPhotoCount(0);
-  $galleryEmpty.style.display = trashOpen ? 'none' : '';
+  $galleryEmpty.style.display = '';
   setLoadMoreBusy(false);
   updateGalleryLoadMore();
   updateChallengeCard();
@@ -3032,19 +3073,23 @@ function addToGallery(photoUrl, save = true, photoId = null, options = {}) {
   // Neue Aufnahmen kommen oben dazu; ältere Server-Seiten werden angehängt.
   const prepend = options.prepend === true || (options.prepend !== false && save);
   const countNew = options.count !== false;
+  const sessionForSave = photoSessionToken;
   let savePromise = null;
   if (save) {
     savePromise = savePhotoToServer(photoUrl).then((id) => {
       if (!id) return;
       card.dataset.id = id;
+      // Ein spät fertiger Upload darf nicht in eine neuere Sitzung rutschen.
+      if (sessionForSave && photoSessionToken === sessionForSave) {
+        sessionPhotoIds.add(id);
+      }
       if (card.isConnected) {
         attachDelete(card, id);
         // Keine Bestätigung hier: Der Gast entscheidet erst im Review
         // zwischen „Neu aufnehmen“ und „Speichern“.
       } else {
-        // Vor dem Speichern verworfen: endgültig löschen, wenn es ein
-        // Home-Abbruch war; sonst wie bisher in den Papierkorb.
-        deletePhoto(card, id, { permanent: card.dataset.discardPermanent === '1' });
+        // Vor dem Speichern verworfen: Gäste löschen endgültig.
+        deletePhoto(card, id);
       }
       if (lastPhoto && lastPhoto.card === card) lastPhoto.id = id;
       record.id = id;
@@ -3104,6 +3149,7 @@ function addToGallery(photoUrl, save = true, photoId = null, options = {}) {
       scale: [1, 1.08, 1], duration: 0.5, ease: 'elastic.out(1, 0.6)'
     });
   });
+  return card;
 }
 
 function openLightbox(photoUrl, photoId = null) {
@@ -3210,21 +3256,14 @@ function openGallery(source = null) {
     onComplete: () => {
       origin.style.display = 'none';
       goTo('gallery');
-      syncGalleryContext();
-      refreshTrashCount();
-      if ($trashToggle && !$trashToggle.hidden) $trashToggle.focus({ preventScroll: true });
     }
   });
 }
 
-// Zurück führt eine Ebene zurück: Papierkorb -> Galerie und Galerie -> der
-// Screen, von dem sie geöffnet wurde. Der Endscreen bleibt dabei erhalten.
+// Zurück führt die Galerie zu dem Screen, von dem sie geöffnet wurde.
+// Der Endscreen bleibt dabei erhalten.
 function closeGallery() {
   if (currentState !== 'gallery') return;
-  if (trashOpen) {
-    toggleTrash(false);
-    return;
-  }
 
   const backTo = galleryReturnState;
   gsap.to($gallery, {
@@ -3350,267 +3389,6 @@ function closeConfirm(result) {
 $confirmOk.addEventListener('click', () => closeConfirm(true));
 $confirmCancel.addEventListener('click', () => closeConfirm(false));
 $confirmModal.addEventListener('click', (e) => { if (e.target === $confirmModal) closeConfirm(false); });
-
-// ============================================================
-//  PAPIERKORB (trash view)
-// ============================================================
-const $trashToggle = document.getElementById('trashToggle');
-const $galleryFromTrashToggle = document.getElementById('galleryFromTrashToggle');
-const $trashBadge = document.getElementById('trashBadge');
-const $trashView = document.getElementById('trashView');
-const $trashGrid = document.getElementById('trashGrid');
-const $trashEmpty = document.getElementById('trashEmpty');
-const $trashLoadMoreWrap = document.getElementById('trashLoadMoreWrap');
-const $trashLoadMore = document.getElementById('trashLoadMore');
-
-let trashOpen = false;
-let trashItems = []; // { id, image, expiresAt }
-let trashVersion = 0; // lokale Änderungen invalidieren noch laufende loadTrash-Antworten
-let trashCursor = null;
-let trashHasMore = false;
-let trashPageLoading = false;
-let trashLoadToken = 0;
-
-// Der Papierkorb ist eine eigene Ansicht: Titel und Kopf-Schaltfläche
-// müssen ihn benennen, sonst bleibt oben weiter „Deine Fotos“ stehen.
-function syncGalleryContext() {
-  const title = document.getElementById('galleryTitle');
-  const toggle = document.getElementById('trashToggle');
-  if (title) title.textContent = t(trashOpen ? 'galleryTrash' : 'galleryTitle');
-  // Genau eine der beiden Schaltflächen belegt die rechte Kopfposition.
-  if (toggle) toggle.hidden = trashOpen;
-  if ($galleryFromTrashToggle) $galleryFromTrashToggle.hidden = !trashOpen;
-}
-
-// Mülleimer-Zähler am Galerie-Header — erst ab 1 sichtbar (0 = Rauschen).
-// Zählt serverseitig ohne die Bilder selbst zu laden.
-function refreshTrashCount() {
-  fetch('/api/trash/count', { cache: 'no-store' })
-    .then((res) => {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-    .then((data) => {
-      $trashBadge.hidden = data.count < 1;
-      $trashBadge.textContent = String(data.count);
-    })
-    .catch(() => { /* Zähler ist optional — still ignorieren */ });
-}
-
-function toggleTrash(force = !trashOpen) {
-  // Beim Wechsel verschwindet die jeweils aktive Kopf-Schaltfläche.
-  // Tastaturfokus wandert auf die andere, damit er nicht ins Leere fällt.
-  const wasTrashToggle = document.activeElement === $trashToggle;
-  const wasGalleryToggle = document.activeElement === $galleryFromTrashToggle;
-  trashOpen = force;
-  $trashToggle.classList.toggle('active', trashOpen);
-  $trashView.hidden = !trashOpen;
-  $galleryGrid.style.display = trashOpen ? 'none' : '';
-  $galleryEmpty.style.display = trashOpen
-    ? 'none'
-    : ($galleryGrid.querySelector('.gallery__card') ? 'none' : '');
-  updateGalleryLoadMore();
-  syncGalleryContext();
-  if (trashOpen && wasTrashToggle && $galleryFromTrashToggle) {
-    $galleryFromTrashToggle.focus({ preventScroll: true });
-  } else if (!trashOpen && wasGalleryToggle && $trashToggle) {
-    $trashToggle.focus({ preventScroll: true });
-  }
-  if (trashOpen) loadTrash();
-}
-
-function setTrashLoadMoreBusy(busy) {
-  if (!$trashLoadMore) return;
-  const key = busy ? 'galleryLoading' : 'galleryLoadMore';
-  $trashLoadMore.disabled = busy;
-  $trashLoadMore.dataset.i18n = key;
-  $trashLoadMore.textContent = t(key);
-}
-
-function updateTrashLoadMore() {
-  if (!$trashLoadMoreWrap || !$trashLoadMore) return;
-  $trashLoadMoreWrap.hidden = !trashOpen || !trashHasMore;
-  $trashLoadMore.disabled = trashPageLoading;
-}
-
-// Jede Öffnung beginnt wieder bei der neuesten Seite. Der Papierkorb lädt —
-// wie die Galerie — nur eine Seite Bilder; weitere Seiten kommen über den
-// Button nach. So bleibt die Antwort auch bei vollem Papierkorb klein.
-function loadTrash() {
-  trashVersion++;
-  trashLoadToken++;
-  trashItems = [];
-  trashCursor = null;
-  trashHasMore = false;
-  trashPageLoading = false;
-  $trashGrid.innerHTML = '';
-  $trashEmpty.style.display = 'none';
-  setTrashLoadMoreBusy(false);
-  updateTrashLoadMore();
-  loadTrashPage();
-}
-
-async function loadTrashPage() {
-  if (trashPageLoading) return;
-  const version = trashVersion;
-  const token = ++trashLoadToken;
-  trashPageLoading = true;
-  setTrashLoadMoreBusy(true);
-  updateTrashLoadMore();
-
-  try {
-    const params = new URLSearchParams({ limit: String(appSettings.galleryPageSize) });
-    if (trashCursor) params.set('before', trashCursor);
-    const res = await fetch('/api/trash?' + params.toString(), { cache: 'no-store' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const data = await res.json();
-
-    // Zwischenzeitlich neu geöffnet oder lokal gelöscht/wiederhergestellt?
-    if (version !== trashVersion || token !== trashLoadToken) return;
-
-    // Ältere Server ohne Pagination liefern weiterhin ein Array.
-    const legacy = Array.isArray(data);
-    const items = legacy ? data : (Array.isArray(data.items) ? data.items : []);
-    const known = new Set(trashItems.map((entry) => entry.id));
-    items.forEach((item) => {
-      if (known.has(item.id)) return;
-      known.add(item.id);
-      trashItems.push(item);
-    });
-
-    if (legacy) {
-      trashHasMore = false;
-      trashCursor = null;
-    } else {
-      trashHasMore = data.hasMore === true;
-      trashCursor = data.nextCursor || null;
-    }
-    renderTrash();
-  } catch (err) {
-    if (version !== trashVersion) return;
-    console.warn('Trash could not be loaded:', err);
-    showToast(t('trashLoadError'), { error: true });
-  } finally {
-    if (token === trashLoadToken) {
-      trashPageLoading = false;
-      setTrashLoadMoreBusy(false);
-      updateTrashLoadMore();
-      if (!trashItems.length && !trashHasMore) $trashEmpty.style.display = '';
-    }
-  }
-}
-
-if ($trashLoadMore) {
-  $trashLoadMore.addEventListener('click', () => loadTrashPage());
-}
-
-function renderTrash() {
-  $trashGrid.innerHTML = '';
-  trashItems.forEach((item) => $trashGrid.appendChild(buildTrashCard(item)));
-  $trashEmpty.style.display = (trashItems.length || trashHasMore) ? 'none' : '';
-  updateTrashLoadMore();
-}
-
-function trashDaysLeftLabel(expiresAt) {
-  if (!expiresAt) return '';
-  const daysLeft = Math.max(0, Math.ceil((expiresAt * 1000 - Date.now()) / 86400000));
-  return daysLeft === 1 ? t('trashDaysLeftOne') : t('trashDaysLeftMany', { n: daysLeft });
-}
-
-function buildTrashCard(item) {
-  const card = document.createElement('div');
-  card.className = 'trash__card';
-
-  const img = document.createElement('img');
-  img.src = item.image;
-  img.alt = t('trashImgAlt');
-  img.loading = 'lazy';
-  card.appendChild(img);
-
-  const meta = document.createElement('div');
-  meta.className = 'trash__meta';
-
-  const days = document.createElement('span');
-  days.className = 'trash__days';
-  days.textContent = trashDaysLeftLabel(item.expiresAt);
-  meta.appendChild(days);
-
-  const actions = document.createElement('div');
-  actions.className = 'trash__actions';
-
-  const restoreBtn = document.createElement('button');
-  restoreBtn.className = 'trash__btn trash__btn--restore';
-  restoreBtn.type = 'button';
-  restoreBtn.textContent = t('trashRestoreBtn');
-  restoreBtn.addEventListener('click', () => restoreTrashedPhoto(item));
-  actions.appendChild(restoreBtn);
-
-  const purgeBtn = document.createElement('button');
-  purgeBtn.className = 'trash__btn trash__btn--purge';
-  purgeBtn.type = 'button';
-  purgeBtn.textContent = t('trashPurgeBtn');
-  // Nur die wirklich zerstörerische Aktion fragt nach — das Trash-Löschen
-  // selbst bleibt ohne Dialog und über den Toast rückgängig machbar.
-  purgeBtn.addEventListener('click', async () => {
-    if (await askConfirm({ warningSound: true })) purgeTrashedPhoto(item);
-  });
-  actions.appendChild(purgeBtn);
-
-  meta.appendChild(actions);
-  card.appendChild(meta);
-  return card;
-}
-
-async function restoreTrashedPhoto(item) {
-  const key = 'restore:' + item.id;
-  if (pendingOps.has(key)) return;
-  pendingOps.add(key);
-  // Karte sofort entfernen (optimistisch) — verhindert auch Doppelklick-Racen
-  trashVersion++;
-  trashItems = trashItems.filter((t) => t.id !== item.id);
-  renderTrash();
-  try {
-    const res = await fetch('/api/trash?id=' + encodeURIComponent(item.id), { method: 'POST' });
-    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
-    const data = res.status === 404 ? {} : await res.json().catch(() => ({}));
-    if (data.id) addToGallery(item.image, false, data.id);
-    else loadPhotosFromServer(); // 404-Fall: Zustand vom Server nachladen
-    refreshTrashCount();
-    showToast(t('toastRestored'));
-  } catch (err) {
-    trashVersion++;
-    trashItems.push(item); // optimistic removal zurückrollen
-    renderTrash();
-    console.warn('Photo could not be restored:', err);
-    showToast(t('toastRestoreError2'), { error: true });
-  } finally {
-    pendingOps.delete(key);
-  }
-}
-
-async function purgeTrashedPhoto(item) {
-  const key = 'purge:' + item.id;
-  if (pendingOps.has(key)) return;
-  pendingOps.add(key);
-  trashVersion++;
-  trashItems = trashItems.filter((t) => t.id !== item.id);
-  renderTrash();
-  try {
-    const res = await fetch('/api/trash?id=' + encodeURIComponent(item.id), { method: 'DELETE' });
-    // 404 = bereits endgültig gelöscht — gilt ebenfalls als Erfolg
-    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
-    refreshTrashCount();
-    showToast(t('toastPurged'));
-  } catch (err) {
-    trashVersion++;
-    trashItems.push(item); // optimistic removal zurückrollen
-    renderTrash();
-    console.warn('Photo could not be purged:', err);
-    showToast(t('toastPurgeError'), { error: true });
-  } finally {
-    pendingOps.delete(key);
-  }
-}
 
 // ============================================================
 //  SOUND
@@ -3963,12 +3741,7 @@ document.querySelectorAll('[data-action]').forEach((el) => {
         openGallery(el.dataset.gallerySource || null);
         break;
       case 'back-camera':
-        // Back kehrt genau EINE Ebene zurück: Papierkorb -> Galerie -> Ursprung.
-        // Ein Sprung über zwei Ebenen verstößt gegen das gelernte Back-Modell.
         closeGallery();
-        break;
-      case 'toggle-trash':
-        if (currentState === 'gallery') toggleTrash();
         break;
       case 'retry-camera':
         initCamera({ retry: true });
@@ -5344,6 +5117,7 @@ function showEndScreen(url) {
 }
 
 function returnToIdle() {
+  endPhotoSession();
   resetGuestCaptureSettings();
   galleryReturnState = 'camera';
   if ($endScreen) $endScreen.hidden = true;
@@ -5633,7 +5407,6 @@ window.addEventListener('load', async () => {
       if (!$confirmModal.hidden) { closeConfirm(false); return; }
       if (!$endScreen.hidden) { returnToIdle(); return; }
       if ($camera.classList.contains('is-reviewing')) { retakePhoto(); return; }
-      if (trashOpen) { toggleTrash(false); return; }
       if (lightbox) { lightbox.remove(); lightbox = null; }
       if (currentState === 'gallery') {
         closeGallery();
@@ -5697,7 +5470,6 @@ function currentIdleStateKey() {
   if ($qrModal && !$qrModal.hidden) return 'qr';
   if ($confirmModal && !$confirmModal.hidden) return 'confirm';
   if (lightbox) return 'lightbox';
-  if (trashOpen) return 'trash';
   if (currentState === 'gallery') return 'gallery';
   if ($endScreen && !$endScreen.hidden) return 'end';
   if ($camera.classList.contains('is-reviewing') || $camera.classList.contains('is-stamping')) return 'review';
@@ -5740,7 +5512,6 @@ function resetToStartScreen() {
   if ($qrModal && !$qrModal.hidden) closeQrDialog();
   if ($confirmModal && !$confirmModal.hidden) closeConfirm(false);
   if (lightbox) { lightbox.remove(); lightbox = null; }
-  if (trashOpen) toggleTrash(false);
   returnToIdle();
   idleStateKey = 'splash';
   idleDeadline = 0;

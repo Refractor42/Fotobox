@@ -1003,14 +1003,6 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
   overflow: hidden;
   text-overflow: ellipsis;
 }
-/* Beide Kopf-Schaltflächen teilen sich die rechte Spalte: in der Galerie
-   „Papierkorb“, im Papierkorb „Galerie“. */
-.gallery__trash-toggle {
-  grid-column: 3;
-  grid-row: 1;
-  justify-self: end;
-  min-height: 60px;
-}
 .gallery__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -1102,6 +1094,10 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
   height: clamp(24px, 2.4vw, 32px);
   pointer-events: none;
 }
+/* Außerhalb einer laufenden Gäste-Sitzung wird nicht gelöscht. Vom
+   Startbildschirm aus geöffnet, bleibt die Galerie damit nur ansehbar. */
+body:not(.photo-session-active) .gallery__delete { display: none; }
+
 .gallery__delete:hover {
   background: rgb(var(--c-danger-rgb) / 0.95);
   border-color: rgb(var(--c-danger-rgb) / 1);
@@ -1148,48 +1144,72 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
 .toasts {
   position: fixed;
   left: 50%;
-  bottom: 1.5rem;
+  bottom: clamp(1.5rem, 2.2vh, 2.4rem);
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   z-index: 10000;
   pointer-events: none;
   width: calc(100% - 3rem);
-  max-width: 380px;
+  max-width: min(820px, calc(100vw - 3rem));
 }
 .toast {
   pointer-events: auto;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  background: rgba(20 20 20 / 0.92);
-  border: 1px solid rgba(255 255 255 / 0.12);
-  border-radius: 9999px;
-  padding: 0.6rem 0.6rem 0.6rem 1.1rem;
+  justify-content: space-between;
+  gap: clamp(0.75rem, 1vw, 1.1rem);
+  max-width: 100%;
+  background: rgba(20 20 20 / 0.94);
+  border: 1px solid rgba(255 255 255 / 0.14);
+  border-radius: clamp(18px, 1.4vw, 26px);
+  padding: clamp(0.8rem, 0.9vw, 1.05rem) clamp(0.8rem, 0.9vw, 1.05rem) clamp(0.8rem, 0.9vw, 1.05rem) clamp(1.1rem, 1.2vw, 1.5rem);
   color: var(--c-text);
-  font-size: 0.9rem;
+  font-size: clamp(1.05rem, 1.15vw, 1.3rem);
+  line-height: 1.35;
   letter-spacing: -0.005em;
-  box-shadow: 0 12px 32px rgba(0 0 0 / 0.5);
+  box-shadow: 0 18px 48px rgba(0 0 0 / 0.55);
   backdrop-filter: blur(16px) saturate(160%);
   -webkit-backdrop-filter: blur(16px) saturate(160%);
 }
 .toast--error { border-color: rgba(248 113 113 / 0.5); }
-.toast__msg { flex: 1; min-width: 0; }
+.toast__msg { flex: 1 1 auto; min-width: 0; font-weight: 500; }
 .toast__action {
-  border: none;
-  background: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(44px, 3.4vw, 60px);
+  border: 1px solid rgb(var(--c-accent-rgb) / 0.3);
+  background: rgb(var(--c-accent-rgb) / 0.08);
   color: var(--c-accent);
-  font-weight: 600;
-  font-size: 0.875rem;
+  font-weight: 700;
+  font-size: clamp(1rem, 1.1vw, 1.25rem);
+  line-height: 1.25;
   cursor: pointer;
-  padding: 0.35rem 0.7rem;
+  padding: clamp(0.55rem, 0.65vw, 0.8rem) clamp(0.85rem, 1vw, 1.15rem);
   border-radius: 9999px;
   letter-spacing: -0.01em;
   flex-shrink: 0;
+  transition: background 0.2s ease, border-color 0.2s ease;
 }
-.toast__action:hover { background: rgb(var(--c-accent-rgb) / 0.12); }
+.toast__action:hover,
+.toast__action:focus-visible {
+  background: rgb(var(--c-accent-rgb) / 0.16);
+  border-color: rgb(var(--c-accent-rgb) / 0.55);
+  outline: none;
+}
+
+@media (max-width: 640px) {
+  .toast {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    border-radius: 20px;
+  }
+  .toast__action { width: 100%; }
+}
 
 /* ============================================================
    CONFIRM MODAL (endgültig löschen)
@@ -1333,99 +1353,6 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
 }
 .qr-modal__retry:hover { color: var(--c-text); background: var(--c-surface-2); }
 .qr-modal__retry:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.5); }
-
-/* ============================================================
-   PAPIERKORB (trash view)
-   ============================================================ */
-.gallery__trash-toggle {
-  gap: 0.8rem;
-  padding: clamp(0.7rem, 0.65vw, 0.95rem) clamp(1rem, 1vw, 1.4rem);
-  font-size: clamp(1rem, 0.95vw, 1.2rem);
-}
-.gallery__trash-toggle .btn__icon svg {
-  width: clamp(1.35rem, 1.25vw, 1.75rem);
-  height: clamp(1.35rem, 1.25vw, 1.75rem);
-}
-.gallery__trash-toggle.active { color: var(--c-accent); border-color: rgb(var(--c-accent-rgb) / 0.4); }
-/* Mülleimer-Zähler: absichtlich ruhiger als der gelbe Galerie-Badge —
-   der Papierkorb ist Nebensache und leer = unsichtbar */
-.btn__badge--muted {
-  background: rgba(255 255 255 / 0.18);
-  color: var(--c-text);
-  top: 0;
-  min-width: 24px;
-  height: 24px;
-  padding: 0 6px;
-  font-size: 0.8rem;
-  box-shadow: 0 0 0 3px var(--c-bg);
-}
-
-.trash { margin-top: 0.25rem; }
-/* etwas breitere Karten, damit beide Buttons nebeneinander Platz hätten —
-   gestapelt brauchen sie aber ohnehin nur die Kartenbreite */
-#trashGrid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
-.trash__bar { margin-bottom: 1.25rem; }
-.trash__hint {
-  font-size: 0.85rem;
-  color: var(--c-text-2);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.35rem;
-  line-height: 1.5;
-}
-/* Die Aufbewahrungsdauer ist eine Admin-Einstellung. Im Gäste-Papierkorb
-   steht deshalb nur der aktuelle Wert, ohne Änderungsmöglichkeit. */
-
-.trash__card {
-  display: flex;
-  flex-direction: column;
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-  background: var(--c-surface);
-  box-shadow: 0 10px 30px rgba(0 0 0 / 0.35);
-}
-.trash__card img {
-  width: 100%;
-  aspect-ratio: 3 / 4;
-  object-fit: cover;
-  display: block;
-  filter: grayscale(0.5);
-  opacity: 0.85;
-}
-.trash__meta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.75rem 0.85rem;
-}
-.trash__days { font-size: 0.85rem; color: var(--c-text-2); white-space: nowrap; }
-.trash__actions { display: flex; flex-direction: column; gap: 0.5rem; }
-.trash__btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 44px;
-  border: 1px solid rgba(255 255 255 / 0.12);
-  background: transparent;
-  color: var(--c-text-2);
-  border-radius: 9999px;
-  font-size: 0.85rem;
-  padding: 0.5rem 0.7rem;
-  text-align: center;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: color var(--transition), background var(--transition), border-color var(--transition);
-}
-.trash__btn:hover { color: var(--c-text); background: var(--c-surface-2); }
-.trash__btn--restore { color: var(--c-accent); border-color: rgb(var(--c-accent-rgb) / 0.35); }
-.trash__btn--restore:hover { background: rgb(var(--c-accent-rgb) / 0.12); }
-.trash__btn--purge:hover {
-  color: #f87171;
-  border-color: rgba(248 113 113 / 0.4);
-  background: rgba(248 113 113 / 0.08);
-}
 
 /* ============================================================
    responsive
@@ -1960,23 +1887,21 @@ body.orientation-landscape section.gallery {
   padding-left: max(clamp(24px, 3vw, 56px), calc((100vw - var(--rail-w) - 1200px) / 2));
   padding-right: max(clamp(20px, 2.4vw, 44px), calc((100vw - var(--rail-w) - 1200px) / 2));
   /* Der Body ist im Querformat auf 100vh fixiert und darf nicht scrollen.
-     Galerie und Papierkorb brauchen deshalb einen eigenen Scrollbereich. */
+     Die Galerie braucht deshalb einen eigenen Scrollbereich. */
   height: auto;
   overflow-y: auto;
   overscroll-behavior: contain;
 }
 
-body.orientation-landscape .gallery__grid,
-body.orientation-landscape #trashGrid {
+body.orientation-landscape .gallery__grid {
   /* Drei große Kacheln pro Reihe: weniger Bilder gleichzeitig, dafür
-     deutlich besser sichtbar. Gilt für Galerie und Papierkorb. */
+     deutlich besser sichtbar. */
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: clamp(16px, 1.4vw, 24px);
 }
 
 @media (max-width: 900px) and (orientation: landscape) {
-  body.orientation-landscape .gallery__grid,
-  body.orientation-landscape #trashGrid {
+  body.orientation-landscape .gallery__grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
