@@ -995,23 +995,22 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
 .gallery__title {
   grid-column: 2;
   justify-self: center;
-  font-size: 1.25rem;
-  font-weight: 600;
+  font-size: clamp(1.8rem, 2.2vw, 2.6rem);
+  font-weight: 700;
   min-width: 0;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.gallery__back {
-  justify-self: start;
-  padding: 0.5rem 1.1rem;
-  font-size: 0.875rem;
+/* Beide Kopf-Schaltflächen teilen sich die rechte Spalte: in der Galerie
+   „Papierkorb“, im Papierkorb „Galerie“. */
+.gallery__trash-toggle {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: end;
+  min-height: 60px;
 }
-/* Touch-Ziele im Galerie-Kopf: mindestens 44 px hoch. */
-.gallery__back,
-.gallery__trash-toggle { min-height: 44px; }
-.gallery__trash-toggle { justify-self: end; }
 .gallery__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -1075,15 +1074,16 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
 .gallery__card:hover::after { opacity: 1; }
 
 /* delete button on a gallery card */
-/* Lösch-Button auf Galerie-Karten (Fitts' Law: von 28px auf 44px vergrößert für sichere Touch-Bedienung) */
+/* Lösch-Button auf Galerie-Karten: deutlich größer für sichere
+   Touch-Bedienung und gut sichtbar auf den größeren Kacheln. */
 .gallery__delete {
   position: absolute;
-  top: 8px;
-  right: 8px;
+  top: 10px;
+  right: 10px;
   z-index: 2;
-  width: 44px;
-  height: 44px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: clamp(52px, 5vw, 64px);
+  height: clamp(52px, 5vw, 64px);
+  border: 1.5px solid rgba(255, 255, 255, 0.24);
   border-radius: 50%;
   background: rgba(0, 0, 0, 0.75);
   backdrop-filter: blur(8px);
@@ -1098,8 +1098,8 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
   transition: background var(--transition), transform 0.15s ease, border-color var(--transition);
 }
 .gallery__delete svg {
-  width: 20px;
-  height: 20px;
+  width: clamp(24px, 2.4vw, 32px);
+  height: clamp(24px, 2.4vw, 32px);
   pointer-events: none;
 }
 .gallery__delete:hover {
@@ -1337,8 +1337,15 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
 /* ============================================================
    PAPIERKORB (trash view)
    ============================================================ */
-.gallery__trash-toggle { padding: 0.5rem 0.9rem; font-size: 0.875rem; }
-.gallery__trash-toggle .btn__icon svg { width: 1.1rem; height: 1.1rem; }
+.gallery__trash-toggle {
+  gap: 0.8rem;
+  padding: clamp(0.7rem, 0.65vw, 0.95rem) clamp(1rem, 1vw, 1.4rem);
+  font-size: clamp(1rem, 0.95vw, 1.2rem);
+}
+.gallery__trash-toggle .btn__icon svg {
+  width: clamp(1.35rem, 1.25vw, 1.75rem);
+  height: clamp(1.35rem, 1.25vw, 1.75rem);
+}
 .gallery__trash-toggle.active { color: var(--c-accent); border-color: rgb(var(--c-accent-rgb) / 0.4); }
 /* Mülleimer-Zähler: absichtlich ruhiger als der gelbe Galerie-Badge —
    der Papierkorb ist Nebensache und leer = unsichtbar */
@@ -1346,10 +1353,10 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
   background: rgba(255 255 255 / 0.18);
   color: var(--c-text);
   top: 0;
-  min-width: 19px;
-  height: 19px;
-  padding: 0 4px;
-  font-size: 0.68rem;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  font-size: 0.8rem;
   box-shadow: 0 0 0 3px var(--c-bg);
 }
 

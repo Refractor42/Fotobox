@@ -180,13 +180,10 @@ const I18N = {
     stickerRemove: 'Sticker entfernen',
     galleryBtn: 'Galerie',
     galleryOpenAria: 'Galerie öffnen',
-    galleryBack: 'Zurück',
     galleryTitle: 'Deine Fotos',
     galleryLoadMore: 'Mehr laden',
     galleryLoading: 'Wird geladen…',
     galleryTrash: 'Papierkorb',
-    trashBackShort: 'Fotos',
-    trashBackToPhotos: 'Zurück zu deinen Fotos',
     galleryEmpty: 'Noch keine Fotos — mach dein erstes Foto!',
     trashRetentionText: 'Neu gelöschte Fotos werden nach {n} Tagen endgültig gelöscht.',
     trashEmpty: 'Der Papierkorb ist leer.',
@@ -393,13 +390,10 @@ const I18N = {
     stickerRemove: 'Remove sticker',
     galleryBtn: 'Gallery',
     galleryOpenAria: 'Open gallery',
-    galleryBack: 'Back',
     galleryTitle: 'Your Photos',
     galleryLoadMore: 'Load more',
     galleryLoading: 'Loading…',
     galleryTrash: 'Trash',
-    trashBackShort: 'Photos',
-    trashBackToPhotos: 'Back to your photos',
     galleryEmpty: 'No photos yet. Capture your first memory!',
     trashRetentionText: 'Newly deleted photos are permanently removed after {n} days.',
     trashEmpty: 'The trash is empty.',
@@ -3216,8 +3210,9 @@ function openGallery(source = null) {
     onComplete: () => {
       origin.style.display = 'none';
       goTo('gallery');
+      syncGalleryContext();
       refreshTrashCount();
-      if ($galleryBack) $galleryBack.focus({ preventScroll: true });
+      if ($trashToggle && !$trashToggle.hidden) $trashToggle.focus({ preventScroll: true });
     }
   });
 }
@@ -3360,7 +3355,7 @@ $confirmModal.addEventListener('click', (e) => { if (e.target === $confirmModal)
 //  PAPIERKORB (trash view)
 // ============================================================
 const $trashToggle = document.getElementById('trashToggle');
-const $galleryBack = document.querySelector('.gallery__back');
+const $galleryFromTrashToggle = document.getElementById('galleryFromTrashToggle');
 const $trashBadge = document.getElementById('trashBadge');
 const $trashView = document.getElementById('trashView');
 const $trashGrid = document.getElementById('trashGrid');
@@ -3376,20 +3371,15 @@ let trashHasMore = false;
 let trashPageLoading = false;
 let trashLoadToken = 0;
 
-// Der Papierkorb ist eine eigene Ansicht: Titel und Rückweg müssen ihn
-// benennen, sonst bleibt oben weiter „Deine Fotos“ stehen.
+// Der Papierkorb ist eine eigene Ansicht: Titel und Kopf-Schaltfläche
+// müssen ihn benennen, sonst bleibt oben weiter „Deine Fotos“ stehen.
 function syncGalleryContext() {
   const title = document.getElementById('galleryTitle');
-  const back = document.getElementById('galleryBackLabel');
   const toggle = document.getElementById('trashToggle');
   if (title) title.textContent = t(trashOpen ? 'galleryTrash' : 'galleryTitle');
-  if (back) {
-    back.textContent = t(trashOpen ? 'trashBackShort' : 'galleryBack');
-    const btn = back.closest('button');
-    if (btn) btn.setAttribute('aria-label', t(trashOpen ? 'trashBackToPhotos' : 'galleryBack'));
-  }
-  // Im Papierkorb ist der Umschalter doppelt; der Zurück-Weg übernimmt.
+  // Genau eine der beiden Schaltflächen belegt die rechte Kopfposition.
   if (toggle) toggle.hidden = trashOpen;
+  if ($galleryFromTrashToggle) $galleryFromTrashToggle.hidden = !trashOpen;
 }
 
 // Mülleimer-Zähler am Galerie-Header — erst ab 1 sichtbar (0 = Rauschen).
@@ -3408,9 +3398,10 @@ function refreshTrashCount() {
 }
 
 function toggleTrash(force = !trashOpen) {
-  // Der Umschalter verschwindet im Papierkorb. Tastaturfokus auf den
-  // sichtbaren Zurück-Weg legen, damit er nicht ins Leere fällt.
-  const moveFocus = !!force && document.activeElement === $trashToggle;
+  // Beim Wechsel verschwindet die jeweils aktive Kopf-Schaltfläche.
+  // Tastaturfokus wandert auf die andere, damit er nicht ins Leere fällt.
+  const wasTrashToggle = document.activeElement === $trashToggle;
+  const wasGalleryToggle = document.activeElement === $galleryFromTrashToggle;
   trashOpen = force;
   $trashToggle.classList.toggle('active', trashOpen);
   $trashView.hidden = !trashOpen;
@@ -3420,7 +3411,11 @@ function toggleTrash(force = !trashOpen) {
     : ($galleryGrid.querySelector('.gallery__card') ? 'none' : '');
   updateGalleryLoadMore();
   syncGalleryContext();
-  if (moveFocus && $galleryBack) $galleryBack.focus({ preventScroll: true });
+  if (trashOpen && wasTrashToggle && $galleryFromTrashToggle) {
+    $galleryFromTrashToggle.focus({ preventScroll: true });
+  } else if (!trashOpen && wasGalleryToggle && $trashToggle) {
+    $trashToggle.focus({ preventScroll: true });
+  }
   if (trashOpen) loadTrash();
 }
 
