@@ -1624,7 +1624,11 @@ function hideReview() {
   const actions = document.getElementById('reviewActions');
   if (actions) actions.hidden = true;
   $camera.classList.remove('is-reviewing', 'is-stamping');
+  // Die in der Review geöffnete Pille (Rahmen) darf nach dem Annehmen nicht
+  // als Filterband stehen bleiben — sonst wirkt der Aufnahme-Modus wieder da.
   setStampMenuOpen(false);
+  setBarMenuOpen(false);
+  setCaptureOptionsOpen(false);
   renderBarMenu();
   syncCancelHome();
   closeReviewTools();
@@ -1697,6 +1701,10 @@ async function keepPhoto() {
   // (HCI: Predictable System State — der Nachfolger in der Warteschlange
   // darf nicht durch eine fremde Sprache verwirrt werden).
   applyLanguage(defaultLang);
+  // Im Kiosk wird der Endscreen erst nach dem Speichern gezeigt. Bis dahin
+  // bleibt die Aufnahme-Leiste verborgen, statt für einen Moment wieder
+  // aufzutauchen und sich bedienen zu lassen.
+  if (isKioskLayout()) $camera.classList.add('is-finishing');
   hideReview();
   setControlsLocked(false);
 
@@ -1718,6 +1726,7 @@ async function keepPhoto() {
     }
     if (photo && photo.id) showToast(t('toastSaved'));
     if (photoUrl) showEndScreen(photoUrl);
+    else $camera.classList.remove('is-finishing');
     return;
   }
 
@@ -2516,7 +2525,9 @@ async function runCaptureSequence() {
   if (isCapturing) return;
   // Während ein Foto zum Annehmen/Neuaufnehmen offen ist, darf kein
   // weiterer Countdown darüberlaufen (z. B. durch einen Fernauslöser).
-  if ($camera.classList.contains('is-reviewing') || $camera.classList.contains('is-ended')) return;
+  if ($camera.classList.contains('is-reviewing')
+    || $camera.classList.contains('is-ended')
+    || $camera.classList.contains('is-finishing')) return;
   if (!stream || !$video.srcObject) {
     showPermissionPrompt();
     return;
@@ -2752,7 +2763,7 @@ function resetCameraView() {
   currentOverlay = null;
   lastStripLayout = null;
   renderOverlayPreview();
-  $camera.classList.remove('is-reviewing', 'is-stamping', 'is-ended');
+  $camera.classList.remove('is-reviewing', 'is-stamping', 'is-ended', 'is-finishing');
   const endScreen = document.getElementById('endScreen');
   if (endScreen) endScreen.hidden = true;
   const reviewActions = document.getElementById('reviewActions');
@@ -5275,6 +5286,10 @@ function closeStampMode(options = {}) {
 }
 
 function showEndScreen(url) {
+  // Wurde in der Zwischenzeit zum Start zurückgekehrt (oder die Galerie
+  // geöffnet), darf der alte Endscreen nicht mehr auftauchen.
+  $camera.classList.remove('is-finishing');
+  if (currentState !== 'camera') return;
   endPhotoUrl = url;
   const wrap = document.getElementById('endPhoto');
   if (wrap) {
@@ -5299,7 +5314,7 @@ function returnToIdle() {
   resetGuestCaptureSettings();
   galleryReturnState = 'camera';
   if ($endScreen) $endScreen.hidden = true;
-  $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping');
+  $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping', 'is-finishing');
   setHomeMode('default');
   clearStickers();
   currentOverlay = null;
@@ -5554,6 +5569,7 @@ window.addEventListener('load', async () => {
     if ((e.key === 'g' || e.key === 'G') && currentState === 'camera'
       && !$camera.classList.contains('is-reviewing')
       && !$camera.classList.contains('is-ended')
+      && !$camera.classList.contains('is-finishing')
       && $qrModal.hidden && $confirmModal.hidden) {
       e.preventDefault();
       openGallery('camera');

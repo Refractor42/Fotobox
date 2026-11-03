@@ -403,7 +403,8 @@ body.orientation-landscape .capture-bar > .bar-options {
    Endscreen selbst; nur das Menü (Overlay/Sticker) bleibt erreichbar. */
 #camera.is-reviewing .capture-bar > .kiosk-shutter,
 #camera.is-reviewing .capture-bar > .bar-options { display: none; }
-#camera.is-ended .capture-bar { display: none; }
+#camera.is-ended .capture-bar,
+#camera.is-finishing .capture-bar { display: none; }
 
 .capture-switch {
   display: flex;
