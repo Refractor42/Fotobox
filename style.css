@@ -2039,6 +2039,8 @@ body.orientation-landscape .gallery__grid {
 }
 .cvd-option[aria-checked="true"] .cvd-option__name { color: var(--c-accent); }
 .cvd-option:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.5); }
+/* Abstand zwischen zwei Auswahlgruppen im Einstellungsdialog */
+.settings-modal__label--gap { margin-top: 1.05rem; }
 
 /* ---- Farbsehschwächen-Schemata ------------------------------------
    Protanopie und Deuteranopie teilen sich die Rot-Grün-Achse: Blau
