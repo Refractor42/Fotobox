@@ -596,7 +596,7 @@ body.orientation-landscape .capture-bar > .bar-options {
 .kiosk-shutter:disabled .kiosk-shutter__disc { transform: none; }
 
 /* --- Globaler Start-Button ---------------------------------------
-   Der Button sitzt unten in der rechten Schiene. Die sichtbare
+   Der Button sitzt unten in der linken Ecke. Die sichtbare
    Beschriftung steht unter dem Kreis; der Kreis selbst bleibt die
    44+ px große Touchfläche. */
 :root {
@@ -611,7 +611,7 @@ body.orientation-landscape .capture-bar > .bar-options {
   /* Start-Knopf genau so groß wie Filter- und Options-Knopf */
   --home-size: clamp(60px, 5.5vw, 77px);
   /* Keine rechte Schiene mehr: Das Foto nutzt die volle Breite, der
-     Start-Button liegt als runder Button über der unteren rechten Ecke. */
+     Start-Button liegt als runder Button über der unteren linken Ecke. */
   --rail-w: 0px;
   --action-gap: 8px;
   --action-label-size: clamp(12px, 0.95vw, 15px);
@@ -621,7 +621,7 @@ body.orientation-landscape .capture-bar > .bar-options {
   position: fixed;
   /* Gleiche Kante wie die Buttons in der Leiste: der Kreis steht auf
      derselben Höhe und hält den kleinen Abstand zur Bildkante ein. */
-  right: calc(var(--stage-pad) + var(--bar-edge-inset));
+  left: calc(var(--stage-pad) + var(--bar-edge-inset));
   bottom: var(--bar-edge-inset);
   z-index: 10001;
   display: none;
@@ -669,6 +669,12 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
   background: var(--c-success);
 }
 .cancel-home.is-done .cancel-home__label { color: #86efac; }
+/* „Fertig“ ist der primäre Abschluss und sitzt deshalb rechts unten — auf
+   derselben Höhe wie der Home-Knopf im Rest des Kiosks. */
+.cancel-home.is-done {
+  left: auto;
+  right: calc(var(--stage-pad) + var(--bar-edge-inset));
+}
 .cancel-home__label {
   font-size: var(--action-label-size);
   line-height: var(--action-label-line);
@@ -780,7 +786,7 @@ body.orientation-landscape .side-menu.is-locked {
 /* --- Schwebender Start-Button ----------------------------------------
    Die rechte Schiene entfällt: .side-rail und .side-rail__home sind nur
    noch Hüllen (display: contents), der Start-Button liegt fest über der
-   unteren rechten Ecke und überdeckt keine Steuerleiste. */
+   unteren linken Ecke und überdeckt keine Steuerleiste. */
 body.orientation-landscape .side-rail,
 body.orientation-landscape .side-rail__home { display: contents; }
 
@@ -1213,13 +1219,13 @@ body.orientation-landscape .capture-bar {
   transition: padding-left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
               padding-right 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* Geöffnet läuft die Reihe bis an die linke Kante des Kamerabildes; rechts
+/* Geöffnet läuft die Reihe bis an die rechte Kante des Kamerabildes; links
    bleibt Platz für den Start-Knopf in der Ecke. */
 body.orientation-landscape .capture-bar.is-menu-open {
-  /* Gleicher kleiner Abstand zur linken Bildkante wie beim Start-Knopf;
-     rechts bleibt die Start-Knopf-Breite plus zweimal dieser Abstand frei. */
-  padding-left: var(--bar-edge-inset);
-  padding-right: calc(var(--home-size) + var(--bar-edge-inset) * 2);
+  /* Links bleibt die Start-Knopf-Breite plus zweimal dieser Abstand frei,
+     rechts nur der gleiche kleine Abstand zur Bildkante. */
+  padding-left: calc(var(--home-size) + var(--bar-edge-inset) * 2);
+  padding-right: var(--bar-edge-inset);
 }
 
 /* Kamerabild bis zur Unterkante: es gibt keine schwarze Fußzeile. */
@@ -1624,19 +1630,20 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 
 /* ============================================================
    REVIEW-LEISTE
-   Sticker | Neu aufnehmen · Annehmen | Rahmen
-   Die Foto-Aktionen stehen eng in der Bildmitte, die beiden Menüknöpfe
-   flankieren sie links und rechts. Ihre Kapseln liegen im selben Glas wie
-   das Filtermenü und wachsen vom Knopf nach außen bis an den Rand ihres
+   Sticker | Neu aufnehmen | Rahmen · Annehmen (rechts unten)
+   „Neu aufnehmen“ bleibt in der Bildmitte, „Annehmen“ sitzt separat in
+   der rechten unteren Ecke. Die beiden Menüknöpfe flankieren die Mitte;
+   ihre Kapseln wachsen vom Knopf nach außen bis an den Rand ihres
    Bereichs. Die Elemente darin sind Quadrate.
    ============================================================ */
 .bar-slot--stamp { display: none; }
 
 #camera.is-reviewing .capture-bar {
-  /* Drei Spalten: links Sticker-Pille, mittig „Neu aufnehmen“ und
-     „Annehmen“, rechts Rahmen-Pille. Die äußeren Spalten sind gleich
-     groß, damit die Aktionen exakt in der Bildmitte stehen. */
+  /* Drei Spalten: links Sticker-Pille, mittig „Neu aufnehmen“, rechts
+     Rahmen-Pille. Die äußeren Spalten sind gleich groß, damit „Neu
+     aufnehmen“ exakt in der Bildmitte steht. */
   --review-home: calc(var(--home-size) + var(--bar-edge-inset));
+  --review-accept: calc(var(--home-size) + var(--bar-edge-inset) + var(--bar-gap));
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   column-gap: var(--bar-gap);
@@ -1659,7 +1666,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   width: var(--bar-side-size);
   display: flex;
 }
-/* Die beiden Foto-Aktionen rücken eng zusammen in die Mitte. */
+/* In der Mitte bleibt „Neu aufnehmen“; „Annehmen“ ist separat fixiert. */
 #camera.is-reviewing .capture-bar > .review-actions {
   grid-column: 2;
   grid-row: 1;
@@ -1669,6 +1676,14 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   justify-content: center;
   gap: clamp(8px, 0.9vw, 14px);
   padding: 0;
+}
+/* „Annehmen“ löst sich aus der mittigen Gruppe und sitzt als primäre
+   Aktion rechts unten, auf derselben Unterkante wie der Home-Knopf. */
+#camera.is-reviewing #landscapeKeep {
+  position: fixed;
+  right: calc(var(--stage-pad) + var(--bar-edge-inset));
+  bottom: var(--bar-edge-inset);
+  z-index: 10001;
 }
 #camera .review-actions[hidden] { display: none !important; }
 #camera.is-reviewing .capture-bar > .side-menu-toggle {
@@ -1702,24 +1717,25 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   opacity: 1;
   pointer-events: auto;
 }
-/* Sticker: rechte Kante am Sticker-Knopf, wächst nach links. */
+/* Sticker: rechte Kante am Sticker-Knopf, wächst nach links bis vor den
+   schwebenden Start-Knopf. */
 #camera.is-reviewing .bar-slot--stamp {
   grid-column: 1;
   justify-self: end;
   margin: 0 calc(var(--bar-side-size) + var(--bar-slot-gap)) 0 0;
 }
 #camera.is-reviewing .bar-slot--stamp.is-open {
-  width: calc(100% - var(--bar-side-size) - var(--bar-slot-gap));
+  width: calc(100% - var(--bar-side-size) - var(--bar-slot-gap) - var(--review-home));
 }
 /* Rahmen: linke Kante am Rahmen-Knopf, wächst nach rechts bis vor den
-   schwebenden Start-Knopf. */
+   „Annehmen“-Knopf. */
 #camera.is-reviewing .bar-slot--menu {
   grid-column: 3;
   justify-self: start;
   margin: 0 0 0 calc(var(--bar-side-size) + var(--bar-slot-gap));
 }
 #camera.is-reviewing .bar-slot--menu.is-open {
-  width: calc(100% - var(--bar-side-size) - var(--bar-slot-gap) - var(--review-home));
+  width: calc(100% - var(--bar-side-size) - var(--bar-slot-gap) - var(--review-accept));
 }
 #camera.is-reviewing .bar-slot__inner { width: 100%; padding-inline: 0; }
 #camera.is-reviewing .bar-filter-list { border-radius: 0; }
@@ -1850,12 +1866,12 @@ html[data-ui="2"] .capture-bar {
      sich die Menübreite bis einen Abstand vor den jeweiligen Knopf
      ableiten: halbe Auslöserbreite + 2,5 Abstände + ein Abstand +
      Knopfbreite, dazu der kleine Rand zur Bildkante. Davon geht die Luft
-     zum eigenen Knopf ab; rechts zusätzlich der Platz des Start-Knopfes,
-     damit das Options-Menü nicht in ihn hineinläuft. */
+     zum eigenen Knopf ab; links zusätzlich der Platz des Start-Knopfes,
+     damit das Filter-Menü nicht in ihn hineinläuft. */
   --ui2-slot-air: calc(var(--bar-gap) + var(--bar-slot-gap));
   --ui2-home-space: calc(var(--home-size) + var(--stage-pad) + var(--bar-edge-inset) * 2 + var(--bar-gap));
   --ui2-pill-w: calc(50% - var(--bar-shutter-size) / 2 - var(--bar-side-size) - var(--bar-gap) * 3.5 - var(--bar-edge-inset) - var(--ui2-slot-air));
-  --ui2-pill-w-options: calc(50% - var(--bar-shutter-size) / 2 - var(--bar-side-size) - var(--bar-gap) * 3.5 - var(--ui2-slot-air) - var(--ui2-home-space));
+  --ui2-pill-w-home: calc(50% - var(--bar-shutter-size) / 2 - var(--bar-side-size) - var(--bar-gap) * 3.5 - var(--ui2-slot-air) - var(--ui2-home-space));
 }
 /* Beide Menüs liegen absolut über der Leiste statt in ihr: die Reihe
    bleibt stehen, das Menü erscheint am Knopf. */
@@ -1870,18 +1886,20 @@ html[data-ui="2"] .bar-slot {
   pointer-events: none;
   transition: opacity 0.22s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
 }
-/* Filter: rechte Kante am Filter-Knopf, wächst nach links. */
+/* Filter: rechte Kante am Filter-Knopf, wächst nach links bis vor den
+   Start-Knopf. */
 html[data-ui="2"] .bar-slot--menu {
-  left: var(--bar-edge-inset);
+  left: var(--ui2-home-space);
   right: auto;
+  width: var(--ui2-pill-w-home);
   transform: translateX(16px);
 }
-/* Optionen: rechte Kante vor dem Start-Knopf, linke Kante neben dem
-   Options-Knopf. */
+/* Optionen: linke Kante neben dem Options-Knopf, rechte Kante an der
+   Bildkante. */
 html[data-ui="2"] .bar-slot--options {
-  right: var(--ui2-home-space);
+  right: var(--bar-edge-inset);
   left: auto;
-  width: var(--ui2-pill-w-options);
+  width: var(--ui2-pill-w);
   transform: translateX(-16px);
 }
 html[data-ui="2"] .bar-slot.is-open {

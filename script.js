@@ -1536,8 +1536,8 @@ function syncCancelHome() {
 }
 
 // Derselbe Button hat drei Zustände: normal „Start“, während der Aufnahme
-// „Abbrechen“ und auf dem Endscreen „Fertig“. Position und Größe bleiben
-// dabei unverändert; nur Icon, Label, ARIA und Farbe wechseln.
+// „Abbrechen“ und auf dem Endscreen „Fertig“. Die Höhe bleibt gleich;
+// „Fertig“ rückt als primäre Abschlussaktion nach rechts unten.
 function setHomeMode(mode = 'default') {
   if (!$cancelHome) return;
   const cancelling = mode === 'cancel';
@@ -1605,7 +1605,9 @@ function showReview() {
     const actions = document.getElementById('reviewActions');
     if (actions) {
       actions.hidden = false;
-      gsap.from(actions, { y: 16, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
+      // Nur einblenden, nicht verschieben: „Annehmen“ ist fixiert und würde
+      // in einem transformierten Eltern-Element für einen Moment falsch sitzen.
+      gsap.from(actions, { opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
     }
     renderBarMenu();
     syncBarToggleLabel();
