@@ -113,6 +113,16 @@ const I18N = {
     scrollHint: 'scrollen',
     sideMenuShowAria: 'Menü öffnen: Filter, Overlay und Sticker',
     sideMenuHideAria: 'Menü schließen',
+    barOptions: 'Optionen',
+    barFilters: 'Filter',
+    barFiltersShowAria: 'Filter anzeigen',
+    barFiltersHideAria: 'Filter schließen',
+    barMenuAria: 'Filter wählen',
+    barFilterReset: 'Zurücksetzen',
+    barFrames: 'Rahmen',
+    barFramesShowAria: 'Rahmen anzeigen',
+    barFramesHideAria: 'Rahmen schließen',
+    barOptionsAria: 'Countdown und Modus einstellen',
     scrollUpAria: 'Nach oben scrollen',
     scrollDownAria: 'Nach unten scrollen',
     overlayNone: 'Kein Rahmen',
@@ -316,6 +326,16 @@ const I18N = {
     scrollHint: 'scroll',
     sideMenuShowAria: 'Open menu: filters, overlays and stickers',
     sideMenuHideAria: 'Close menu',
+    barOptions: 'Options',
+    barFilters: 'Filters',
+    barFiltersShowAria: 'Show filters',
+    barFiltersHideAria: 'Close filters',
+    barMenuAria: 'Choose a filter',
+    barFilterReset: 'Reset',
+    barFrames: 'Frames',
+    barFramesShowAria: 'Show frames',
+    barFramesHideAria: 'Close frames',
+    barOptionsAria: 'Adjust countdown and mode',
     scrollUpAria: 'Scroll up',
     scrollDownAria: 'Scroll down',
     overlayNone: 'No frame',
@@ -520,6 +540,8 @@ function applyLanguage(lang) {
     syncSideMenuHint();
     renderSideTabs();
     renderSideMenu();
+    renderBarMenu();
+    if (barMenuShowsStamps()) renderStampPanel();
     updateChallengeCard();
     setSideMenuOpen($sideMenu.classList.contains('is-open'));
   }
@@ -1193,7 +1215,13 @@ function startSession() {
   currentState = 'camera';
   initCamera(); // request camera immediately to preserve user-gesture context
 
-  if (isKioskLayout()) openSideMenu('filter');
+  // Menü-Inhalt vorbereiten, aber geschlossen lassen: Die Vorschau startet
+  // in voller Größe, das Menü öffnet der Gast über die untere Leiste.
+  if (isKioskLayout()) {
+    openSideMenu('filter');
+    setSideMenuOpen(false);
+  }
+  setCaptureOptionsOpen(false);
 
   const tl = timeline();
   tl.to(['.splash__content--portrait', '.splash__content--kiosk', '.lang-switch--splash',
@@ -1365,7 +1393,9 @@ function setFeatureHidden(el, hidden) {
 function sideMenuStageIds() {
   const inReview = $camera.classList.contains('is-reviewing')
     || $camera.classList.contains('is-stamping');
-  return inReview ? ['overlay', 'stamp'] : ['filter'];
+  // Review nutzt ausschließlich die Leisten-Pillen (Sticker + Rahmen);
+  // die Schublade gehört nur noch zur Kamera-Filterauswahl.
+  return inReview ? [] : ['filter'];
 }
 
 function sideMenuFeatureEnabled(context) {
@@ -1388,18 +1418,21 @@ function chooseSideMenuContext(preferred) {
 function setSideMenuVisible(visible) {
   if (!$sideMenu) return;
   $sideMenu.classList.toggle('feature-disabled', !visible);
-  setFeatureHidden($sideMenuToggle, !visible);
+  // Der Leistenknopf hängt nicht mehr an dieser Schublade: er zeigt in der
+  // Kamera die Filter und im Review die Rahmen.
   if (!visible) setSideMenuOpen(false);
 }
 
 function refreshSideMenu() {
   if (!isKioskLayout() || !$sideMenu) return;
   const next = chooseSideMenuContext(sideContext);
-  if (!next) {
-    setSideMenuVisible(false);
-    return;
-  }
-  setSideMenuVisible(true);
+  setSideMenuVisible(!!next);
+  // Der linke Knopf bleibt sichtbar, solange irgendein Menü erreichbar ist:
+  // Filter in der Kamera, Rahmen im Review oder die Sticker-Schublade.
+  const barMenus = (barMenuShowsFilters() && appSettings.filtersEnabled !== false)
+    || barMenuShowsOverlays();
+  setFeatureHidden($sideMenuToggle, !barMenus && !next);
+  if (!next) return;
   openSideMenu(next);
 }
 
@@ -1465,9 +1498,14 @@ function setControlsLocked(locked) {
     else sideMenu.removeAttribute('aria-disabled');
   }
   if ($sideMenuToggle) $sideMenuToggle.disabled = locked;
+  if ($captureOptionsToggle) {
+    $captureOptionsToggle.disabled = locked;
+    setCaptureOptionsOpen(false);
+  }
   // Die Schublade verdeckt sonst die Vorschau während Countdown und
   // Verarbeitung.
   if (locked) setSideMenuOpen(false);
+  if (locked) setBarMenuOpen(false);
 }
 
 // Das Review-Panel bleibt während der Bearbeitung sichtbar: „Save“ ist
@@ -1487,8 +1525,13 @@ function syncCancelHome() {
   if ($sideMenuToggle) {
     const showToggle = !onSplash && currentState === 'camera'
       && !$camera.classList.contains('is-ended');
-    if (!showToggle) setSideMenuOpen(false);
+    if (!showToggle) {
+      setSideMenuOpen(false);
+      setBarMenuOpen(false);
+      setCaptureOptionsOpen(false);
+    }
     $sideMenuToggle.hidden = !showToggle;
+    syncBarToggleLabel();
   }
 }
 
@@ -1546,7 +1589,12 @@ function cancelCapture() {
 
 function showReview() {
   $camera.classList.add('is-reviewing');
+  // Die Pille der Leiste zeigt ab jetzt die Rahmen statt der Filter.
+  renderBarMenu();
   syncCancelHome();
+  setBarMenuOpen(false);
+  setStampMenuOpen(false);
+  setCaptureOptionsOpen(false);
   closeReviewTools();
   // Ausgangszustand: ungefiltertes Foto, Auswahl auf „Standard“.
   applyFilterSelection();
@@ -1560,7 +1608,8 @@ function showReview() {
       actions.hidden = false;
       gsap.from(actions, { y: 16, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
     }
-    openSideMenu('overlay');
+    renderBarMenu();
+    syncBarToggleLabel();
     const keepBtn = document.getElementById('landscapeKeep');
     if (keepBtn) keepBtn.focus();
     return;
@@ -1576,6 +1625,8 @@ function hideReview() {
   const actions = document.getElementById('reviewActions');
   if (actions) actions.hidden = true;
   $camera.classList.remove('is-reviewing', 'is-stamping');
+  setStampMenuOpen(false);
+  renderBarMenu();
   syncCancelHome();
   closeReviewTools();
 }
@@ -3834,6 +3885,8 @@ const $sideViewport = document.querySelector('.side-menu__viewport');
 const $sideScrollUp = document.getElementById('sideScrollUp');
 const $sideScrollDown = document.getElementById('sideScrollDown');
 const $sideMenuToggle = document.getElementById('sideMenuToggle');
+const $captureOptions = document.getElementById('captureOptions');
+const $captureOptionsToggle = document.getElementById('captureOptionsToggle');
 const $sideRail = document.getElementById('sideRail');
 const $endScreen = document.getElementById('endScreen');
 const $cancelHome = document.getElementById('cancelHome');
@@ -3847,6 +3900,601 @@ document.addEventListener('keydown', () => {
 document.addEventListener('pointerdown', () => {
   document.body.classList.remove('is-keyboard-nav');
 }, true);
+
+// ============================================================
+//  FILTER-MENÜ IN DER UNTEREN LEISTE
+//  Kein Overlay mehr: Das Menü klappt in der Leiste selbst auf und
+//  zeigt die Filter als runde, horizontal scrollbare Knöpfe. Der
+//  Auslöser rutscht dabei weich zur Seite.
+// ============================================================
+// var statt let: applyLanguage() kann laufen, bevor die Filtervariablen
+// weiter oben im Skript initialisiert sind.
+var barMenuReady = false;
+
+function barMenuPanelEl() { return document.getElementById('barMenuPanel'); }
+function barMenuListEl() { return document.getElementById('barMenuList'); }
+function barFilterPinEl() { return document.getElementById('barFilterPin'); }
+
+const BAR_COLOR_FILTERS = {
+  standard: 'filterStandard',
+  sw: 'filterSw',
+  vintage: 'filterVintage',
+  knackig: 'filterKnackig'
+};
+
+// In der Kamera gehören die Filter in die Leiste; im Review öffnet derselbe
+// Button weiterhin die Schublade für Overlay und Sticker.
+function barMenuShowsFilters() {
+  return !$camera.classList.contains('is-reviewing')
+    && !$camera.classList.contains('is-stamping');
+}
+
+// Dieselbe Pille zeigt im Review die Rahmen als Kacheln. Im Sticker-Modus
+// nicht: dort übernimmt die Sticker-Pille die Auswahl.
+function barMenuShowsOverlays() {
+  return !$camera.classList.contains('is-stamping')
+    && $camera.classList.contains('is-reviewing')
+    && appSettings.overlaysEnabled !== false;
+}
+
+// Sticker-Pille: gleiche Leiste, gleiches Glas, klappt nach links auf.
+function barMenuShowsStamps() {
+  return !$camera.classList.contains('is-stamping')
+    && $camera.classList.contains('is-reviewing')
+    && appSettings.stickersEnabled !== false;
+}
+
+function stampPanelEl() { return document.getElementById('stampPanel'); }
+function stampListEl() { return document.getElementById('stampList'); }
+
+function stampMenuIsOpen() {
+  const panel = stampPanelEl();
+  return !!panel && panel.classList.contains('is-open');
+}
+
+function renderStampPanel() {
+  const list = stampListEl();
+  if (!list) return;
+  list.innerHTML = '';
+  const addDivider = () => {
+    const divider = document.createElement('span');
+    divider.className = 'bar-filter-divider';
+    divider.setAttribute('aria-hidden', 'true');
+    list.appendChild(divider);
+  };
+  SHAPE_STICKERS.forEach((sticker) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'bar-tile bar-tile--stamp';
+    btn.setAttribute('aria-label', t(sticker.ariaKey));
+    const source = $stickerPalette.querySelector('[data-sticker="' + sticker.kind + '"] svg');
+    if (source) btn.appendChild(source.cloneNode(true));
+    btn.addEventListener('click', () => {
+      if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
+      addSticker(sticker.kind);
+    });
+    enableMenuDrag(btn, { kind: 'sticker', sticker: sticker.kind });
+    list.appendChild(btn);
+  });
+  ['emoji', 'uni'].forEach((key) => {
+    const stamps = STAMPS[key] || [];
+    if (!stamps.length) return;
+    addDivider();
+    stamps.forEach((stamp) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'bar-tile bar-tile--stamp bar-tile--stamp-emoji';
+      btn.setAttribute('aria-label', t('stickerEmojiAria', { emoji: stamp.glyph }));
+      const glyph = document.createElement('span');
+      glyph.className = 'bar-tile__glyph';
+      glyph.textContent = stamp.glyph;
+      btn.appendChild(glyph);
+      btn.addEventListener('click', () => {
+        if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
+        addEmojiStamp(stamp.glyph);
+      });
+      enableMenuDrag(btn, { kind: 'sticker', glyph: stamp.glyph });
+      list.appendChild(btn);
+    });
+  });
+}
+
+function setStampMenuOpen(open) {
+  const panel = stampPanelEl();
+  if (!panel) return;
+  const next = !!open && barMenuShowsStamps();
+  if (next) {
+    setBarMenuOpen(false);
+    setCaptureOptionsOpen(false);
+    renderStampPanel();
+  }
+  panel.classList.toggle('is-open', next);
+  panel.inert = !next;
+  panel.setAttribute('aria-hidden', String(!next));
+  const btn = document.getElementById('barStickerToggle');
+  if (btn) btn.setAttribute('aria-expanded', String(next));
+}
+
+// ---- Elemente aus den Menüs aufs Foto ziehen -------------------------
+// Ein kurzer Tipp fügt wie gewohnt in der Mitte ein. Ein senkrechtes Ziehen
+// nimmt das Element am Finger mit: die Leiste blendet aus, über dem Foto
+// bleibt es liegen, über dem Mülleimer wird es verworfen.
+var menuDrag = null;
+
+function elementTrashEl() { return document.getElementById('elementTrash'); }
+
+function pointerInside(rect, x, y) {
+  return !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+}
+
+function paintMenuGhost(x, y) {
+  if (!menuDrag) return;
+  menuDrag.x = x;
+  menuDrag.y = y;
+  menuDrag.ghost.style.left = x + 'px';
+  menuDrag.ghost.style.top = y + 'px';
+  const trash = elementTrashEl();
+  if (trash) trash.classList.toggle('is-target', pointerInside(trash.getBoundingClientRect(), x, y));
+}
+
+function beginMenuDrag(btn, payload, ev) {
+  const ghost = document.createElement('div');
+  ghost.className = 'menu-drag-ghost';
+  if (payload.kind === 'overlay') {
+    const img = document.createElement('img');
+    img.src = payload.src;
+    img.alt = '';
+    ghost.appendChild(img);
+    setBarMenuOpen(false);
+  } else {
+    if (payload.glyph) {
+      const span = document.createElement('span');
+      span.className = 'bar-tile__glyph';
+      span.textContent = payload.glyph;
+      ghost.appendChild(span);
+    } else {
+      const source = $stickerPalette.querySelector('[data-sticker="' + payload.sticker + '"] svg');
+      if (source) ghost.appendChild(source.cloneNode(true));
+    }
+    setStampMenuOpen(false);
+  }
+  document.body.appendChild(ghost);
+  menuDrag = { btn, payload, ghost, x: ev.clientX, y: ev.clientY };
+  $camera.classList.add('is-dragging-element');
+  paintMenuGhost(ev.clientX, ev.clientY);
+}
+
+function cancelMenuDrag() {
+  if (!menuDrag) return;
+  menuDrag.ghost.remove();
+  menuDrag = null;
+  $camera.classList.remove('is-dragging-element');
+  const trash = elementTrashEl();
+  if (trash) trash.classList.remove('is-target');
+}
+
+function endMenuDrag(x, y) {
+  if (!menuDrag) return;
+  const { btn, payload } = menuDrag;
+  const trash = elementTrashEl();
+  const overTrash = pointerInside(trash && trash.getBoundingClientRect(), x, y);
+  const viewfinder = $camera.querySelector('.viewfinder');
+  const overPhoto = pointerInside(viewfinder && viewfinder.getBoundingClientRect(), x, y);
+  cancelMenuDrag();
+  btn.dataset.dragged = '1';
+
+  if (overTrash) {
+    // Mülleimer: nichts ablegen — ein bereits sichtbarer Rahmen verschwindet.
+    if (payload.kind === 'overlay' && currentOverlay && currentOverlay.id === payload.id) {
+      setOverlay(NO_OVERLAY_ID);
+    }
+    return;
+  }
+  if (!overPhoto) return;
+  if (payload.kind === 'overlay') {
+    setOverlay(payload.id);
+    return;
+  }
+  // Sticker genau dort platzieren, wo der Finger loslässt.
+  if (payload.glyph) addEmojiStamp(payload.glyph);
+  else addSticker(payload.sticker);
+  const st = activeStickers[activeStickers.length - 1];
+  if (!st) return;
+  const rect = photoStageRect();
+  st.x = Math.min(94, Math.max(6, ((x - rect.left) / rect.width) * 100));
+  st.y = Math.min(94, Math.max(6, ((y - rect.top) / rect.height) * 100));
+  positionSticker(st);
+  selectSticker(st);
+}
+
+function enableMenuDrag(btn, payload) {
+  btn.addEventListener('pointerdown', (e) => {
+    if (e.button !== undefined && e.button !== 0) return;
+    delete btn.dataset.dragged;
+    const startX = e.clientX;
+    const startY = e.clientY;
+    let dragging = false;
+
+    const move = (ev) => {
+      if (!dragging) {
+        const dx = Math.abs(ev.clientX - startX);
+        const dy = Math.abs(ev.clientY - startY);
+        // Erst ab einer klaren senkrechten Geste ziehen — sonst bleibt es
+        // beim waagerechten Scrollen des Bandes.
+        if (dy < 12 || dy <= dx) return;
+        dragging = true;
+        beginMenuDrag(btn, payload, ev);
+      }
+      ev.preventDefault();
+      paintMenuGhost(ev.clientX, ev.clientY);
+    };
+    const up = (ev) => {
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      if (!dragging) return;
+      if (ev.type === 'pointercancel') cancelMenuDrag();
+      else endMenuDrag(ev.clientX, ev.clientY);
+    };
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+  });
+}
+
+function barMenuIsOpen() {
+  const panel = barMenuPanelEl();
+  return !!panel && panel.classList.contains('is-open');
+}
+
+function barMenuChip(kind, value, disc, label) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'dot-chip';
+  btn.dataset.kind = kind;
+  btn.dataset.value = value;
+  btn.setAttribute('aria-label', label);
+  btn.setAttribute('aria-pressed', 'false');
+  const discEl = document.createElement('span');
+  discEl.className = 'dot-chip__disc';
+  discEl.setAttribute('aria-hidden', 'true');
+  if (kind === 'color') discEl.classList.add('dot-chip__disc--' + value);
+  else discEl.textContent = disc;
+  const labelEl = document.createElement('span');
+  labelEl.className = 'dot-chip__label';
+  labelEl.textContent = label;
+  btn.appendChild(discEl);
+  // Die Beschriftung sitzt im Kreis, damit der Kreis das hohe Menü füllt.
+  discEl.appendChild(labelEl);
+  btn.addEventListener('click', () => {
+    if (!appSettings.filtersEnabled) return;
+    // Ein zweiter Tipp auf den schon gewählten Filter hebt ihn wieder auf:
+    // Gesichtsfilter zurück auf „Original“, Farbfilter zurück auf „Standard“.
+    if (kind === 'face') {
+      if (!filterEngine) return;
+      const active = filterEngine.getFilter();
+      filterEngine.setFilter(active === value ? 'none' : value);
+      syncFaceFilterSelection();
+    } else {
+      currentFilter = currentFilter === value ? 'standard' : value;
+      applyFilterSelection();
+    }
+    updateBarMenuSelection();
+    updateSideSelection();
+  });
+  return btn;
+}
+
+// Der feste Kreis links setzt beide Filterarten auf einmal zurück: Farb- und
+// Gesichtsfilter wieder auf „Standard“ bzw. „Original“.
+function resetBarFilters() {
+  if (!appSettings.filtersEnabled) return;
+  currentFilter = 'standard';
+  applyFilterSelection();
+  if (filterEngine) filterEngine.setFilter('none');
+  syncFaceFilterSelection();
+  updateBarMenuSelection();
+  updateSideSelection();
+}
+
+function barResetChip() {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'dot-chip dot-chip--reset';
+  btn.setAttribute('aria-label', t('barFilterReset'));
+  const discEl = document.createElement('span');
+  discEl.className = 'dot-chip__disc';
+  discEl.setAttribute('aria-hidden', 'true');
+  discEl.textContent = '↺';
+  const labelEl = document.createElement('span');
+  labelEl.className = 'dot-chip__label';
+  labelEl.textContent = t('barFilterReset');
+  discEl.appendChild(labelEl);
+  btn.appendChild(discEl);
+  btn.addEventListener('click', resetBarFilters);
+  return btn;
+}
+
+// Rahmen als reine Bildquadrate: kein Text, nur das Vorschaubild.
+function barOverlayTile(overlay) {
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.className = 'bar-tile bar-tile--frame';
+  btn.dataset.kind = 'overlay';
+  btn.dataset.value = overlay.id;
+  btn.setAttribute('aria-label', overlayLabel(overlay));
+  btn.setAttribute('aria-pressed', 'false');
+  const img = document.createElement('img');
+  img.src = overlay.src;
+  img.alt = '';
+  img.loading = 'lazy';
+  img.draggable = false;
+  btn.appendChild(img);
+  btn.addEventListener('click', () => {
+    if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
+    setOverlay(overlay.id);
+  });
+  enableMenuDrag(btn, { kind: 'overlay', id: overlay.id, src: overlay.src });
+  return btn;
+}
+
+function renderBarOverlays(list) {
+  const groups = [
+    [NO_OVERLAY_OPTION, ...(OVERLAYS.standard || [])],
+    OVERLAYS.event || [],
+    OVERLAYS.uni || []
+  ];
+  groups.forEach((items, index) => {
+    if (!items.length) return;
+    // Ohne Beschriftung trennen dünne Striche die Rahmen-Serien.
+    if (index > 0 && list.children.length) {
+      const divider = document.createElement('span');
+      divider.className = 'bar-filter-divider';
+      divider.setAttribute('aria-hidden', 'true');
+      list.appendChild(divider);
+    }
+    items.forEach((overlay) => list.appendChild(barOverlayTile(overlay)));
+  });
+}
+
+function renderBarMenu() {
+  const list = barMenuListEl();
+  if (!list) return;
+  const overlaysMode = barMenuShowsOverlays();
+  const panel = barMenuPanelEl();
+  if (panel) panel.dataset.mode = overlaysMode ? 'overlays' : 'filters';
+  const pin = barFilterPinEl();
+  if (pin) {
+    pin.innerHTML = '';
+    if (!overlaysMode) pin.appendChild(barResetChip());
+  }
+  list.innerHTML = '';
+  if (overlaysMode) {
+    renderBarOverlays(list);
+    updateBarMenuSelection();
+    return;
+  }
+  Object.keys(BAR_COLOR_FILTERS).forEach((id) => {
+    list.appendChild(barMenuChip('color', id, '', t(BAR_COLOR_FILTERS[id])));
+  });
+  const divider = document.createElement('span');
+  divider.className = 'bar-filter-divider';
+  divider.setAttribute('aria-hidden', 'true');
+  list.appendChild(divider);
+  const filters = (window.SnapBoxFilters && window.SnapBoxFilters.FILTERS) || [];
+  filters.forEach((filter) => {
+    list.appendChild(barMenuChip('face', filter.id, filter.emoji || '✕', faceLabel(filter)));
+  });
+  updateBarMenuSelection();
+}
+
+function updateBarMenuSelection() {
+  if (!barMenuReady) return;
+  const list = barMenuListEl();
+  if (!list) return;
+  const face = filterEngine ? filterEngine.getFilter() : 'none';
+  list.querySelectorAll('[data-kind]').forEach((btn) => {
+    const kind = btn.dataset.kind;
+    let active;
+    if (kind === 'face') active = face === btn.dataset.value;
+    else if (kind === 'overlay') {
+      active = btn.dataset.value === NO_OVERLAY_ID
+        ? !currentOverlay
+        : (!!currentOverlay && currentOverlay.id === btn.dataset.value);
+    } else active = currentFilter === btn.dataset.value;
+    btn.classList.toggle('is-selected', active);
+    btn.setAttribute('aria-pressed', String(active));
+  });
+}
+
+// Derselbe Button in der Leiste heißt in der Kamera „Filter“ und im Review
+// „Menü“ (Overlay/Sticker). Beschriftung und ARIA hängen am offenen Panel.
+function syncBarToggleLabel() {
+  const toggle = document.getElementById('sideMenuToggle');
+  if (!toggle) return;
+  const overlaysMode = barMenuShowsOverlays();
+  const filtersMode = !overlaysMode && barMenuShowsFilters();
+  const open = (filtersMode || overlaysMode)
+    ? barMenuIsOpen()
+    : !!$sideMenu && $sideMenu.classList.contains('is-open');
+  let labelKey = 'sideMenuToggleOpen';
+  let ariaKey = 'sideMenuShowAria';
+  let controls = 'sideMenu';
+  if (filtersMode) {
+    labelKey = 'barFilters';
+    ariaKey = open ? 'barFiltersHideAria' : 'barFiltersShowAria';
+    controls = 'barMenuPanel';
+  } else if (overlaysMode) {
+    labelKey = 'barFrames';
+    ariaKey = open ? 'barFramesHideAria' : 'barFramesShowAria';
+    controls = 'barMenuPanel';
+  } else {
+    labelKey = open ? 'sideMenuToggleClose' : 'sideMenuToggleOpen';
+    ariaKey = open ? 'sideMenuHideAria' : 'sideMenuShowAria';
+  }
+  const label = toggle.querySelector('.side-menu-toggle__label');
+  if (label) {
+    label.dataset.i18n = labelKey;
+    label.textContent = t(labelKey);
+  }
+  toggle.dataset.i18nAria = ariaKey;
+  toggle.setAttribute('aria-label', t(ariaKey));
+  toggle.setAttribute('aria-expanded', String(open));
+  toggle.setAttribute('aria-controls', controls);
+  // Der Sticker-Knopf gehört zur Sticker-Pille und erscheint nur im Review.
+  const stickerBtn = document.getElementById('barStickerToggle');
+  if (stickerBtn) {
+    setFeatureHidden(stickerBtn, !barMenuShowsStamps());
+    stickerBtn.setAttribute('aria-expanded', String(stampMenuIsOpen()));
+  }
+}
+
+// Beim Aufklappen deutet ein kurzer elastischer Ruck an, dass sich das
+// Filterband waagerecht scrollen lässt: Das Band scrollt ein Stück weiter
+// und federt zurück. Bewusst über scrollLeft und nicht über transform —
+// ein verschobenes Band wandert aus der Pille heraus (links) und der am
+// Rand neu sichtbare Bereich wird nicht fertig gezeichnet (rechts).
+var filterScrollHintTimer = 0;
+var filterScrollPulse = 0;
+var filterScrollPulseCleanup = null;
+
+// Laufenden Ruck stoppen und dabei die Scroll-Einstellungen zurücksetzen.
+function endFilterScrollPulse() {
+  if (filterScrollPulse) {
+    cancelAnimationFrame(filterScrollPulse);
+    filterScrollPulse = 0;
+  }
+  if (filterScrollPulseCleanup) {
+    filterScrollPulseCleanup();
+    filterScrollPulseCleanup = null;
+  }
+}
+
+function hintFilterListScroll() {
+  const list = barMenuListEl();
+  if (!list || !barMenuIsOpen()) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const max = list.scrollWidth - list.clientWidth;
+  if (max <= 2) return;
+  const start = Math.max(0, Math.min(list.scrollLeft, max));
+  // Platz in Scrollrichtung nehmen; steht das Band schon am Ende, läuft der
+  // Ruck nach links statt ins Leere.
+  let room = max - start;
+  let direction = 1;
+  if (room < 60) {
+    direction = -1;
+    room = start;
+  }
+  const distance = Math.round(Math.min(room, Math.max(70, Math.min(260, list.clientWidth * 0.3))));
+  if (distance <= 4) return;
+  endFilterScrollPulse();
+  // Snapping und weiches Scrollen würden die Einzelbilder verschlucken: jede
+  // gesetzte Position würde sofort auf einen Rastpunkt gezogen bzw. neu
+  // weich animiert. Darum während des Rucks aus und danach zurück.
+  const prevSnap = list.style.scrollSnapType;
+  const prevBehavior = list.style.scrollBehavior;
+  filterScrollPulseCleanup = () => {
+    list.style.scrollSnapType = prevSnap;
+    list.style.scrollBehavior = prevBehavior;
+  };
+  list.style.scrollSnapType = 'none';
+  list.style.scrollBehavior = 'auto';
+  const duration = 2000;
+  const easeOut = (t) => 1 - Math.pow(1 - t, 3);
+  const easeInOut = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  const t0 = performance.now();
+  const step = (now) => {
+    const p = Math.min(1, (now - t0) / duration);
+    // Erst raus (ease-out), dann zurückfedern (ease-in-out).
+    const f = p < 0.45 ? easeOut(p / 0.45) : 1 - easeInOut((p - 0.45) / 0.55);
+    list.scrollLeft = start + direction * distance * f;
+    filterScrollPulse = p < 1 ? requestAnimationFrame(step) : 0;
+    if (p >= 1) endFilterScrollPulse();
+  };
+  filterScrollPulse = requestAnimationFrame(step);
+}
+
+// Wisch-Hinweis über dem Filterband: der Fingerpunkt fährt einmal quer
+// durch die Pille, damit man sieht, dass die Filter scrollbar sind.
+var filterHintHideTimer = 0;
+function hideFilterScrollHint() {
+  window.clearTimeout(filterHintHideTimer);
+  filterHintHideTimer = 0;
+  endFilterScrollPulse();
+  const hint = document.getElementById('barSwipeHint');
+  if (hint) hint.classList.remove('is-playing');
+}
+
+function playFilterScrollHint() {
+  const list = barMenuListEl();
+  const hint = document.getElementById('barSwipeHint');
+  if (!list || !hint || !barMenuIsOpen()) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  if (list.scrollWidth <= list.clientWidth + 2) return;
+  // Weg an der Bandbreite ausrichten: je breiter die Pille, desto weiter
+  // fährt der Finger, aber gedeckelt, damit er in der Pille bleibt.
+  const travel = Math.round(Math.max(120, Math.min(300, list.clientWidth * 0.42)));
+  hint.style.setProperty('--hint-travel', travel + 'px');
+  hint.classList.remove('is-playing');
+  // Reflow erzwingen, damit die Animation bei jedem Öffnen neu startet.
+  void hint.offsetWidth;
+  hint.classList.add('is-playing');
+  window.clearTimeout(filterHintHideTimer);
+  filterHintHideTimer = window.setTimeout(hideFilterScrollHint, 2250);
+}
+
+// Menü und Optionen sind Geschwister: Es ist immer nur eines offen.
+function setBarMenuOpen(open) {
+  const panel = barMenuPanelEl();
+  if (!panel) return;
+  const next = !!open && (
+    (barMenuShowsFilters() && appSettings.filtersEnabled !== false)
+    || barMenuShowsOverlays()
+  );
+  if (next) {
+    setSideMenuOpen(false);
+    setCaptureOptionsOpen(false);
+    setStampMenuOpen(false);
+    // Inhalt passend zur Phase aufbauen (Filter oder Rahmen).
+    renderBarMenu();
+  }
+  panel.classList.toggle('is-open', next);
+  panel.inert = !next;
+  panel.setAttribute('aria-hidden', String(!next));
+  const bar = document.getElementById('captureBar');
+  if (bar) bar.classList.toggle('is-menu-open', next);
+  syncBarToggleLabel();
+  if (filterScrollHintTimer) {
+    window.clearTimeout(filterScrollHintTimer);
+    filterScrollHintTimer = 0;
+  }
+  if (!next) hideFilterScrollHint();
+  if (next) {
+    updateBarMenuSelection();
+    // Erst nach dem Aufklappen messen: während die Pille wächst, ist die
+    // sichtbare Breite des Bandes noch nicht die endgültige.
+    filterScrollHintTimer = window.setTimeout(() => {
+      filterScrollHintTimer = 0;
+      hintFilterListScroll();
+      playFilterScrollHint();
+    }, 460);
+  }
+}
+
+renderBarMenu();
+barMenuReady = true;
+updateBarMenuSelection();
+// Mausrad scrollt das Filterband waagerecht (Kiosk mit Maus).
+if (barMenuListEl()) {
+  barMenuListEl().addEventListener('wheel', (e) => {
+    const list = barMenuListEl();
+    if (!list) return;
+    if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+    if (list.scrollWidth <= list.clientWidth + 1) return;
+    list.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
+}
 
 // Ein einziges Randmenü mit drei Bereichen, die je nach Schritt verfügbar
 // sind: Kamera = Filter, Review = Overlay und Sticker. Die Unterteilung in
@@ -3877,18 +4525,10 @@ function setSideMenuOpen(open, options = {}) {
   const next = !!open
     && !$sideMenu.classList.contains('feature-disabled')
     && !$sideMenu.classList.contains('is-locked');
+  if (next) { setCaptureOptionsOpen(false); setBarMenuOpen(false); }
   $sideMenu.classList.toggle('is-open', next);
   $sideMenu.inert = !next;
-  $sideMenuToggle.setAttribute('aria-expanded', String(next));
-  const ariaKey = next ? 'sideMenuHideAria' : 'sideMenuShowAria';
-  $sideMenuToggle.dataset.i18nAria = ariaKey;
-  $sideMenuToggle.setAttribute('aria-label', t(ariaKey));
-  const toggleLabel = $sideMenuToggle.querySelector('.side-menu-toggle__label');
-  if (toggleLabel) {
-    const labelKey = next ? 'sideMenuToggleClose' : 'sideMenuToggleOpen';
-    toggleLabel.dataset.i18n = labelKey;
-    toggleLabel.textContent = t(labelKey);
-  }
+  syncBarToggleLabel();
   if (!next && wasOpen && focusWasInside) {
     $sideMenuToggle.focus({ preventScroll: true });
   } else if (next && options.focus) {
@@ -3906,10 +4546,53 @@ function focusActiveSideTab() {
 
 if ($sideMenuToggle) {
   $sideMenuToggle.addEventListener('click', () => {
+    // Kamera: Filter in der Leiste. Review: Schublade für Overlay/Sticker.
+    if (barMenuShowsFilters() || barMenuShowsOverlays()) {
+      setBarMenuOpen(!barMenuIsOpen());
+      return;
+    }
     const opening = !$sideMenu.classList.contains('is-open');
     setSideMenuOpen(opening, { focus: opening });
   });
 }
+
+// Review: Sticker-Schublade als eigener Knopf, damit die Pille die Rahmen
+// zeigen kann.
+const $barStickerToggle = document.getElementById('barStickerToggle');
+if ($barStickerToggle) {
+  $barStickerToggle.addEventListener('click', () => {
+    setStampMenuOpen(!stampMenuIsOpen());
+  });
+}
+
+// Countdown und Modus teilen sich einen Button in der unteren Leiste. Das
+// Panel darüber klappt per Tipp wieder zu; es liegt nie über dem Auslöser.
+function setCaptureOptionsOpen(open) {
+  if (!$captureOptions || !$captureOptionsToggle) return;
+  const next = !!open && !$captureOptionsToggle.disabled;
+  $captureOptions.classList.toggle('is-open', next);
+  $captureOptions.inert = !next;
+  $captureOptions.setAttribute('aria-hidden', String(!next));
+  const bar = document.getElementById('captureBar');
+  if (bar) bar.classList.toggle('is-options-open', next);
+  if (next) setBarMenuOpen(false);
+  $captureOptionsToggle.setAttribute('aria-expanded', String(next));
+}
+
+if ($captureOptionsToggle) {
+  $captureOptionsToggle.addEventListener('click', () => {
+    const opening = $captureOptionsToggle.getAttribute('aria-expanded') !== 'true';
+    if (opening) setSideMenuOpen(false);
+    setCaptureOptionsOpen(opening);
+  });
+}
+
+// Tippen neben das Panel schließt es — wie beim Seitenmenü.
+document.addEventListener('click', (e) => {
+  if (!$captureOptions || !$captureOptions.classList.contains('is-open')) return;
+  if (e.target.closest('#captureOptions, #captureOptionsToggle')) return;
+  setCaptureOptionsOpen(false);
+});
 
 let sideContext = 'filter';
 let currentOverlay = null;
@@ -4321,6 +5004,7 @@ function renderSideMenu() {
 }
 
 function updateSideSelection() {
+  updateBarMenuSelection();
   if (!$sideMenuList) return;
   $sideMenuList.querySelectorAll('.side-menu__item[data-kind]').forEach((el) => {
     const kind = el.dataset.kind;
@@ -4529,7 +5213,10 @@ function addEmojiStamp(glyph) {
 
 function openStampMode() {
   if (!hasPhoto || !appSettings.stickersEnabled) return;
+  setBarMenuOpen(false);
+  setCaptureOptionsOpen(false);
   $camera.classList.add('is-stamping');
+  syncBarToggleLabel();
   openSideMenu('stamp');
   // Sticker werden nur im Menü gewählt; die Review-Aktionen bleiben sichtbar.
   setSideMenuOpen(true);
@@ -4537,10 +5224,10 @@ function openStampMode() {
 
 function closeStampMode(options = {}) {
   $camera.classList.remove('is-stamping');
-  if (isKioskLayout() && !options.keepMenuOpen) {
-    openSideMenu('overlay');
-    setSideMenuOpen(false);
-  }
+  if (isKioskLayout() && !options.keepMenuOpen) setSideMenuOpen(false);
+  // Zurück im Review: die Pille zeigt wieder die Rahmen statt der Filter.
+  renderBarMenu();
+  syncBarToggleLabel();
 }
 
 function showEndScreen(url) {
@@ -4555,6 +5242,8 @@ function showEndScreen(url) {
   }
   if ($endScreen) $endScreen.hidden = false;
   setSideMenuOpen(false);
+  setBarMenuOpen(false);
+  setStampMenuOpen(false);
   $camera.classList.add('is-ended');
   $camera.classList.remove('is-reviewing', 'is-stamping');
   setHomeMode('done');
@@ -4828,6 +5517,18 @@ window.addEventListener('load', async () => {
     }
 
     if (e.key === 'Escape') {
+      if (barMenuIsOpen()) {
+        e.preventDefault();
+        setBarMenuOpen(false);
+        if ($sideMenuToggle) $sideMenuToggle.focus({ preventScroll: true });
+        return;
+      }
+      if ($captureOptions && $captureOptions.classList.contains('is-open')) {
+        e.preventDefault();
+        setCaptureOptionsOpen(false);
+        if ($captureOptionsToggle) $captureOptionsToggle.focus({ preventScroll: true });
+        return;
+      }
       if ($sideMenu && $sideMenu.classList.contains('is-open')) {
         e.preventDefault();
         setSideMenuOpen(false);

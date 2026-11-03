@@ -354,7 +354,6 @@ body.orientation-landscape .viewfinder {
   isolation: isolate;
 }
 
-#camera.is-reviewing .viewfinder,
 #camera.is-stamping .viewfinder {
   outline: 8px solid var(--c-alert);
   outline-offset: -8px;
@@ -369,25 +368,41 @@ body.orientation-landscape .streak { display: none !important; }
 body.orientation-landscape .camera__controls { display: contents; }
 body.orientation-landscape .lang-switch--portrait { display: none !important; }
 
-/* --- Untere Steuerleiste ------------------------------------------ */
+/* --- Untere Steuerleiste ------------------------------------------
+   Links das Menü, mittig der Auslöser, rechts Countdown/Modus hinter einem
+   gemeinsamen Button. Rechts bleibt Platz für den schwebenden Start-Button. */
 body.orientation-landscape .capture-bar {
   grid-area: 2 / 1;
+  position: relative;
+  z-index: 2;
   display: grid;
+  /* Leere Flächen der Leiste lassen Klicks durch (im Review liegen die
+     runden Aktionen in derselben Zelle). */
+  pointer-events: none;
   height: 100%;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   min-width: 0;
   align-items: end;
   gap: clamp(10px, 1.4vw, 24px);
-  padding: 0 6px 0 12px;
+  padding: 0 calc(var(--home-size) + clamp(14px, 1.6vw, 26px)) 0 clamp(10px, 1.2vw, 18px);
 }
-body.orientation-landscape .capture-bar > .capture-switch:first-of-type { grid-column: 1; grid-row: 1; justify-self: start; }
-body.orientation-landscape .capture-bar > .capture-switch:last-of-type {
+body.orientation-landscape .capture-bar > * { pointer-events: auto; }
+body.orientation-landscape .capture-bar > .side-menu-toggle {
+  display: flex;
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+}
+body.orientation-landscape .capture-bar > .bar-options {
   grid-column: 3;
   grid-row: 1;
   justify-self: end;
 }
-#camera.is-reviewing .capture-bar,
+/* Im Review und auf dem Endscreen übernehmen die runden Aktionen bzw. der
+   Endscreen selbst; nur das Menü (Overlay/Sticker) bleibt erreichbar. */
+#camera.is-reviewing .capture-bar > .kiosk-shutter,
+#camera.is-reviewing .capture-bar > .bar-options { display: none; }
 #camera.is-ended .capture-bar { display: none; }
 
 .capture-switch {
@@ -430,13 +445,94 @@ body.orientation-landscape .capture-bar > .capture-switch:last-of-type {
 .seg__btn.is-selected { background: var(--c-highlight); color: var(--c-accent-contrast); font-weight: 700; }
 .seg__btn:focus-visible { outline: none; box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.7); }
 
-/* Zentraler, sichtbarer Auslöser in der unteren Leiste. Das runde
-   schwarze Gehäuse dahinter ragt bewusst in die Vorschau hinein und gibt
-   dem größeren Auslöser einen ruhigen, abgerundeten Abschluss. */
+/* --- Menü- und Options-Button der unteren Leiste -------------------
+   Beide sitzen als runde Buttons mit Beschriftung in der Fußleiste, damit
+   die Vorschau die volle Breite behält. */
+.bar-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--action-gap);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #e8eaf0;
+  font: inherit;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.bar-btn__icon {
+  display: grid;
+  place-items: center;
+  width: clamp(50px, 4.6vw, 64px);
+  aspect-ratio: 1;
+  border: 2px solid rgba(255, 255, 255, 0.24);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.bar-btn__icon svg { width: 48%; height: 48%; }
+.bar-btn:hover .bar-btn__icon {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.13);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+.bar-btn:active .bar-btn__icon { transform: scale(0.95); }
+.bar-btn:focus-visible { outline: none; }
+.bar-btn:focus-visible .bar-btn__icon { box-shadow: 0 0 0 4px rgb(var(--c-highlight-rgb) / 0.55); }
+.bar-btn:disabled { opacity: 0.4; cursor: default; }
+.bar-btn:disabled .bar-btn__icon { transform: none; }
+.bar-btn[aria-expanded="true"] .bar-btn__icon {
+  border-color: var(--c-highlight);
+  background: rgb(var(--c-highlight-rgb) / 0.16);
+  color: var(--c-highlight);
+}
+.bar-btn__label {
+  font-size: clamp(11px, 0.85vw, 13px);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  line-height: 1.2;
+  color: #9aa1ad;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.bar-btn[aria-expanded="true"] .bar-btn__label { color: var(--c-highlight); }
+
+/* Panel über der Leiste: Countdown und Modus an einer Stelle. */
+.bar-options {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+}
+.bar-popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + clamp(10px, 1.2vh, 16px));
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1.1vh, 14px);
+  width: clamp(240px, 21vw, 306px);
+  padding: clamp(12px, 1.1vw, 18px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: #17181d;
+  box-shadow: 0 -8px 44px rgba(0, 0, 0, 0.55);
+}
+.bar-popover .capture-switch { align-items: stretch; gap: 6px; }
+.bar-popover .capture-switch__label { text-align: left; }
+.bar-popover .seg { display: flex; width: 100%; }
+.bar-popover .seg__btn {
+  flex: 1 1 0;
+  min-width: 0;
+  padding-inline: clamp(8px, 0.8vw, 14px);
+  text-align: center;
+}
+
+/* Zentraler, sichtbarer Auslöser in der unteren Leiste. */
 .kiosk-shutter {
   --shutter-size: clamp(88px, 9.2vw, 124px);
-  --shutter-housing: clamp(12px, 1.4vw, 18px);
-  position: relative;
   grid-column: 2;
   grid-row: 1;
   justify-self: center;
@@ -453,21 +549,7 @@ body.orientation-landscape .capture-bar > .capture-switch:last-of-type {
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-.kiosk-shutter::before {
-  content: "";
-  position: absolute;
-  top: calc(var(--shutter-housing) * -1);
-  left: 50%;
-  width: calc(var(--shutter-size) + var(--shutter-housing) * 2);
-  aspect-ratio: 1;
-  border-radius: 50%;
-  background: #08090c;
-  pointer-events: none;
-  transform: translateX(-50%);
-}
 .kiosk-shutter__disc {
-  position: relative;
-  z-index: 1;
   display: grid;
   place-items: center;
   width: var(--shutter-size);
@@ -481,8 +563,6 @@ body.orientation-landscape .capture-bar > .capture-switch:last-of-type {
 }
 .kiosk-shutter__disc svg { width: 38%; height: 38%; }
 .kiosk-shutter__label {
-  position: relative;
-  z-index: 1;
   font-size: clamp(13px, 1vw, 15px);
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -508,21 +588,28 @@ body.orientation-landscape .capture-bar > .capture-switch:last-of-type {
    44+ px große Touchfläche. */
 :root {
   --stage-pad: clamp(14px, 1.5vw, 24px);
+  /* Einheitlicher kleiner Abstand der schwebenden Knöpfe zu den Bildkanten */
+  --bar-edge-inset: clamp(6px, 0.6vw, 12px);
   --stage-gap-y: clamp(10px, 1.1vw, 18px);
   --stage-bottom-h: clamp(82px, 7.8vw, 110px);
   --menu-w: clamp(300px, 26vw, 400px);
   /* Start-Button so groß wie die runden Review-/Sticker-Aktionen; die
      Schiene wächst mit, damit der Kreis nicht am Rand klebt. */
-  --home-size: clamp(58px, 5.6vw, 78px);
-  --rail-w: calc(var(--home-size) + 18px);
+  /* Start-Knopf genau so groß wie Filter- und Options-Knopf */
+  --home-size: clamp(60px, 5.5vw, 77px);
+  /* Keine rechte Schiene mehr: Das Foto nutzt die volle Breite, der
+     Start-Button liegt als runder Button über der unteren rechten Ecke. */
+  --rail-w: 0px;
   --action-gap: 8px;
   --action-label-size: clamp(12px, 0.95vw, 15px);
   --action-label-line: 1.25;
 }
 .cancel-home {
   position: fixed;
-  right: var(--stage-pad);
-  bottom: var(--stage-pad);
+  /* Gleiche Kante wie die Buttons in der Leiste: der Kreis steht auf
+     derselben Höhe und hält den kleinen Abstand zur Bildkante ein. */
+  right: calc(var(--stage-pad) + var(--bar-edge-inset));
+  bottom: var(--bar-edge-inset);
   z-index: 10001;
   display: none;
   flex-direction: column;
@@ -593,6 +680,7 @@ body.is-keyboard-nav .cancel-home:focus .cancel-home__disc {
 /* --- Runde Review-/Sticker-Aktionen ------------------------------ */
 body.orientation-landscape .review-actions {
   grid-area: 2 / 1;
+  z-index: 1;
   display: flex;
   height: 100%;
   min-width: 0;
@@ -676,103 +764,13 @@ body.orientation-landscape .side-menu.is-locked {
   pointer-events: none;
 }
 
-/* --- Rechte Schiene ---------------------------------------------------
-   Dünner Streifen am rechten Rand: oben der Griff, mit dem das Seitenmenü
-   herausfährt, unten durch eine Linie abgetrennt der Start-Button. */
-body.orientation-landscape .side-rail {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 10000;
-  display: flex;
-  flex-direction: column;
-  width: var(--rail-w);
-  background: #0b0c10;
-  border-left: 1px solid rgba(255, 255, 255, 0.09);
-}
+/* --- Schwebender Start-Button ----------------------------------------
+   Die rechte Schiene entfällt: .side-rail und .side-rail__home sind nur
+   noch Hüllen (display: contents), der Start-Button liegt fest über der
+   unteren rechten Ecke und überdeckt keine Steuerleiste. */
+body.orientation-landscape .side-rail,
+body.orientation-landscape .side-rail__home { display: contents; }
 
-/* Der ganze obere Streifen ist die Touchfläche zum Aus- und Einklappen. */
-body.orientation-landscape .side-menu-toggle {
-  flex: 1 1 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  width: 100%;
-  min-height: 0;
-  padding: 12px 4px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  color: #b9bec9;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-  transition: background 0.2s ease, color 0.2s ease;
-}
-body.orientation-landscape .side-menu-toggle:hover {
-  background: rgba(255, 255, 255, 0.06);
-  color: #fff;
-}
-body.orientation-landscape .side-menu-toggle:active { background: rgba(255, 255, 255, 0.1); }
-body.orientation-landscape .side-menu-toggle:disabled {
-  opacity: 0.38;
-  cursor: default;
-}
-body.orientation-landscape .side-menu-toggle:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px rgb(var(--c-highlight-rgb) / 0.65);
-}
-body.orientation-landscape .side-menu-toggle[aria-expanded="true"] {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--c-highlight);
-}
-.side-menu-toggle__icon {
-  width: clamp(20px, 1.7vw, 26px);
-  height: clamp(20px, 1.7vw, 26px);
-  transition: transform 0.32s ease;
-}
-.side-menu-toggle__label {
-  font-size: clamp(12px, 0.88vw, 14px);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.2;
-  text-align: center;
-}
-body.orientation-landscape .side-menu-toggle[aria-expanded="true"] .side-menu-toggle__icon {
-  transform: rotate(180deg);
-}
-body.orientation-landscape .side-menu-toggle[aria-expanded="true"] .side-menu-toggle__label {
-  color: var(--c-highlight);
-}
-
-body.orientation-landscape .side-rail__divider {
-  display: block;
-  flex: 0 0 auto;
-  width: calc(100% - 20px);
-  height: 1px;
-  /* auto: hält Linie und Start-Button auch dann unten, wenn der Menü-Griff
-     (wie in der Galerie) ausgeblendet ist und keinen Platz mehr füllt. */
-  margin: auto 10px 0;
-  background: rgba(255, 255, 255, 0.16);
-}
-
-body.orientation-landscape .side-rail__home {
-  flex: 0 0 auto;
-  display: flex;
-  justify-content: center;
-  width: 100%;
-  padding: clamp(10px, 1.2vw, 18px) 0;
-}
-
-/* Der Start-Button sitzt in der Schiene statt über dem Inhalt. */
-body.orientation-landscape .side-rail .cancel-home {
-  position: static;
-  right: auto;
-  bottom: auto;
-}
 .side-menu__panel {
   display: flex;
   flex: 1 1 auto;
@@ -1076,7 +1074,7 @@ body.orientation-landscape .endscreen {
   :root {
     --menu-w: clamp(240px, 26vw, 300px);
     /* gleiche Größe wie .round-action__icon in diesem Breakpoint */
-    --home-size: clamp(52px, 5.8vw, 68px);
+    --home-size: clamp(60px, 5.5vw, 77px);
   }
   .splash__start-label { font-size: clamp(1.7rem, 3.2vw, 2.5rem); }
   body.orientation-landscape .challenge-card { width: clamp(220px, 24vw, 280px); }
@@ -1153,7 +1151,6 @@ body.orientation-landscape .viewfinder {
 }
 /* Der Rahmen liegt als Overlay über dem Foto (ein Outline würde von Video/
    Bild überdeckt, weil Kinder über der Border-Fläche malen). */
-#camera.is-reviewing .viewfinder::after,
 #camera.is-stamping .viewfinder::after {
   content: "";
   position: absolute;
@@ -1165,6 +1162,741 @@ body.orientation-landscape .viewfinder {
 }
 /* Ein gewähltes Overlay bringt seinen eigenen Rahmen mit. */
 #camera.has-overlay .viewfinder::after { display: none; }
+
+/* ============================================================
+   UNTERE LEISTE V2 — Menü und Optionen klappen IN der Leiste auf
+   Reihenfolge (Flex-Order): Menü | Menüfenster | Auslöser |
+   Optionsfenster | Optionsbutton. Weil beide Fenster nur ihre
+   max-width animieren, schieben sie den Auslöser weich zur Seite
+   statt über dem Foto zu schweben.
+   ============================================================ */
+body.orientation-landscape .capture-bar {
+  --bar-gap: clamp(8px, 1vw, 18px);
+  /* Knopfgrößen: 40 % kleiner als im letzten Schritt. */
+  --bar-side-size: clamp(60px, 5.5vw, 77px);
+  --bar-shutter-size: clamp(78px, 7.3vw, 109px);
+  /* Höhe der unteren Reihe: der höchste Knopf (Auslöser) samt Beschriftung.
+     Beide Menükapseln sind genau so hoch und liegen damit auf derselben
+     Zeile wie die Knöpfe. */
+  --bar-label-h: clamp(14px, 1.15vw, 18px);
+  --bar-row-h: calc(var(--bar-shutter-size) + var(--action-gap) + var(--bar-label-h));
+  /* Zusätzliche Luft zwischen Knopf und aufgeklapptem Menü. */
+  --bar-slot-gap: clamp(8px, 0.8vw, 14px);
+  /* Die Leiste schwebt über dem unteren Bildrand statt in einer eigenen
+     schwarzen Fußzeile zu sitzen. */
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: flex-end;
+  /* Die drei Knöpfe bilden eine kompakte, mittige Gruppe; links und rechts
+     ist gleich viel Luft. Der Start-Knopf sitzt separat in der Ecke und
+     verschiebt die Gruppe nicht mehr. Die Leiste bleibt innerhalb des
+     Kamerabildes — keinen Überstand über die Bühnen-Polsterung hinaus. */
+  justify-content: center;
+  gap: var(--bar-gap);
+  height: 100%;
+  min-width: 0;
+  padding: 0 var(--bar-edge-inset) var(--bar-edge-inset);
+  pointer-events: none;
+  transition: padding-left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+              padding-right 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Geöffnet läuft die Reihe bis an die linke Kante des Kamerabildes; rechts
+   bleibt Platz für den Start-Knopf in der Ecke. */
+body.orientation-landscape .capture-bar.is-menu-open {
+  /* Gleicher kleiner Abstand zur linken Bildkante wie beim Start-Knopf;
+     rechts bleibt die Start-Knopf-Breite plus zweimal dieser Abstand frei. */
+  padding-left: var(--bar-edge-inset);
+  padding-right: calc(var(--home-size) + var(--bar-edge-inset) * 2);
+}
+
+/* Kamerabild bis zur Unterkante: es gibt keine schwarze Fußzeile. */
+body.orientation-landscape .camera__stage {
+  grid-template-rows: minmax(0, 1fr);
+  gap: 0;
+  padding-bottom: 0;
+}
+/* Das Review belegt keine eigene Zeile unter dem Foto mehr: die Aktionen
+   liegen in der Leiste, das Bild reicht bis zur Unterkante. */
+#camera.is-stamping .camera__stage {
+  grid-template-rows: minmax(0, 1fr) var(--stage-bottom-h);
+  gap: var(--stage-gap-y) clamp(14px, 1.4vw, 24px);
+  padding-bottom: clamp(14px, 1.5vw, 24px);
+}
+
+/* Abstand um den Auslöser: 250 % mehr als ein normaler Knopfabstand.
+   Öffnet sich ein Fenster, gibt der Auslöser die Extraluft wieder ab,
+   damit Pille und Knopf normal zusammenrücken. */
+body.orientation-landscape .kiosk-shutter {
+  margin-inline: calc(2.5 * var(--bar-gap));
+  transition: margin 0.42s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Filter offen: der Auslöser rückt an den Options-Knopf heran, damit das
+   Filterband die ganze Breite bekommt. Optionen offen: er behält links
+   seinen Abstand und rückt nur rechts an die Pille. */
+body.orientation-landscape .capture-bar.is-menu-open .kiosk-shutter {
+  margin-left: 0;
+  margin-right: 0;
+}
+body.orientation-landscape .capture-bar.is-options-open .kiosk-shutter { margin-right: 0; }
+
+/* Glas statt schwarzer Kästen: Knöpfe und Menüs liegen direkt auf dem Bild. */
+body.orientation-landscape .bar-btn__icon {
+  width: var(--bar-side-size);
+  border-width: 1.5px;
+  border-color: rgba(255, 255, 255, 0.34);
+  background: rgba(255, 255, 255, 0.1);
+  -webkit-backdrop-filter: blur(14px) saturate(140%);
+  backdrop-filter: blur(14px) saturate(140%);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+}
+body.orientation-landscape .bar-btn__label {
+  color: #eef1f6;
+  font-size: clamp(11px, 0.85vw, 13px);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.65);
+}
+/* Beide runden Knöpfe haben dieselbe Breite. Damit sitzen ihre Kreise
+   gleich weit vom Auslöser weg (vorher war „Optionen“ wegen der längeren
+   Beschriftung etwas weiter draußen). */
+body.orientation-landscape .capture-bar > .side-menu-toggle,
+body.orientation-landscape .bar-options > #captureOptionsToggle {
+  width: var(--bar-side-size);
+}
+body.orientation-landscape .kiosk-shutter__disc { width: var(--bar-shutter-size); }
+body.orientation-landscape .kiosk-shutter__label { font-size: clamp(12px, 0.95vw, 15px); }
+/* .bar-options ist nur noch Hülle, damit die Optionsgruppe als eigenes
+   Flex-Element zwischen Auslöser und Optionsbutton liegt. */
+.bar-options { display: contents; }
+body.orientation-landscape .capture-bar > *,
+body.orientation-landscape .capture-bar > .bar-options > * { pointer-events: auto; }
+
+body.orientation-landscape .capture-bar > .side-menu-toggle { order: 1; flex: 0 0 auto; }
+body.orientation-landscape .capture-bar > .bar-slot--menu { order: 2; }
+body.orientation-landscape .capture-bar > .kiosk-shutter { order: 3; flex: 0 0 auto; }
+body.orientation-landscape .bar-options > #captureOptions { order: 4; }
+body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex: 0 0 auto; }
+
+/* Ein Fenster in der Leiste. Die Hülle ist zugeklappt wirklich 0 px breit
+   (Rahmen, Hintergrund und Innenabstand sitzen im Kind), sonst bliebe ein
+   schmaler Rand der geschlossenen Pille sichtbar. Der negative linke
+   Außenabstand nimmt die zusätzliche gap-Lücke des leeren Fensters wieder
+   weg, damit die Knöpfe im Ruhezustand normal dicht beieinander stehen. */
+.bar-slot {
+  --slot-max: 0px;
+  position: relative;
+  display: flex;
+  flex: 0 1 auto;
+  align-items: stretch;
+  min-width: 0;
+  max-width: 0;
+  margin-left: calc(-1 * var(--bar-gap));
+  opacity: 0;
+  overflow: hidden;
+  /* Gleiche Rundung wie die Pille: sonst schneidet die Hülle die runden
+     Enden samt Unschärfe eckig ab. */
+  border-radius: 999px;
+  pointer-events: none;
+  transition: max-width 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+              margin-left 0.42s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.24s ease;
+}
+.bar-slot.is-open {
+  max-width: var(--slot-max);
+  /* Ein paar Pixel Luft zum eigenen Knopf, damit Kreis und Kapsel nicht
+     aneinanderkleben. */
+  margin-left: var(--bar-slot-gap);
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Die sichtbare Pille. Sie wird vom zugeklappten Fenster weggeschnitten. */
+.bar-slot__inner {
+  display: flex;
+  align-items: center;
+  gap: clamp(10px, 1.2vw, 22px);
+  min-width: 0;
+  position: relative;
+  /* Gleiche Höhe wie die Knopfreihe; der Inhalt sitzt mittig mit Abstand
+     zum Rand statt an den runden Enden zu klemmen. */
+  height: var(--bar-row-h);
+  /* Einheitlicher Seitenabstand der Pille; das Filterband hält ihn selbst,
+     damit sein Scrollbereich bis an den Pillenrand reicht. */
+  --slot-pad-x: clamp(20px, 2vw, 34px);
+  padding: clamp(10px, 0.9vw, 16px) var(--slot-pad-x);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+}
+.bar-slot--menu {
+  flex: 1 1 0;
+  /* Aufgeklappt nimmt das Filterband den ganzen Platz zwischen Filter-Knopf
+     und Auslöser ein und reicht damit bis zur linken Bildschirmkante. */
+  --slot-max: 100%;
+}
+/* Das Band bekommt die volle Pillenbreite als Scrollbereich. Läge der
+   Seitenabstand an der Hülle, bliebe zwischen Pillenrand und Scrollbereich
+   ein unsichtbarer Streifen, in dem hereinscrollende Kreise nicht gemalt
+   werden; den Abstand hält jetzt das Band über seinen eigenen Innenabstand. */
+.bar-slot--menu .bar-slot__inner { padding-inline: 0; }
+/* Der Zurücksetzen-Kreis steht fest am linken Rand der Pille und scrollt
+   nicht mit — nur das Band daneben bewegt sich. */
+.bar-filter-pin {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  padding-left: var(--slot-pad-x, 20px);
+}
+.bar-filter-divider--pin { flex: 0 0 auto; margin: 4px clamp(4px, 0.5vw, 8px); }
+/* Band samt Wisch-Hinweis: der Finger bezieht sich nur auf den scrollbaren
+   Teil der Pille, nicht auf den festen Kreis. */
+.bar-filter-band {
+  position: relative;
+  display: flex;
+  flex: 1 1 auto;
+  align-items: center;
+  min-width: 0;
+}
+
+.bar-slot--options {
+  /* Etwas breiter als vorher: die beiden Gruppen bekommen Luft. */
+  --slot-max: clamp(340px, 48vw, 640px);
+}
+/* Dieselbe Luft wie beim Filter: Abstand zum Options-Knopf rechts. */
+.bar-slot--options.is-open { margin-right: var(--bar-slot-gap); }
+/* An den runden Enden der Pille schneidet die Krümmung in den Inhalt:
+   darum links/rechts deutlich mehr Innenabstand als oben/unten. */
+.bar-slot--options .bar-slot__inner {
+  gap: clamp(12px, 1.2vw, 22px);
+  padding-inline: clamp(18px, 1.8vw, 30px);
+  /* Nichts darf aus der Pille laufen: zu breite Inhalte werden beschnitten,
+     statt über den Glasrand zu ragen. */
+  overflow: hidden;
+}
+/* Zwei kompakte Gruppen, die sich gemeinsam verkleinern: so läuft keine
+   Beschriftung und kein Knopf aus der Pille heraus. */
+.bar-slot--options .capture-switch {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+  align-items: stretch;
+  gap: clamp(4px, 0.45vw, 7px);
+}
+/* Beschriftung mittig über der eigenen Gruppe, notfalls mit Auslassung. */
+.bar-slot--options .capture-switch__label {
+  max-width: 100%;
+  overflow: hidden;
+  font-size: clamp(9px, 0.7vw, 11px);
+  letter-spacing: 0.1em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #e6e9f0;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
+}
+.bar-slot--options .seg {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+/* Jeder Knopf bleibt in seiner Fläche: der Text wird kleiner statt breiter
+   und endet notfalls mit „…“, statt über den Nachbarn zu laufen. */
+.bar-slot--options .seg__btn {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: clamp(7px, 0.6vw, 11px) clamp(6px, 0.6vw, 12px);
+  overflow: hidden;
+  font-size: clamp(11px, 0.82vw, 14px);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Rundes, horizontal scrollbares Filterband */
+.bar-filter-list {
+  display: flex;
+  align-items: center;
+  gap: clamp(4px, 0.6vw, 10px);
+  width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  scroll-snap-type: x proximity;
+  touch-action: pan-x;
+  /* Links nur ein kleiner Abstand zum Trenner: der Rand der Pille liegt
+     jetzt hinter dem festen Kreis, nicht mehr hinter dem ersten Filter. */
+  padding: 2px var(--slot-pad-x, 20px) 2px clamp(2px, 0.4vw, 5px);
+  /* Das Band schneidet in derselben Kapselform ab wie die Pille, damit
+     hereinscrollende Kreise nicht neben dem Glas überstehen. */
+  border-radius: 999px;
+}
+.bar-filter-list::-webkit-scrollbar { display: none; }
+
+/* Wisch-Hinweis: ein Fingerpunkt mit Nachziehpunkten fährt beim Aufklappen
+   über das Filterband und blendet wieder aus. Liegt nur über dem Inhalt
+   (pointer-events: none), damit Tippen und Scrollen ungestört bleiben. */
+.bar-swipe-hint {
+  --hint-travel: 140px;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 4;
+  display: none;
+  width: clamp(40px, 3.4vw, 54px);
+  height: clamp(40px, 3.4vw, 54px);
+  opacity: 0;
+  pointer-events: none;
+  filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.6));
+}
+.bar-swipe-hint.is-playing {
+  display: block;
+  animation: barSwipeHintSweep 2012ms cubic-bezier(0.33, 0, 0.2, 1) both;
+}
+.bar-swipe-hint__dot {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  background: radial-gradient(circle at 50% 50%,
+    rgba(255, 255, 255, 0.95) 0 30%,
+    rgba(255, 255, 255, 0.35) 32%,
+    rgba(255, 255, 255, 0.12) 62%,
+    rgba(255, 255, 255, 0) 72%);
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.35);
+}
+/* Zwei Nachziehstriche hinter dem Punkt: rechts, weil der Punkt nach links
+   fährt — so liest die Bewegung als Wischen. */
+.bar-swipe-hint__trail {
+  position: absolute;
+  top: 50%;
+  right: -10px;
+  width: 3px;
+  height: 40%;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.6);
+  transform: translateY(-50%);
+}
+.bar-swipe-hint__trail + .bar-swipe-hint__trail {
+  right: -20px;
+  height: 28%;
+  opacity: 0.45;
+}
+@keyframes barSwipeHintSweep {
+  0%   { opacity: 0; transform: translate(calc(-50% + var(--hint-travel) / 2), -50%) scale(0.85); }
+  14%  { opacity: 1; transform: translate(calc(-50% + var(--hint-travel) / 2), -50%) scale(1); }
+  60%  { opacity: 1; transform: translate(calc(-50% - var(--hint-travel) / 2), -50%) scale(1); }
+  72%  { opacity: 1; transform: translate(calc(-50% - var(--hint-travel) / 2), -50%) scale(0.96); }
+  100% { opacity: 0; transform: translate(calc(-50% - var(--hint-travel) / 2), -50%) scale(0.9); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-swipe-hint.is-playing { display: none; animation: none; }
+}
+
+.dot-chip {
+  flex: 0 0 auto;
+  display: block;
+  /* Füllt die Höhe des Menüs: nur noch ein Kreis, Text ist innen. Ein paar
+     Pixel Luft bleiben für Hover-/Auswahl-Ringe. */
+  width: clamp(64px, 6vw, 84px);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #e8eaf0;
+  font: inherit;
+  cursor: pointer;
+  scroll-snap-align: center;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.dot-chip__disc {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 9% 12%;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.07);
+  /* Verlauf/Emoji enden exakt an der Kreisform statt unter dem Rand
+     hervorzuschimmern. */
+  background-clip: padding-box;
+  overflow: hidden;
+  font-size: clamp(18px, 1.6vw, 24px);
+  line-height: 1;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+/* Zwei Zeilen im Kreis: „Schwarzweiß“ passt, ohne herauszulaufen. Der Text
+   liegt auf dem Farbverlauf, darum weiße Schrift mit dunklem Schatten. */
+.dot-chip__label {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  max-width: 100%;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  text-align: center;
+  font-size: clamp(9px, 0.68vw, 10px);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  color: #fff;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.85), 0 0 6px rgba(0, 0, 0, 0.5);
+}
+/* Farbfilter als Farbkreis, Gesichtsfilter mit Emoji */
+.dot-chip__disc--standard { background: linear-gradient(135deg, #f6c96b 0%, #e2603c 52%, #7c5cff 100%); }
+.dot-chip__disc--sw { background: linear-gradient(135deg, #ffffff 0%, #9aa1ad 48%, #101116 100%); }
+.dot-chip__disc--vintage { background: linear-gradient(135deg, #f4e3c2 0%, #c9a06a 55%, #6b4a2f 100%); }
+.dot-chip__disc--knackig { background: linear-gradient(135deg, #4ee1a0 0%, #2f7dff 55%, #ff3d81 100%); }
+/* Zurücksetzen: gleiche Form wie die Filter, aber neutral statt Farbverlauf,
+   damit der Kreis als Aktion lesbar bleibt. */
+.dot-chip--reset .dot-chip__disc {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.14);
+  font-size: clamp(15px, 1.3vw, 20px);
+}
+.dot-chip:hover .dot-chip__disc {
+  /* Kein Scale mehr: der Kreis hat in der Pille nur wenige Pixel Luft und
+     würde oben/unten abgeschnitten. Helligkeit + Rand statt Größe. */
+  border-color: rgba(255, 255, 255, 0.5);
+  filter: brightness(1.08);
+}
+.dot-chip:active .dot-chip__disc { transform: scale(0.96); }
+.dot-chip:focus-visible { outline: none; }
+.dot-chip:focus-visible .dot-chip__disc {
+  box-shadow: inset 0 0 0 3px rgb(var(--c-highlight-rgb) / 0.85);
+}
+.dot-chip.is-selected .dot-chip__disc {
+  border-color: var(--c-highlight);
+  box-shadow: 0 0 0 2px rgb(var(--c-highlight-rgb) / 0.35);
+  transform: none;
+}
+.dot-chip.is-selected .dot-chip__label { color: var(--c-highlight); }
+.bar-filter-divider {
+  flex: 0 0 auto;
+  width: 1px;
+  align-self: stretch;
+  margin: 4px 2px;
+  background: rgba(255, 255, 255, 0.16);
+}
+/* Im Review zeigt dieselbe Pille die Rahmen als Kacheln. Nur der
+   Sticker-Modus blendet sie aus, weil dort die Sticker-Pille die Auswahl
+   übernimmt. */
+#camera.is-stamping .bar-slot--menu { display: none; }
+
+/* Rahmen: Vorschaubild ohne Beschriftung, Kachel statt Kreis. */
+.bar-slot--menu[data-mode="overlays"] .bar-filter-pin,
+.bar-slot--menu[data-mode="overlays"] .bar-filter-divider--pin { display: none; }
+.bar-slot--menu[data-mode="overlays"] .bar-filter-list { padding-left: var(--slot-pad-x, 20px); }
+
+/* ============================================================
+   REVIEW-LEISTE
+   Sticker | Neu aufnehmen · Annehmen | Rahmen
+   Die Foto-Aktionen stehen eng in der Bildmitte, die beiden Menüknöpfe
+   flankieren sie links und rechts. Ihre Kapseln liegen im selben Glas wie
+   das Filtermenü und wachsen vom Knopf nach außen bis an den Rand ihres
+   Bereichs. Die Elemente darin sind Quadrate.
+   ============================================================ */
+.bar-slot--stamp { display: none; }
+
+#camera.is-reviewing .capture-bar {
+  /* Drei Spalten: links Sticker-Pille, mittig „Neu aufnehmen“ und
+     „Annehmen“, rechts Rahmen-Pille. Die äußeren Spalten sind gleich
+     groß, damit die Aktionen exakt in der Bildmitte stehen. */
+  --review-home: calc(var(--home-size) + var(--bar-edge-inset));
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  column-gap: var(--bar-gap);
+  align-items: end;
+  align-content: end;
+  padding-left: var(--bar-edge-inset);
+  padding-right: var(--bar-edge-inset);
+}
+/* Die Leiste rückt im Review nicht zur Seite: die Pillen liegen in der Leiste. */
+#camera.is-reviewing .capture-bar.is-menu-open {
+  padding-left: var(--bar-edge-inset);
+  padding-right: var(--bar-edge-inset);
+}
+#camera.is-reviewing .capture-bar > .bar-btn--review-sticker {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: end;
+  order: 0;
+  flex: 0 0 auto;
+  width: var(--bar-side-size);
+  display: flex;
+}
+/* Die beiden Foto-Aktionen rücken eng zusammen in die Mitte. */
+#camera.is-reviewing .capture-bar > .review-actions {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  height: auto;
+  align-items: flex-end;
+  justify-content: center;
+  gap: clamp(8px, 0.9vw, 14px);
+  padding: 0;
+}
+#camera .review-actions[hidden] { display: none !important; }
+#camera.is-reviewing .capture-bar > .side-menu-toggle {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: start;
+  order: 0;
+}
+
+/* Beide Pillen sind Rasterkinder in der äußeren Spalte ihres Knopfes und
+   wachsen aus der Mitte bis an den Rand ihres Bereichs. */
+#camera.is-reviewing .bar-slot {
+  /* UI 2 positioniert die Pillen absolut — im Review liegen sie im Raster,
+     damit ihre Breite an der eigenen Spalte gemessen wird (sonst laufen sie
+     über die ganze Bildbreite). */
+  position: static;
+  inset: auto;
+  grid-row: 1;
+  align-self: end;
+  display: flex;
+  width: 0;
+  overflow: hidden;
+  max-width: none;
+  opacity: 0;
+  overflow: hidden;
+  transform: none;
+  pointer-events: none;
+  transition: width 0.42s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+}
+#camera.is-reviewing .bar-slot.is-open {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Sticker: rechte Kante am Sticker-Knopf, wächst nach links. */
+#camera.is-reviewing .bar-slot--stamp {
+  grid-column: 1;
+  justify-self: end;
+  margin: 0 calc(var(--bar-side-size) + var(--bar-slot-gap)) 0 0;
+}
+#camera.is-reviewing .bar-slot--stamp.is-open {
+  width: calc(100% - var(--bar-side-size) - var(--bar-slot-gap));
+}
+/* Rahmen: linke Kante am Rahmen-Knopf, wächst nach rechts bis vor den
+   schwebenden Start-Knopf. */
+#camera.is-reviewing .bar-slot--menu {
+  grid-column: 3;
+  justify-self: start;
+  margin: 0 0 0 calc(var(--bar-side-size) + var(--bar-slot-gap));
+}
+#camera.is-reviewing .bar-slot--menu.is-open {
+  width: calc(100% - var(--bar-side-size) - var(--bar-slot-gap) - var(--review-home));
+}
+#camera.is-reviewing .bar-slot__inner { width: 100%; padding-inline: 0; }
+#camera.is-reviewing .bar-filter-list { border-radius: 0; }
+.bar-slot--stamp .bar-filter-list {
+  padding-left: var(--slot-pad-x, 20px);
+  padding-right: var(--slot-pad-x, 20px);
+}
+
+/* Quadrat-Kacheln für Rahmen und Sticker. */
+.bar-tile {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: clamp(64px, 6vw, 84px);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-radius: 20%;
+  background: rgba(255, 255, 255, 0.07);
+  color: #e8eaf0;
+  font: inherit;
+  cursor: pointer;
+  overflow: hidden;
+  scroll-snap-align: center;
+  /* Quer darf das Band scrollen, senkrecht gehört die Geste dem Ziehen
+     aufs Foto. */
+  touch-action: pan-x;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+}
+.bar-tile:hover {
+  border-color: rgba(255, 255, 255, 0.5);
+  filter: brightness(1.08);
+}
+.bar-tile:active { transform: scale(0.96); }
+.bar-tile:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 3px rgb(var(--c-highlight-rgb) / 0.85);
+}
+.bar-tile.is-selected {
+  border-color: var(--c-highlight);
+  box-shadow: 0 0 0 2px rgb(var(--c-highlight-rgb) / 0.35);
+}
+.bar-tile--frame { padding: 6%; background: rgba(0, 0, 0, 0.34); }
+.bar-tile--frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+.bar-tile--stamp svg { width: 72%; height: 72%; }
+.bar-tile--stamp-emoji { font-size: clamp(22px, 2vw, 30px); line-height: 1; }
+.bar-tile__glyph { display: block; line-height: 1; }
+
+/* --- Ziehen aus den Menüs aufs Foto -------------------------------
+   Das Element hängt am Finger, die Leiste tritt zurück und der Mülleimer
+   erscheint am unteren Bildrand. */
+.menu-drag-ghost {
+  position: fixed;
+  z-index: 2000;
+  display: grid;
+  place-items: center;
+  width: clamp(64px, 6vw, 84px);
+  aspect-ratio: 1;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  border-radius: 20%;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.55);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+}
+.menu-drag-ghost img { width: 100%; height: 100%; object-fit: contain; }
+.menu-drag-ghost svg { width: 72%; height: 72%; }
+.menu-drag-ghost .bar-tile__glyph { font-size: clamp(22px, 2vw, 30px); }
+
+.element-trash {
+  position: absolute;
+  left: 50%;
+  bottom: 20%;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  width: clamp(58px, 5.2vw, 74px);
+  aspect-ratio: 1;
+  border: 2px solid #ef4444;
+  border-radius: 50%;
+  background: rgba(239, 68, 68, 0.18);
+  color: #fecaca;
+  opacity: 0;
+  transform: translate(-50%, 10px) scale(0.94);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
+}
+.element-trash svg { width: 46%; height: 46%; }
+#camera.is-dragging-element .element-trash {
+  opacity: 1;
+  transform: translate(-50%, 0) scale(1);
+}
+.element-trash.is-target {
+  background: rgba(239, 68, 68, 0.45);
+  color: #fff;
+  transform: translate(-50%, 0) scale(1.1);
+}
+/* Beim Ziehen blendet die Leiste aus, damit das Foto frei liegt. */
+#camera.is-dragging-element .capture-bar {
+  opacity: 0.1;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+#camera.is-dragging-element .capture-bar.is-menu-open { padding-left: var(--bar-edge-inset); }
+
+@media (prefers-reduced-motion: reduce) {
+  .bar-slot { transition: none; }
+}
+/* ============================================================
+   UI 2 — feste Leisten-Variante (data-ui="2" auf <html>)
+   Gleiche Leiste, gleiche Knöpfe; die beiden Menüs liegen über dem
+   Bild und wachsen vom jeweiligen Knopf nach außen: Filter nach links,
+   Optionen nach rechts, jeweils bis kurz vor die Bildkante. Auslöser
+   und Knöpfe bleiben dabei stehen.
+   ============================================================ */
+html[data-ui="2"] .capture-bar {
+  /* Der Auslöser sitzt mittig (beide Außenknöpfe sind gleich breit) und
+     hat links/rechts 2,5 Knopfabstände Luft. Von dieser Mitte aus lässt
+     sich die Menübreite bis einen Abstand vor den jeweiligen Knopf
+     ableiten: halbe Auslöserbreite + 2,5 Abstände + ein Abstand +
+     Knopfbreite, dazu der kleine Rand zur Bildkante. Davon geht die Luft
+     zum eigenen Knopf ab; rechts zusätzlich der Platz des Start-Knopfes,
+     damit das Options-Menü nicht in ihn hineinläuft. */
+  --ui2-slot-air: calc(var(--bar-gap) + var(--bar-slot-gap));
+  --ui2-home-space: calc(var(--home-size) + var(--stage-pad) + var(--bar-edge-inset) * 2 + var(--bar-gap));
+  --ui2-pill-w: calc(50% - var(--bar-shutter-size) / 2 - var(--bar-side-size) - var(--bar-gap) * 3.5 - var(--bar-edge-inset) - var(--ui2-slot-air));
+  --ui2-pill-w-options: calc(50% - var(--bar-shutter-size) / 2 - var(--bar-side-size) - var(--bar-gap) * 3.5 - var(--ui2-slot-air) - var(--ui2-home-space));
+}
+/* Beide Menüs liegen absolut über der Leiste statt in ihr: die Reihe
+   bleibt stehen, das Menü erscheint am Knopf. */
+html[data-ui="2"] .bar-slot {
+  position: absolute;
+  bottom: var(--bar-edge-inset);
+  max-width: none;
+  width: var(--ui2-pill-w);
+  margin: 0;
+  opacity: 0;
+  overflow: visible;
+  pointer-events: none;
+  transition: opacity 0.22s ease, transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+/* Filter: rechte Kante am Filter-Knopf, wächst nach links. */
+html[data-ui="2"] .bar-slot--menu {
+  left: var(--bar-edge-inset);
+  right: auto;
+  transform: translateX(16px);
+}
+/* Optionen: rechte Kante vor dem Start-Knopf, linke Kante neben dem
+   Options-Knopf. */
+html[data-ui="2"] .bar-slot--options {
+  right: var(--ui2-home-space);
+  left: auto;
+  width: var(--ui2-pill-w-options);
+  transform: translateX(-16px);
+}
+html[data-ui="2"] .bar-slot.is-open {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+/* Die Pille füllt das Menü bis zur Bildkante und ist vertikal genau so
+   groß wie der Knopf, aus dem sie aufklappt (Kreis + Beschriftung). */
+html[data-ui="2"] .bar-slot__inner {
+  width: 100%;
+  height: calc(var(--bar-side-size) + var(--action-gap) + var(--bar-label-h));
+  padding-block: clamp(8px, 0.7vw, 12px);
+}
+html[data-ui="2"] .bar-slot--options .bar-slot__inner { justify-content: center; }
+/* Die Filterkreise werden mitverkleinert, damit sie in der flacheren Pille
+   weder oben/unten herausragen noch den runden Rand schneiden. */
+html[data-ui="2"] .bar-slot--menu .dot-chip { width: clamp(56px, 4.6vw, 72px); }
+/* Kacheln passen sich der flacheren Pille an, damit sie nicht oben/unten
+   aus dem Glas ragen. */
+html[data-ui="2"] .bar-tile { width: clamp(56px, 4.6vw, 72px); }
+/* Menüs belegen keinen Platz in der Reihe mehr, also rückt die Leiste
+   nicht mehr zur Seite und der Auslöser behält seinen Abstand. */
+html[data-ui="2"] .capture-bar.is-menu-open,
+html[data-ui="2"] .capture-bar.is-options-open {
+  padding-left: var(--bar-edge-inset);
+  padding-right: var(--bar-edge-inset);
+}
+html[data-ui="2"] .capture-bar.is-menu-open .kiosk-shutter,
+html[data-ui="2"] .capture-bar.is-options-open .kiosk-shutter {
+  margin-left: calc(2.5 * var(--bar-gap));
+  margin-right: calc(2.5 * var(--bar-gap));
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui="2"] .bar-slot { transition: none; }
+}
+
 /* Der Outline-Fallback von oben wird nicht mehr gebraucht. */
 #camera.is-reviewing .viewfinder,
 #camera.is-stamping .viewfinder {

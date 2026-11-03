@@ -1940,7 +1940,8 @@ body.orientation-landscape section.gallery {
   margin: 0;
   /* Inhalt bleibt bei max. 1200 px zentriert, die Schiene bleibt frei. */
   padding-top: 2.5rem;
-  padding-bottom: 2.5rem;
+  /* Unten Platz für den schwebenden Start-Button in der Ecke. */
+  padding-bottom: calc(2.5rem + var(--home-size));
   padding-left: max(clamp(24px, 3vw, 56px), calc((100vw - var(--rail-w) - 1200px) / 2));
   padding-right: max(clamp(20px, 2.4vw, 44px), calc((100vw - var(--rail-w) - 1200px) / 2));
   /* Der Body ist im Querformat auf 100vh fixiert und darf nicht scrollen.
