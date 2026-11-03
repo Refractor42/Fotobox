@@ -210,7 +210,17 @@
           <!-- Sticker-Menü: eigene Pille, die sich links am Knopf aufklappt. -->
           <div class="bar-slot bar-slot--stamp" id="stampPanel" aria-hidden="true" inert>
             <div class="bar-slot__inner">
-              <div class="bar-filter-list" id="stampList" role="group" aria-label="Sticker" data-i18n-aria="stickerGroupAria"></div>
+              <div class="bar-filter-band">
+                <div class="bar-filter-list" id="stampList" role="group" aria-label="Sticker" data-i18n-aria="stickerGroupAria"></div>
+                <!-- Derselbe Wisch-Hinweis wie im Filterband: zeigt beim
+                     Aufklappen, dass sich die Sticker waagerecht schieben
+                     lassen. Reines Overlay, keine Klickfläche. -->
+                <span class="bar-swipe-hint" id="stampSwipeHint" aria-hidden="true">
+                  <span class="bar-swipe-hint__trail"></span>
+                  <span class="bar-swipe-hint__trail"></span>
+                  <span class="bar-swipe-hint__dot"></span>
+                </span>
+              </div>
             </div>
           </div>
 

@@ -4013,6 +4013,21 @@ function setStampMenuOpen(open) {
   panel.setAttribute('aria-hidden', String(!next));
   const btn = document.getElementById('barStickerToggle');
   if (btn) btn.setAttribute('aria-expanded', String(next));
+  // Wisch-Hinweis wie im Filterband: erst nach dem Aufklappen messen, sonst
+  // ist die sichtbare Breite der Sticker-Pille noch nicht die endgültige.
+  if (stampScrollHintTimer) {
+    window.clearTimeout(stampScrollHintTimer);
+    stampScrollHintTimer = 0;
+  }
+  const swipeHint = document.getElementById('stampSwipeHint');
+  if (!next) hideListScrollHint(swipeHint);
+  if (next) {
+    stampScrollHintTimer = window.setTimeout(() => {
+      stampScrollHintTimer = 0;
+      hintListScroll(stampListEl());
+      playListScrollHint(stampListEl(), swipeHint);
+    }, 460);
+  }
 }
 
 // ---- Elemente aus den Menüs aufs Foto ziehen -------------------------
@@ -4355,6 +4370,7 @@ function syncBarToggleLabel() {
 // ein verschobenes Band wandert aus der Pille heraus (links) und der am
 // Rand neu sichtbare Bereich wird nicht fertig gezeichnet (rechts).
 var filterScrollHintTimer = 0;
+var stampScrollHintTimer = 0;
 var filterScrollPulse = 0;
 var filterScrollPulseCleanup = null;
 
@@ -4370,9 +4386,8 @@ function endFilterScrollPulse() {
   }
 }
 
-function hintFilterListScroll() {
-  const list = barMenuListEl();
-  if (!list || !barMenuIsOpen()) return;
+function hintListScroll(list) {
+  if (!list) return;
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const max = list.scrollWidth - list.clientWidth;
   if (max <= 2) return;
@@ -4417,18 +4432,18 @@ function hintFilterListScroll() {
 // Wisch-Hinweis über dem Filterband: der Fingerpunkt fährt einmal quer
 // durch die Pille, damit man sieht, dass die Filter scrollbar sind.
 var filterHintHideTimer = 0;
-function hideFilterScrollHint() {
+function hideListScrollHint(hint) {
+  // Nur den laufenden Hinweis stoppen: Ein bereits geschlossenes Band darf
+  // den Hinweis des anderen Menüs nicht vorzeitig abräumen.
+  if (hint && !hint.classList.contains('is-playing')) return;
   window.clearTimeout(filterHintHideTimer);
   filterHintHideTimer = 0;
   endFilterScrollPulse();
-  const hint = document.getElementById('barSwipeHint');
   if (hint) hint.classList.remove('is-playing');
 }
 
-function playFilterScrollHint() {
-  const list = barMenuListEl();
-  const hint = document.getElementById('barSwipeHint');
-  if (!list || !hint || !barMenuIsOpen()) return;
+function playListScrollHint(list, hint) {
+  if (!list || !hint) return;
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   if (list.scrollWidth <= list.clientWidth + 2) return;
   // Weg an der Bandbreite ausrichten: je breiter die Pille, desto weiter
@@ -4440,7 +4455,7 @@ function playFilterScrollHint() {
   void hint.offsetWidth;
   hint.classList.add('is-playing');
   window.clearTimeout(filterHintHideTimer);
-  filterHintHideTimer = window.setTimeout(hideFilterScrollHint, 2250);
+  filterHintHideTimer = window.setTimeout(() => hideListScrollHint(hint), 2250);
 }
 
 // Menü und Optionen sind Geschwister: Es ist immer nur eines offen.
@@ -4468,15 +4483,16 @@ function setBarMenuOpen(open) {
     window.clearTimeout(filterScrollHintTimer);
     filterScrollHintTimer = 0;
   }
-  if (!next) hideFilterScrollHint();
+  const filterHint = document.getElementById('barSwipeHint');
+  if (!next) hideListScrollHint(filterHint);
   if (next) {
     updateBarMenuSelection();
     // Erst nach dem Aufklappen messen: während die Pille wächst, ist die
     // sichtbare Breite des Bandes noch nicht die endgültige.
     filterScrollHintTimer = window.setTimeout(() => {
       filterScrollHintTimer = 0;
-      hintFilterListScroll();
-      playFilterScrollHint();
+      hintListScroll(barMenuListEl());
+      playListScrollHint(barMenuListEl(), filterHint);
     }, 460);
   }
 }
