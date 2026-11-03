@@ -682,7 +682,37 @@ async function handleTrashApi(req, res) {
     if (req.method === 'GET') {
       await purgeExpiredTrash();
       const names = await listJpgNames(cfg, TRASH_PREFIX);
-      const items = await Promise.all(names.map(async (name) => {
+
+      // Ohne limit bleibt die alte Vollliste erhalten (Abwärtskompatibilität).
+      // Die aktuelle App fordert immer genau eine Seite an.
+      if (!params.has('limit')) {
+        const items = await Promise.all(names.map(async (name) => {
+          const m = name.match(TRASH_NAME_RE);
+          return {
+            id: TRASH_PREFIX + name,
+            image: await objectToDataUrl(cfg, TRASH_PREFIX + name),
+            expiresAt: m ? Number(m[1]) : null,
+            name: m ? m[2] : name
+          };
+        }));
+        return sendJson(res, 200, items);
+      }
+
+      const requestedLimit = Number.parseInt(params.get('limit'), 10);
+      const limit = Number.isFinite(requestedLimit)
+        ? Math.min(50, Math.max(1, requestedLimit))
+        : 12;
+      const before = params.get('before') || '';
+      if (before && !TRASH_NAME_RE.test(before)) {
+        return sendJson(res, 400, { error: 'Invalid cursor' });
+      }
+
+      // Neueste Löschungen zuerst. Der Zeitstempel steht am Namensanfang,
+      // deshalb funktioniert dieselbe Cursor-Logik wie bei den Fotos.
+      const sorted = names.slice().sort().reverse();
+      const eligible = before ? sorted.filter((name) => name < before) : sorted;
+      const pageNames = eligible.slice(0, limit);
+      const items = await Promise.all(pageNames.map(async (name) => {
         const m = name.match(TRASH_NAME_RE);
         return {
           id: TRASH_PREFIX + name,
@@ -691,7 +721,13 @@ async function handleTrashApi(req, res) {
           name: m ? m[2] : name
         };
       }));
-      return sendJson(res, 200, items);
+
+      return sendJson(res, 200, {
+        items,
+        total: sorted.length,
+        hasMore: eligible.length > pageNames.length,
+        nextCursor: pageNames.length ? pageNames[pageNames.length - 1] : null
+      });
     }
 
     if (req.method === 'POST') { // restore: trash/<ts>-<name>.jpg -> photos/<name>.jpg

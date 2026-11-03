@@ -3365,10 +3365,16 @@ const $trashBadge = document.getElementById('trashBadge');
 const $trashView = document.getElementById('trashView');
 const $trashGrid = document.getElementById('trashGrid');
 const $trashEmpty = document.getElementById('trashEmpty');
+const $trashLoadMoreWrap = document.getElementById('trashLoadMoreWrap');
+const $trashLoadMore = document.getElementById('trashLoadMore');
 
 let trashOpen = false;
 let trashItems = []; // { id, image, expiresAt }
 let trashVersion = 0; // lokale Änderungen invalidieren noch laufende loadTrash-Antworten
+let trashCursor = null;
+let trashHasMore = false;
+let trashPageLoading = false;
+let trashLoadToken = 0;
 
 // Der Papierkorb ist eine eigene Ansicht: Titel und Rückweg müssen ihn
 // benennen, sonst bleibt oben weiter „Deine Fotos“ stehen.
@@ -3418,30 +3424,96 @@ function toggleTrash(force = !trashOpen) {
   if (trashOpen) loadTrash();
 }
 
+function setTrashLoadMoreBusy(busy) {
+  if (!$trashLoadMore) return;
+  const key = busy ? 'galleryLoading' : 'galleryLoadMore';
+  $trashLoadMore.disabled = busy;
+  $trashLoadMore.dataset.i18n = key;
+  $trashLoadMore.textContent = t(key);
+}
+
+function updateTrashLoadMore() {
+  if (!$trashLoadMoreWrap || !$trashLoadMore) return;
+  $trashLoadMoreWrap.hidden = !trashOpen || !trashHasMore;
+  $trashLoadMore.disabled = trashPageLoading;
+}
+
+// Jede Öffnung beginnt wieder bei der neuesten Seite. Der Papierkorb lädt —
+// wie die Galerie — nur eine Seite Bilder; weitere Seiten kommen über den
+// Button nach. So bleibt die Antwort auch bei vollem Papierkorb klein.
 function loadTrash() {
+  trashVersion++;
+  trashLoadToken++;
+  trashItems = [];
+  trashCursor = null;
+  trashHasMore = false;
+  trashPageLoading = false;
+  $trashGrid.innerHTML = '';
+  $trashEmpty.style.display = 'none';
+  setTrashLoadMoreBusy(false);
+  updateTrashLoadMore();
+  loadTrashPage();
+}
+
+async function loadTrashPage() {
+  if (trashPageLoading) return;
   const version = trashVersion;
-  fetch('/api/trash', { cache: 'no-store' })
-    .then((res) => {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-    .then((items) => {
-      // Antwort veraltet? Zwischenzeitlich wurde lokal gelöscht/wiederhergestellt —
-      // sonst würde sie den aktuelleren Zustand überschreiben.
-      if (version !== trashVersion) return;
-      trashItems = items;
-      renderTrash();
-    })
-    .catch((err) => {
-      console.warn('Trash could not be loaded:', err);
-      showToast(t('trashLoadError'), { error: true });
+  const token = ++trashLoadToken;
+  trashPageLoading = true;
+  setTrashLoadMoreBusy(true);
+  updateTrashLoadMore();
+
+  try {
+    const params = new URLSearchParams({ limit: String(appSettings.galleryPageSize) });
+    if (trashCursor) params.set('before', trashCursor);
+    const res = await fetch('/api/trash?' + params.toString(), { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+
+    // Zwischenzeitlich neu geöffnet oder lokal gelöscht/wiederhergestellt?
+    if (version !== trashVersion || token !== trashLoadToken) return;
+
+    // Ältere Server ohne Pagination liefern weiterhin ein Array.
+    const legacy = Array.isArray(data);
+    const items = legacy ? data : (Array.isArray(data.items) ? data.items : []);
+    const known = new Set(trashItems.map((entry) => entry.id));
+    items.forEach((item) => {
+      if (known.has(item.id)) return;
+      known.add(item.id);
+      trashItems.push(item);
     });
+
+    if (legacy) {
+      trashHasMore = false;
+      trashCursor = null;
+    } else {
+      trashHasMore = data.hasMore === true;
+      trashCursor = data.nextCursor || null;
+    }
+    renderTrash();
+  } catch (err) {
+    if (version !== trashVersion) return;
+    console.warn('Trash could not be loaded:', err);
+    showToast(t('trashLoadError'), { error: true });
+  } finally {
+    if (token === trashLoadToken) {
+      trashPageLoading = false;
+      setTrashLoadMoreBusy(false);
+      updateTrashLoadMore();
+      if (!trashItems.length && !trashHasMore) $trashEmpty.style.display = '';
+    }
+  }
+}
+
+if ($trashLoadMore) {
+  $trashLoadMore.addEventListener('click', () => loadTrashPage());
 }
 
 function renderTrash() {
   $trashGrid.innerHTML = '';
   trashItems.forEach((item) => $trashGrid.appendChild(buildTrashCard(item)));
-  $trashEmpty.style.display = trashItems.length ? 'none' : '';
+  $trashEmpty.style.display = (trashItems.length || trashHasMore) ? 'none' : '';
+  updateTrashLoadMore();
 }
 
 function trashDaysLeftLabel(expiresAt) {
