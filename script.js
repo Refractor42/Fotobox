@@ -4378,6 +4378,8 @@ function syncBarToggleLabel() {
     label.dataset.i18n = labelKey;
     label.textContent = t(labelKey);
   }
+  // Nur im Rahmen-Modus ersetzt das gelieferte Rahmen-Symbol die Regler.
+  toggle.classList.toggle('is-frames-mode', overlaysMode);
   toggle.dataset.i18nAria = ariaKey;
   toggle.setAttribute('aria-label', t(ariaKey));
   toggle.setAttribute('aria-expanded', String(open));

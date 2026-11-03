@@ -473,6 +473,18 @@ body.orientation-landscape .capture-bar > .bar-options {
   transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 .bar-btn__icon svg { width: 48%; height: 48%; }
+/* Rahmen-Symbol aus dem gelieferten Asset. Als Maske nimmt es exakt die
+   Icon-Farbe an (weiß bzw. gelb bei geöffnetem Menü). */
+.bar-btn__icon-frame {
+  display: none;
+  width: 48%;
+  height: 48%;
+  background-color: currentColor;
+  -webkit-mask: url('assets/icons/frames.png') center / contain no-repeat;
+  mask: url('assets/icons/frames.png') center / contain no-repeat;
+}
+.side-menu-toggle.is-frames-mode .bar-btn__icon-frame { display: block; }
+.side-menu-toggle.is-frames-mode .bar-btn__icon > svg { display: none; }
 .bar-btn:hover .bar-btn__icon {
   transform: scale(1.05);
   background: rgba(255, 255, 255, 0.13);
@@ -1363,14 +1375,17 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 .bar-slot--options {
   /* Etwas breiter als vorher: die beiden Gruppen bekommen Luft. */
   --slot-max: clamp(340px, 48vw, 640px);
+  /* Deutlich größere Segmente: die Höhe wächst, ohne die Leiste selbst
+     höher zu machen — das Panel ragt nach oben über die Knopfreihe. */
+  --options-control-h: clamp(46px, 4vw, 60px);
 }
 /* Dieselbe Luft wie beim Filter: Abstand zum Options-Knopf rechts. */
 .bar-slot--options.is-open { margin-right: var(--bar-slot-gap); }
 /* An den runden Enden der Pille schneidet die Krümmung in den Inhalt:
    darum links/rechts deutlich mehr Innenabstand als oben/unten. */
 .bar-slot--options .bar-slot__inner {
-  gap: clamp(12px, 1.2vw, 22px);
-  padding-inline: clamp(18px, 1.8vw, 30px);
+  gap: clamp(8px, 0.8vw, 14px);
+  padding-inline: clamp(12px, 1.1vw, 20px);
   /* Nichts darf aus der Pille laufen: zu breite Inhalte werden beschnitten,
      statt über den Glasrand zu ragen. */
   overflow: hidden;
@@ -1382,14 +1397,15 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   min-width: 0;
   max-width: 100%;
   align-items: stretch;
-  gap: clamp(4px, 0.45vw, 7px);
+  gap: clamp(6px, 0.65vw, 10px);
 }
-/* Beschriftung mittig über der eigenen Gruppe, notfalls mit Auslassung. */
+/* Beschriftung unter der eigenen Gruppe. */
 .bar-slot--options .capture-switch__label {
+  order: 2;
   max-width: 100%;
   overflow: hidden;
   font-size: clamp(9px, 0.7vw, 11px);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.12em;
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1397,9 +1413,11 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   text-shadow: 0 1px 5px rgba(0, 0, 0, 0.55);
 }
 .bar-slot--options .seg {
+  order: 1;
   display: flex;
   min-width: 0;
   max-width: 100%;
+  min-height: var(--options-control-h);
   overflow: hidden;
   background: rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16);
@@ -1409,9 +1427,12 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 .bar-slot--options .seg__btn {
   flex: 1 1 auto;
   min-width: 0;
-  padding: clamp(7px, 0.6vw, 11px) clamp(6px, 0.6vw, 12px);
+  min-height: var(--options-control-h);
+  padding: 0 clamp(5px, 0.55vw, 9px);
   overflow: hidden;
-  font-size: clamp(11px, 0.82vw, 14px);
+  font-size: clamp(11px, 1.05vw, 15px);
+  font-weight: 600;
+  line-height: var(--options-control-h);
   text-align: center;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1874,7 +1895,12 @@ html[data-ui="2"] .bar-slot__inner {
   height: calc(var(--bar-side-size) + var(--action-gap) + var(--bar-label-h));
   padding-block: clamp(8px, 0.7vw, 12px);
 }
-html[data-ui="2"] .bar-slot--options .bar-slot__inner { justify-content: center; }
+/* Die Optionspille wächst mit den größeren Segmenten nach oben. */
+html[data-ui="2"] .bar-slot--options .bar-slot__inner {
+  height: auto;
+  justify-content: center;
+  padding-block: clamp(10px, 0.9vw, 15px);
+}
 /* Die Filterkreise werden mitverkleinert, damit sie in der flacheren Pille
    weder oben/unten herausragen noch den runden Rand schneiden. */
 html[data-ui="2"] .bar-slot--menu .dot-chip { width: clamp(56px, 4.6vw, 72px); }
