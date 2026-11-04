@@ -3037,6 +3037,28 @@ function removeCard(card) {
   renderSplashChain();
 }
 
+// Der Mülleimer gehört an die sichtbare Bildecke, nicht an die Ecke der
+// 16:9-Kachel. Bei object-fit: contain liegen sonst schwarze Balken zwischen
+// Foto und Button, wodurch er planlos im Kartenrand zu schweben scheint.
+function positionGalleryDelete(card) {
+  const btn = card.querySelector('.gallery__delete');
+  const img = card.querySelector('img');
+  if (!btn || !img) return;
+  const cw = card.clientWidth;
+  const ch = card.clientHeight;
+  if (!cw || !ch || !img.naturalWidth || !img.naturalHeight) return;
+
+  const scale = Math.min(cw / img.naturalWidth, ch / img.naturalHeight);
+  const shownW = img.naturalWidth * scale;
+  const shownH = img.naturalHeight * scale;
+  const left = (cw - shownW) / 2;
+  const top = (ch - shownH) / 2;
+
+  // 10 px Abstand zur Bildkante, aber immer mindestens 8 px zur Kachel.
+  btn.style.top = Math.max(8, top + 10) + 'px';
+  btn.style.right = Math.max(8, left + 10) + 'px';
+}
+
 // Adds a delete button only to photos captured in the current session.
 function attachDelete(card, photoId) {
   if (!photoSessionToken || !sessionPhotoIds.has(photoId)) return;
@@ -3053,6 +3075,11 @@ function attachDelete(card, photoId) {
     deletePhoto(card, photoId);
   });
   card.appendChild(btn);
+  positionGalleryDelete(card);
+  const img = card.querySelector('img');
+  if (img && !img.complete) {
+    img.addEventListener('load', () => positionGalleryDelete(card), { once: true });
+  }
 }
 
 // Galerie-Seitengröße kommt aus den Admin-Einstellungen (6/12/24).
@@ -3288,6 +3315,15 @@ function openLightbox(photoUrl, photoId = null) {
 // ============================================================
 //  STATE NAVIGATION
 // ============================================================
+let galleryDeleteRaf = 0;
+window.addEventListener('resize', () => {
+  if (galleryDeleteRaf) return;
+  galleryDeleteRaf = requestAnimationFrame(() => {
+    galleryDeleteRaf = 0;
+    $galleryGrid.querySelectorAll('.gallery__card').forEach(positionGalleryDelete);
+  });
+});
+
 function goTo(sectionName) {
   const sections = { splash: $splash, camera: $camera, gallery: $gallery };
   const target = sections[sectionName];
@@ -3305,6 +3341,15 @@ function goTo(sectionName) {
 
   currentState = sectionName;
   syncCancelHome();
+
+  if (sectionName === 'gallery') {
+    // Beim Öffnen ist die Galerie erst jetzt sichtbar geworden; vorher hatten
+    // die Kacheln keine Breite und der Mülleimer konnte nicht ausgerichtet
+    // werden.
+    requestAnimationFrame(() => {
+      $galleryGrid.querySelectorAll('.gallery__card').forEach(positionGalleryDelete);
+    });
+  }
 
   // Der Splash-Schalter (fest unten rechts) gehört zum Startbildschirm und
   // verschwindet danach — in der Kameraansicht sitzt der zweite Schalter in
