@@ -1133,7 +1133,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   qrTtlHours: 24,
   challengeEnabled: false,
   challengeLocation: 'lcc',
-  challengeAppUrl: '',
+  challengeAppUrl: 'https://site-6e612acb7a47490692d7da5a7b9d9292.freebuff.page',
   updatedAt: null
 });
 

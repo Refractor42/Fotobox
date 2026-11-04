@@ -684,7 +684,7 @@ const APP_SETTINGS_DEFAULTS = Object.freeze({
   qrTtlHours: 24,
   challengeEnabled: false,
   challengeLocation: 'lcc',
-  challengeAppUrl: '',
+  challengeAppUrl: 'https://site-6e612acb7a47490692d7da5a7b9d9292.freebuff.page',
   // Nur ein Status-Flag, nie der Schlüssel selbst. Damit kann der Endscreen
   // auch dann einen QR zeigen, wenn die Zusammenfassung gerade nicht lädt.
   challengeApiKeySet: false
