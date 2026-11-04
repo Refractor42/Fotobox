@@ -940,6 +940,7 @@ async function handlePhotosApi(req, res) {
       if (params.get('purge') === '1' || session) {
         await supabaseFetch(cfg, `/object/${encodeURIComponent(cfg.bucket)}/${id}`, { method: 'DELETE' });
         if (session) session.photoIds.delete(id);
+        syncChallengeRemoval(id);
         return sendJson(res, 200, { ok: true, purged: true });
       }
       const name = id.slice(PHOTO_PREFIX.length);
@@ -948,6 +949,10 @@ async function handlePhotosApi(req, res) {
       const expiresAt = Math.floor(Date.now() / 1000) + readSettings().trashRetentionDays * 86400;
       const trashId = `${TRASH_PREFIX}${expiresAt}-${name}`;
       await moveObject(cfg, id, trashId);
+      // Im Papierkorb ist das Foto öffentlich nicht mehr sichtbar. Beim
+      // Wiederherstellen wird es bewusst nicht erneut eingereicht: Nicht jedes
+      // wiederhergestellte Foto war zuvor Teil der Challenge.
+      syncChallengeRemoval(id);
       return sendJson(res, 200, { ok: true, trashId });
     }
 
@@ -1057,6 +1062,7 @@ async function handleTrashApi(req, res) {
       const m = id.match(trashIdRe);
       if (!m) return sendJson(res, 400, { error: 'Invalid id' });
       await supabaseFetch(cfg, `/object/${encodeURIComponent(cfg.bucket)}/${id}`, { method: 'DELETE' });
+      syncChallengeRemoval(PHOTO_PREFIX + m[2]);
       return sendJson(res, 200, { ok: true });
     }
 
@@ -1078,6 +1084,14 @@ async function handleTrashApi(req, res) {
 // Server ist die einzige Quelle der Wahrheit; das Admin-Panel schickt immer
 // nur die geänderten Felder. So bleiben mehrere Terminals synchron.
 const SETTINGS_FILE = path.join(DIST_DIR, 'settings.json');
+// Der API-Schlüssel der öffentlichen Challenge-App liegt bewusst NEBEN den
+// Einstellungen in einer ignorierten Datei: settings.json ist versioniert und
+// wird über /api/settings an alle Boxen verteilt — ein Schlüssel darin wäre
+// für jeden Browser lesbar.
+const CHALLENGE_SECRET_FILE = path.join(DIST_DIR, 'challenge-secret.json');
+const CHALLENGE_LOCATIONS = ['lcc', 'coburg'];
+const CHALLENGE_MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+const CHALLENGE_KEY_RE = /^[A-Za-z0-9_-]{20,128}$/;
 const COLOR_RE = /^#[0-9a-f]{6}$/i;
 const BRAND_MAX_LENGTH = 32;
 // Die Fotobox ist gestalterisch ein Dark-Theme. Ein zu heller Hintergrund
@@ -1114,12 +1128,32 @@ const DEFAULT_SETTINGS = Object.freeze({
   backgroundColor: '#0d0d0d',
   brandName: 'SnapBox',
   qrTtlHours: 24,
+  challengeEnabled: false,
+  challengeLocation: 'lcc',
+  challengeAppUrl: '',
+  challengeMonthlyGoal: 42,
   updatedAt: null
 });
 
 function numberInRange(value, fallback, min, max) {
   const n = Number(value);
   return Number.isInteger(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+
+// Nur eine Basis-URL ohne Zugangsdaten, Query oder Fragment. Der Kiosk baut
+// daraus die API-Pfade und den QR-Code; alles andere wäre fehleranfällig.
+function sanitizeChallengeAppUrl(value) {
+  if (typeof value !== 'string') return '';
+  const raw = value.trim();
+  if (!raw || raw.length > 300) return '';
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+    if (url.username || url.password || url.search || url.hash) return '';
+    return (url.origin + url.pathname).replace(/\/+$/, '');
+  } catch (err) {
+    return '';
+  }
 }
 
 function sanitizeSettings(data) {
@@ -1157,6 +1191,15 @@ function sanitizeSettings(data) {
     backgroundColor: safeBackground,
     brandName: brand || DEFAULT_SETTINGS.brandName,
     qrTtlHours: numberInRange(raw.qrTtlHours, DEFAULT_SETTINGS.qrTtlHours, 1, 168),
+    challengeEnabled: raw.challengeEnabled === true,
+    challengeLocation: raw.challengeLocation === 'coburg' ? 'coburg' : 'lcc',
+    challengeAppUrl: sanitizeChallengeAppUrl(raw.challengeAppUrl),
+    challengeMonthlyGoal: numberInRange(
+      raw.challengeMonthlyGoal,
+      DEFAULT_SETTINGS.challengeMonthlyGoal,
+      1,
+      9999
+    ),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null
   };
 
@@ -1179,6 +1222,24 @@ function readSettings() {
     console.warn('Could not read settings.json:', err.message);
   }
   return { ...DEFAULT_SETTINGS };
+}
+
+function readChallengeKey() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(CHALLENGE_SECRET_FILE, 'utf8'));
+    const key = parsed && typeof parsed.apiKey === 'string' ? parsed.apiKey.trim() : '';
+    return CHALLENGE_KEY_RE.test(key) ? key : '';
+  } catch (err) {
+    return '';
+  }
+}
+
+function writeChallengeKey(key) {
+  fs.writeFileSync(
+    CHALLENGE_SECRET_FILE,
+    JSON.stringify({ apiKey: key }, null, 2) + '\n',
+    { encoding: 'utf8', mode: 0o600 }
+  );
 }
 
 function assertInteger(value, name, min, max) {
@@ -1265,6 +1326,35 @@ function validateSettingsPatch(patch) {
     next.brandName = brand;
   }
   if (has('qrTtlHours')) next.qrTtlHours = assertInteger(patch.qrTtlHours, 'QR-Gültigkeit', 1, 168);
+  if (has('challengeEnabled')) {
+    if (typeof patch.challengeEnabled !== 'boolean') throw new Error('Ungültiger Challenge-Schalter.');
+    next.challengeEnabled = patch.challengeEnabled;
+  }
+  if (has('challengeLocation')) {
+    if (!CHALLENGE_LOCATIONS.includes(patch.challengeLocation)) {
+      throw new Error('Bitte LCC oder Coburg als Standort wählen.');
+    }
+    next.challengeLocation = patch.challengeLocation;
+  }
+  if (has('challengeAppUrl')) {
+    const rawUrl = typeof patch.challengeAppUrl === 'string' ? patch.challengeAppUrl.trim() : '';
+    const url = sanitizeChallengeAppUrl(rawUrl);
+    if (rawUrl && !url) {
+      throw new Error('Die Web-App-URL muss mit http:// oder https:// beginnen und ohne Query/Fragment auskommen.');
+    }
+    next.challengeAppUrl = url;
+  }
+  if (has('challengeMonthlyGoal')) {
+    next.challengeMonthlyGoal = assertInteger(patch.challengeMonthlyGoal, 'Challenge-Ziel', 1, 9999);
+  }
+  if (has('challengeApiKey')) {
+    const key = typeof patch.challengeApiKey === 'string' ? patch.challengeApiKey.trim() : '';
+    // Leer lassen heißt „bestehenden Schlüssel behalten“ — das Passwortfeld
+    // zeigt den gespeicherten Wert nie an.
+    if (key && !CHALLENGE_KEY_RE.test(key)) {
+      throw new Error('Der API-Schlüssel muss 20–128 Zeichen aus A–Z, a–z, 0–9, _ oder - haben.');
+    }
+  }
 
   next.updatedAt = new Date().toISOString();
   return next;
@@ -1273,6 +1363,8 @@ function validateSettingsPatch(patch) {
 function saveSettings(patch) {
   const next = validateSettingsPatch(patch);
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), 'utf8');
+  const key = typeof patch.challengeApiKey === 'string' ? patch.challengeApiKey.trim() : '';
+  if (key) writeChallengeKey(key);
   return next;
 }
 
@@ -1282,6 +1374,8 @@ async function handleSettingsApi(req, res) {
     const localIP = getLocalIP();
     return sendJson(res, 200, {
       ...settings,
+      // Nur ob ein Schlüssel existiert, nie der Schlüssel selbst.
+      challengeApiKeySet: !!readChallengeKey(),
       server: {
         port: PORT,
         localIP,
@@ -1300,12 +1394,210 @@ async function handleSettingsApi(req, res) {
         return sendJson(res, 400, { error: 'Invalid JSON or settings' });
       }
       const saved = saveSettings(body);
-      return sendJson(res, 200, { ok: true, settings: saved });
+      return sendJson(res, 200, {
+        ok: true,
+        settings: saved,
+        challengeApiKeySet: !!readChallengeKey()
+      });
     } catch (err) {
       return sendJson(res, 400, { error: err.message || 'Invalid JSON or settings' });
     }
   }
   return sendJson(res, 405, { error: 'Method not allowed' });
+}
+
+// ---- Challenge-App (öffentliche Web-App) ----
+// Der Server ist die einzige Stelle, die den API-Schlüssel kennt. Der Kiosk
+// fragt hier nach dem Monatsstand und reicht Fotos ein; der Browser bekommt
+// weder Schlüssel noch direkten Zugriff auf die Challenge-API.
+function currentChallengeMonth() {
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Berlin',
+    year: 'numeric',
+    month: '2-digit'
+  }).format(new Date());
+}
+
+function readChallengeConfig() {
+  const settings = readSettings();
+  const apiKey = readChallengeKey();
+  return {
+    enabled: settings.challengeEnabled === true,
+    appUrl: settings.challengeAppUrl,
+    location: settings.challengeLocation,
+    goal: settings.challengeMonthlyGoal,
+    apiKey,
+    // Für Einreichungen muss die Challenge aktiv sein; für das Entfernen
+    // gelöschter Fotos reicht eine vollständige Verbindung.
+    configured: !!(settings.challengeAppUrl && apiKey)
+  };
+}
+
+async function challengeFetch(urlPath, options = {}, timeoutMs = 15000) {
+  const cfg = readChallengeConfig();
+  if (!cfg.appUrl || !cfg.apiKey) {
+    throw Object.assign(new Error('Die Challenge-App ist noch nicht vollständig eingerichtet.'), { status: 503 });
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(cfg.appUrl + urlPath, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        'x-challenge-key': cfg.apiKey
+      },
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function handleChallengeSummaryApi(req, res) {
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  const cfg = readChallengeConfig();
+  const url = new URL(req.url, 'http://localhost');
+  const requested = url.searchParams.get('month') || '';
+  const month = CHALLENGE_MONTH_RE.test(requested) ? requested : currentChallengeMonth();
+  const base = {
+    ok: true,
+    enabled: cfg.enabled,
+    configured: cfg.enabled && cfg.configured,
+    online: false,
+    location: cfg.location,
+    month,
+    goal: cfg.goal,
+    appUrl: cfg.appUrl,
+    entries: 0,
+    votes: 0,
+    score: 0
+  };
+
+  if (!cfg.enabled || !cfg.configured) {
+    return sendJson(res, 200, base);
+  }
+
+  try {
+    const query = new URLSearchParams({ location: cfg.location, month });
+    const remote = await challengeFetch('/api/summary?' + query.toString());
+    const data = await remote.json().catch(() => ({}));
+    if (!remote.ok) throw new Error(data.error || ('HTTP ' + remote.status));
+    return sendJson(res, 200, {
+      ...base,
+      online: true,
+      entries: Number(data.entries) || 0,
+      votes: Number(data.votes) || 0,
+      score: Number(data.score) || 0,
+      theme: typeof data.theme === 'string' ? data.theme : ''
+    });
+  } catch (err) {
+    console.warn('Challenge summary failed:', err.message);
+    return sendJson(res, 200, {
+      ...base,
+      error: 'Die Challenge-App ist gerade nicht erreichbar.'
+    });
+  }
+}
+
+async function handleChallengeEntryApi(req, res) {
+  const cfg = readChallengeConfig();
+  if (!cfg.enabled || !cfg.configured) {
+    return sendJson(res, 503, { error: 'Die Challenge ist nicht eingerichtet oder ausgeschaltet.' });
+  }
+
+  if (req.method === 'POST') {
+    let body;
+    try {
+      body = JSON.parse(await readBody(req, 16 * 1024));
+    } catch (err) {
+      return sendJson(res, 400, { error: 'Invalid JSON' });
+    }
+    const photoId = body && typeof body.photoId === 'string' ? body.photoId : '';
+    if (!new RegExp(`^${PHOTO_PREFIX}(${PHOTO_NAME})$`).test(photoId)) {
+      return sendJson(res, 400, { error: 'Invalid photo id' });
+    }
+    // Nur das gerade aufgenommene Foto der laufenden Gäste-Sitzung darf
+    // eingereicht werden — die Auswahl auf dem Endscreen bleibt verbindlich.
+    const session = getPhotoSession(req);
+    if (!session || !session.photoIds.has(photoId)) {
+      return sendJson(res, 403, { error: 'Photo does not belong to this session' });
+    }
+
+    try {
+      const supabase = getSupabaseConfig();
+      const image = await objectToDataUrl(supabase, photoId);
+      const month = currentChallengeMonth();
+      const remote = await challengeFetch('/api/entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          photoId,
+          location: cfg.location,
+          month,
+          image
+        })
+      }, 30000);
+      const data = await remote.json().catch(() => ({}));
+      if (!remote.ok) {
+        return sendJson(res, remote.status, { error: data.error || 'Die Challenge hat das Foto nicht angenommen.' });
+      }
+      return sendJson(res, 200, {
+        ok: true,
+        id: data.id || null,
+        duplicate: data.duplicate === true,
+        month,
+        location: cfg.location
+      });
+    } catch (err) {
+      console.error('Challenge submit failed:', err.message);
+      return sendJson(res, 502, { error: 'Die Challenge-App ist gerade nicht erreichbar.' });
+    }
+  }
+
+  if (req.method === 'DELETE') {
+    const url = new URL(req.url, 'http://localhost');
+    const photoId = url.searchParams.get('photoId') || '';
+    if (!new RegExp(`^${PHOTO_PREFIX}(${PHOTO_NAME})$`).test(photoId)) {
+      return sendJson(res, 400, { error: 'Invalid photo id' });
+    }
+    const session = getPhotoSession(req);
+    if (!isAdmin(req) && (!session || !session.photoIds.has(photoId))) {
+      return sendJson(res, 403, { error: 'Photo does not belong to this session' });
+    }
+    try {
+      const remote = await challengeFetch(
+        '/api/entries?photoId=' + encodeURIComponent(photoId),
+        { method: 'DELETE' },
+        8000
+      );
+      const data = await remote.json().catch(() => ({}));
+      if (!remote.ok) throw new Error(data.error || ('HTTP ' + remote.status));
+      return sendJson(res, 200, { ok: true, removed: data.removed === true });
+    } catch (err) {
+      console.warn('Challenge delete failed:', err.message);
+      return sendJson(res, 502, { error: 'Die Challenge-App ist gerade nicht erreichbar.' });
+    }
+  }
+
+  return sendJson(res, 405, { error: 'Method not allowed' });
+}
+
+// Löscht den öffentlichen Challenge-Eintrag im Hintergrund. Fehler dürfen das
+// Löschen in der Fotobox nie blockieren: Das Foto selbst ist bereits weg.
+function syncChallengeRemoval(photoId) {
+  const cfg = readChallengeConfig();
+  if (!cfg.appUrl || !cfg.apiKey) return;
+  challengeFetch('/api/entries?photoId=' + encodeURIComponent(photoId), { method: 'DELETE' }, 8000)
+    .then(async (remote) => {
+      if (!remote.ok) {
+        const text = await remote.text().catch(() => '');
+        console.warn('Challenge cleanup failed:', remote.status, text.slice(0, 160));
+      }
+    })
+    .catch((err) => console.warn('Challenge cleanup failed:', err.message));
 }
 
 // ---- Druckerstatus ----
@@ -1425,6 +1717,12 @@ const requestHandler = (req, res) => {
   }
   if (route === '/api/settings') {
     return handleSettingsApi(req, res);
+  }
+  if (route === '/api/challenge/summary') {
+    return handleChallengeSummaryApi(req, res);
+  }
+  if (route === '/api/challenge/entries') {
+    return handleChallengeEntryApi(req, res);
   }
   if (route === '/api/admin/login') {
     return handleAdminLoginApi(req, res);

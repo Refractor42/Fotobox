@@ -72,9 +72,33 @@ const I18N = {
     challengeDaysOne: 'noch 1 Tag',
     challengeDays: 'noch {n} Tage',
     challengeLastDay: 'letzter Tag',
+    themeJan: 'Neuer Start',
+    themeFeb: 'Liebe & Winter',
+    themeMar: 'Frühlingswachen',
+    themeApr: 'Bunt & Verrückt',
+    themeMay: 'Blütenpracht',
+    themeJun: 'Sommer-Vibes',
+    themeJul: 'Strand & Sonne',
+    themeAug: 'Heiße Nächte',
+    themeSep: 'Goldener Herbst',
+    themeOct: 'Halloween & Laub',
+    themeNov: 'Gemütlichkeit',
+    themeDec: 'Winterzauber',
     themeHalloween: 'Halloween Motive',
     themeWinter: 'Winterzauber',
     themeDefault: 'Monatsmotiv',
+    endChallengeKicker: 'MONATS-CHALLENGE',
+    endChallengeQuestion: 'Foto für {location} einreichen?',
+    endChallengeHint: 'Dein Foto erscheint in der Web-App. Jeder Like bringt dem Team Extrapunkte.',
+    endChallengeYes: 'Ja, mitmachen',
+    endChallengeNo: 'Nein, danke',
+    endChallengeSubmitting: 'Wird eingereicht…',
+    endChallengeSubmitted: 'Dabei! Dein Foto steht jetzt in der Challenge-Galerie.',
+    endChallengeDeclined: 'Nicht eingereicht. Vielleicht beim nächsten Foto.',
+    endChallengeError: 'Einreichung hat nicht geklappt. Bitte noch einmal tippen.',
+    endChallengeQrLabel: 'Web-App',
+    endChallengeQrHint: 'Scannen & liken',
+    endChallengeQrAria: 'QR-Code zur Web-App mit Leaderboard und Challenge-Galerie',
     captionMode: 'MODUS',
     modeGroupAria: 'Aufnahmemodus',
     modeSingle: 'Einzelfoto',
@@ -281,9 +305,33 @@ const I18N = {
     challengeDaysOne: '1 day left',
     challengeDays: '{n} days left',
     challengeLastDay: 'last day',
+    themeJan: 'Fresh start',
+    themeFeb: 'Love & winter',
+    themeMar: 'Spring awakening',
+    themeApr: 'Colorful & wild',
+    themeMay: 'Blossom time',
+    themeJun: 'Summer vibes',
+    themeJul: 'Beach & sun',
+    themeAug: 'Hot nights',
+    themeSep: 'Golden autumn',
+    themeOct: 'Halloween & leaves',
+    themeNov: 'Cozy season',
+    themeDec: 'Winter magic',
     themeHalloween: 'Halloween motifs',
     themeWinter: 'Winter magic',
     themeDefault: 'Theme of the month',
+    endChallengeKicker: 'MONTHLY CHALLENGE',
+    endChallengeQuestion: 'Submit this photo for {location}?',
+    endChallengeHint: 'Your photo appears in the web app. Every like adds extra points for the team.',
+    endChallengeYes: 'Yes, join in',
+    endChallengeNo: 'No, thanks',
+    endChallengeSubmitting: 'Submitting…',
+    endChallengeSubmitted: 'You are in! Your photo is now in the challenge gallery.',
+    endChallengeDeclined: 'Not submitted. Maybe the next photo.',
+    endChallengeError: 'Submission failed. Please tap again.',
+    endChallengeQrLabel: 'Web app',
+    endChallengeQrHint: 'Scan & like',
+    endChallengeQrAria: 'QR code for the web app with leaderboard and challenge gallery',
     captionMode: 'MODE',
     modeGroupAria: 'Capture mode',
     modeSingle: 'Single photo',
@@ -574,9 +622,44 @@ const APP_SETTINGS_DEFAULTS = Object.freeze({
   secondaryColor: '#00e0d6',
   backgroundColor: '#0d0d0d',
   brandName: 'SnapBox',
-  qrTtlHours: 24
+  qrTtlHours: 24,
+  challengeEnabled: false,
+  challengeLocation: 'lcc',
+  challengeAppUrl: '',
+  challengeMonthlyGoal: 42,
+  // Nur ein Status-Flag, nie der Schlüssel selbst. Damit kann der Endscreen
+  // auch dann einen QR zeigen, wenn die Zusammenfassung gerade nicht lädt.
+  challengeApiKeySet: false
 });
 let appSettings = { ...APP_SETTINGS_DEFAULTS };
+
+// Letzter bekannter Stand der öffentlichen Challenge. Die Karte auf dem
+// Startbildschirm zeigt nur eingereichte Fotos, nicht den gesamten Bestand.
+let challengeStatus = {
+  enabled: false,
+  configured: false,
+  online: false,
+  entries: 0,
+  votes: 0,
+  goal: APP_SETTINGS_DEFAULTS.challengeMonthlyGoal,
+  location: APP_SETTINGS_DEFAULTS.challengeLocation,
+  appUrl: '',
+  month: ''
+};
+let challengeSettingsSignature = '';
+
+function normalizeChallengeUrl(value) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+    if (url.username || url.password || url.search || url.hash) return '';
+    return (url.origin + url.pathname).replace(/\/+$/, '');
+  } catch (err) {
+    return '';
+  }
+}
 
 function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
   const raw = data && typeof data === 'object' ? data : {};
@@ -613,7 +696,17 @@ function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
     secondaryColor: color(merged.secondaryColor, APP_SETTINGS_DEFAULTS.secondaryColor),
     backgroundColor: color(merged.backgroundColor, APP_SETTINGS_DEFAULTS.backgroundColor),
     brandName: brand || APP_SETTINGS_DEFAULTS.brandName,
-    qrTtlHours: intInRange(merged.qrTtlHours, APP_SETTINGS_DEFAULTS.qrTtlHours, 1, 168)
+    qrTtlHours: intInRange(merged.qrTtlHours, APP_SETTINGS_DEFAULTS.qrTtlHours, 1, 168),
+    challengeEnabled: merged.challengeEnabled === true,
+    challengeLocation: merged.challengeLocation === 'coburg' ? 'coburg' : 'lcc',
+    challengeAppUrl: normalizeChallengeUrl(merged.challengeAppUrl),
+    challengeMonthlyGoal: intInRange(
+      merged.challengeMonthlyGoal,
+      APP_SETTINGS_DEFAULTS.challengeMonthlyGoal,
+      1,
+      9999
+    ),
+    challengeApiKeySet: merged.challengeApiKeySet === true
   };
   next.idleWarnSeconds = Math.max(5, Math.min(
     next.idleWarnSeconds,
@@ -835,6 +928,20 @@ function applyAppSettings(data) {
   applyThemeSettings(appSettings);
   applyBrandSettings(appSettings.brandName);
   applyFeatureAvailability();
+
+  // Nur bei geänderter Challenge-Konfiguration neu laden, nicht bei jedem
+  // 2,5-Sekunden-Sync.
+  const signature = [
+    appSettings.challengeEnabled,
+    appSettings.challengeLocation,
+    appSettings.challengeAppUrl,
+    appSettings.challengeMonthlyGoal,
+    appSettings.challengeApiKeySet
+  ].join('|');
+  if (signature !== challengeSettingsSignature) {
+    challengeSettingsSignature = signature;
+    refreshChallengeSummary();
+  }
 
   applyOrientation();
   if (appSettings.defaultLanguage !== defaultLang) {
@@ -2790,6 +2897,10 @@ function resetCameraView() {
   $camera.classList.remove('is-reviewing', 'is-stamping', 'is-ended', 'is-finishing');
   const endScreen = document.getElementById('endScreen');
   if (endScreen) endScreen.hidden = true;
+  document.body.classList.remove('challenge-end-active');
+  if ($challengeEnd) $challengeEnd.hidden = true;
+  challengeEndPhotoId = null;
+  challengeEndChoice = null;
   const reviewActions = document.getElementById('reviewActions');
   if (reviewActions) reviewActions.hidden = true;
   if (isKioskLayout()) {
@@ -2981,6 +3092,10 @@ function openPhotoInReview(imageUrl) {
   $camera.style.display = 'block';
   $camera.style.opacity = '1';
   if ($endScreen) $endScreen.hidden = true;
+  document.body.classList.remove('challenge-end-active');
+  if ($challengeEnd) $challengeEnd.hidden = true;
+  challengeEndPhotoId = null;
+  challengeEndChoice = null;
   currentState = 'camera';
   $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping', 'is-finishing');
   setSideMenuOpen(false);
@@ -3902,6 +4017,16 @@ const $captureOptionsToggle = document.getElementById('captureOptionsToggle');
 const $sideRail = document.getElementById('sideRail');
 const $endScreen = document.getElementById('endScreen');
 const $cancelHome = document.getElementById('cancelHome');
+const $challengeEnd = document.getElementById('challengeEnd');
+const $challengeEndTheme = document.getElementById('challengeEndTheme');
+const $challengeEndQuestion = document.getElementById('challengeEndQuestion');
+const $challengeEndStatus = document.getElementById('challengeEndStatus');
+const $challengeEndChoices = document.getElementById('challengeEndChoices');
+const $challengeEndQrWrap = document.getElementById('challengeEndQrWrap');
+const $challengeEndQr = document.getElementById('challengeEndQr');
+let challengeEndPhotoId = null;
+let challengeEndChoice = null;
+let challengeEndBusy = false;
 
 // Der Home-Button wird nach Aufnahmeaktionen programmatisch fokussiert.
 // Nur bei Tastaturbedienung soll daraus ein sichtbarer Fokusring werden;
@@ -4754,25 +4879,52 @@ function removePhotoIndexId(id) {
   if (index !== -1) photoIndexIds.splice(index, 1);
 }
 
-function themeKeyForNow() {
-  const month = new Date().getMonth();
-  if (month === 9) return 'themeHalloween';
-  if (month === 11) return 'themeWinter';
-  return 'themeDefault';
+const MONTH_THEME_KEYS = [
+  'themeJan', 'themeFeb', 'themeMar', 'themeApr', 'themeMay', 'themeJun',
+  'themeJul', 'themeAug', 'themeSep', 'themeOct', 'themeNov', 'themeDec'
+];
+
+function themeKeyForNow(month = new Date().getMonth()) {
+  return MONTH_THEME_KEYS[month] || 'themeDefault';
+}
+
+async function refreshChallengeSummary() {
+  try {
+    const res = await fetch('/api/challenge/summary', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    challengeStatus = {
+      enabled: data.enabled === true,
+      configured: data.configured === true,
+      online: data.online === true,
+      entries: Math.max(0, Number(data.entries) || 0),
+      votes: Math.max(0, Number(data.votes) || 0),
+      goal: Number(data.goal) || appSettings.challengeMonthlyGoal,
+      location: data.location === 'coburg' ? 'coburg' : 'lcc',
+      appUrl: normalizeChallengeUrl(data.appUrl),
+      month: typeof data.month === 'string' ? data.month : ''
+    };
+  } catch (err) {
+    // Die Karte bleibt sichtbar, zeigt aber keinen erfundenen Zähler an.
+    challengeStatus.online = false;
+  }
+  updateChallengeCard();
 }
 
 function updateChallengeCard() {
   const countEl = document.getElementById('challengeCount');
   if (!countEl) return;
+  const configured = challengeStatus.configured
+    || (appSettings.challengeAppUrl && appSettings.challengeApiKeySet);
+  const active = appSettings.challengeEnabled && configured;
+  document.body.classList.toggle('challenge-active', active);
+  if (!active) return;
+
   const now = new Date();
-  const ids = photoIndexIds.length
-    ? photoIndexIds
-    : photoRecords.map((record) => record.id).filter(Boolean);
-  const count = ids.filter(photoIsCurrentMonth).length;
   const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
-  countEl.textContent = String(count);
+  countEl.textContent = challengeStatus.online ? String(challengeStatus.entries) : '—';
   const goal = document.getElementById('challengeGoal');
-  if (goal) goal.textContent = '42';
+  if (goal) goal.textContent = String(challengeStatus.goal || appSettings.challengeMonthlyGoal || 42);
   const unit = document.getElementById('challengePhotos');
   if (unit) unit.textContent = t('challengePhotos');
   const days = document.getElementById('challengeDays');
@@ -5305,6 +5457,110 @@ function closeStampMode(options = {}) {
   syncBarToggleLabel();
 }
 
+function challengeLocationLabel() {
+  const location = challengeStatus.location || appSettings.challengeLocation;
+  return location === 'coburg' ? 'Coburg' : 'LCC';
+}
+
+// Baut die Challenge-Karte am Endscreen für das gerade bestätigte Foto auf.
+// Die Entscheidung gilt pro Foto; ein neues Foto bekommt wieder Ja/Nein.
+function setupChallengeEnd() {
+  const panel = $challengeEnd;
+  if (!panel) return;
+  const photoId = lastPhoto && lastPhoto.id ? lastPhoto.id : null;
+  const configured = challengeStatus.configured
+    || (appSettings.challengeAppUrl && appSettings.challengeApiKeySet);
+  const active = appSettings.challengeEnabled && configured && !!photoId;
+  challengeEndPhotoId = photoId;
+  challengeEndChoice = null;
+  challengeEndBusy = false;
+  panel.classList.remove('is-submitted', 'is-declined', 'is-submitting');
+  panel.hidden = !active;
+  document.body.classList.toggle('challenge-end-active', active);
+  if (!active) return;
+
+  if ($challengeEndChoices) $challengeEndChoices.hidden = false;
+  panel.querySelectorAll('[data-challenge-choice]').forEach((btn) => { btn.disabled = false; });
+  if ($challengeEndTheme) $challengeEndTheme.textContent = t(themeKeyForNow());
+  if ($challengeEndQuestion) {
+    $challengeEndQuestion.textContent = t('endChallengeQuestion', { location: challengeLocationLabel() });
+  }
+  if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeHint');
+
+  const qrUrl = challengeStatus.appUrl || appSettings.challengeAppUrl;
+  if ($challengeEndQrWrap && $challengeEndQr) {
+    $challengeEndQrWrap.hidden = !qrUrl;
+    if (qrUrl) {
+      renderQrInto($challengeEndQr, qrUrl);
+      const svg = $challengeEndQr.querySelector('svg');
+      if (svg) svg.setAttribute('aria-label', t('endChallengeQrAria'));
+    }
+  }
+}
+
+async function submitChallengeEnd() {
+  if (challengeEndBusy || challengeEndChoice || !challengeEndPhotoId) return;
+  if (!appSettings.challengeEnabled || !appSettings.challengeApiKeySet) return;
+  challengeEndBusy = true;
+  challengeEndChoice = 'yes';
+  const panel = $challengeEnd;
+  if (panel) {
+    panel.classList.add('is-submitting');
+    panel.querySelectorAll('[data-challenge-choice]').forEach((btn) => { btn.disabled = true; });
+  }
+  if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeSubmitting');
+
+  try {
+    const res = await fetch('/api/challenge/entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...photoSessionHeaders() },
+      body: JSON.stringify({ photoId: challengeEndPhotoId })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+
+    challengeEndChoice = 'submitted';
+    challengeEndBusy = false;
+    if (panel) {
+      panel.classList.remove('is-submitting');
+      panel.classList.add('is-submitted');
+    }
+    if ($challengeEndChoices) $challengeEndChoices.hidden = true;
+    if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeSubmitted');
+    if (data.duplicate !== true) {
+      challengeStatus.entries += 1;
+      challengeStatus.online = true;
+      updateChallengeCard();
+    }
+    refreshChallengeSummary();
+  } catch (err) {
+    console.warn('Challenge submission failed:', err);
+    challengeEndChoice = null;
+    challengeEndBusy = false;
+    if (panel) {
+      panel.classList.remove('is-submitting');
+      panel.querySelectorAll('[data-challenge-choice]').forEach((btn) => { btn.disabled = false; });
+    }
+    if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeError');
+    showToast(t('endChallengeError'), { error: true });
+  }
+}
+
+function declineChallengeEnd() {
+  if (challengeEndBusy || challengeEndChoice) return;
+  challengeEndChoice = 'no';
+  if ($challengeEndChoices) $challengeEndChoices.hidden = true;
+  if ($challengeEnd) $challengeEnd.classList.add('is-declined');
+  if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeDeclined');
+}
+
+document.querySelectorAll('[data-challenge-choice]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.challengeChoice === 'yes') submitChallengeEnd();
+    else declineChallengeEnd();
+  });
+});
+
 function showEndScreen(url) {
   // Wurde in der Zwischenzeit zum Start zurückgekehrt (oder die Galerie
   // geöffnet), darf der alte Endscreen nicht mehr auftauchen.
@@ -5323,6 +5579,7 @@ function showEndScreen(url) {
     wrap.appendChild(img);
   }
   if ($endScreen) $endScreen.hidden = false;
+  setupChallengeEnd();
   setSideMenuOpen(false);
   setBarMenuOpen(false);
   setStampMenuOpen(false);
@@ -5336,6 +5593,10 @@ function showEndScreen(url) {
 function returnToIdle() {
   endPhotoSession();
   resetGuestCaptureSettings();
+  document.body.classList.remove('challenge-end-active');
+  if ($challengeEnd) $challengeEnd.hidden = true;
+  challengeEndPhotoId = null;
+  challengeEndChoice = null;
   // Der Startbildschirm beginnt ein neues Gast-Erlebnis: Beim nächsten
   // Öffnen zeigen Filter, Rahmen und Sticker ihren Hinweis wieder einmal.
   resetListScrollHints();
@@ -5361,6 +5622,7 @@ function returnToIdle() {
   if ($splashLang) $splashLang.hidden = false;
   applyLanguage(defaultLang);
   updateChallengeCard();
+  refreshChallengeSummary();
   renderSplashChain();
 }
 
@@ -5623,6 +5885,7 @@ window.addEventListener('load', async () => {
   loadPhotosFromServer();
   loadStreak();
   updateChallengeCard();
+  refreshChallengeSummary();
   renderSplashChain();
   if (isKioskLayout()) openSideMenu('filter');
 

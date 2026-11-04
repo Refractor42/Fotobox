@@ -476,6 +476,44 @@
             <span class="endscreen__label" data-i18n="galleryBtn">Galerie</span>
           </button>
         </div>
+
+        <!-- Monats-Challenge: bewusste Ja/Nein-Entscheidung nach dem Foto,
+             mit direktem Feedback und QR zur öffentlichen Web-App. -->
+        <div class="challenge-end" id="challengeEnd" hidden>
+          <div class="challenge-end__copy">
+            <p class="challenge-end__kicker">
+              <span class="challenge-end__badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                  <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"></path>
+                  <path d="M7 6H4a3 3 0 0 0 3 3M17 6h3a3 3 0 0 1-3 3"></path>
+                </svg>
+              </span>
+              <span data-i18n="endChallengeKicker">MONATS-CHALLENGE</span>
+              <span class="challenge-end__theme" id="challengeEndTheme"></span>
+            </p>
+            <p class="challenge-end__question" id="challengeEndQuestion"></p>
+            <p class="challenge-end__status" id="challengeEndStatus" role="status" aria-live="polite"></p>
+          </div>
+          <div class="challenge-end__choices" id="challengeEndChoices">
+            <button class="challenge-choice challenge-choice--yes" type="button" data-challenge-choice="yes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M4 12.5l5 5L20 6.5"></path>
+              </svg>
+              <span data-i18n="endChallengeYes">Ja, mitmachen</span>
+            </button>
+            <button class="challenge-choice challenge-choice--no" type="button" data-challenge-choice="no">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" focusable="false">
+                <path d="M6 6l12 12M18 6 6 18"></path>
+              </svg>
+              <span data-i18n="endChallengeNo">Nein, danke</span>
+            </button>
+          </div>
+          <div class="challenge-end__qr" id="challengeEndQrWrap" hidden>
+            <div class="challenge-end__qr-code" id="challengeEndQr"></div>
+            <span class="challenge-end__qr-label" data-i18n="endChallengeQrLabel">Web-App</span>
+            <span class="challenge-end__qr-hint" data-i18n="endChallengeQrHint">Scannen &amp; liken</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>

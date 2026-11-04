@@ -1724,6 +1724,7 @@
       <a href="#adminGallery">Fotos</a>
       <a href="#adminTrash">Papierkorb</a>
       <a href="#gallerySettings">Galerie & Leistung</a>
+      <a href="#challenge">Challenge</a>
       <a href="#usageStats">Nutzung</a>
       <a href="#system">System</a>
     </nav>
@@ -2084,6 +2085,89 @@
       <p class="section-note">Empfehlung: 12 Fotos. Das entspricht der bisherigen Geschwindigkeit und hält den ersten Aufruf unter einer halben Megabyte.</p>
     </section>
 
+    <!-- Section: Monthly Challenge -->
+    <section class="section-card" id="challenge">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"></path>
+              <path d="M7 6H4a3 3 0 0 0 3 3M17 6h3a3 3 0 0 1-3 3"></path>
+            </svg>
+            <span class="section-kicker">05</span>
+            Monats-Challenge
+          </h2>
+          <p class="section-header__desc">Verknüpft diese Fotobox mit der öffentlichen Challenge-Web-App. Standort, Adresse, Monatsziel und API-Schlüssel werden hier hinterlegt. Der Schlüssel bleibt auf dem Server und wird nie an den Kiosk-Browser ausgeliefert.</p>
+        </div>
+      </div>
+
+      <div class="settings-stack">
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Challenge aktiv</span>
+            <p class="setting-row__desc">Blendet Challenge-Karte, Einreichung und Leaderboard-QR auf der Fotobox ein. Erst einschalten, wenn Standort, Web-App-Adresse und Schlüssel stimmen.</p>
+          </div>
+          <div class="setting-control">
+            <button class="switch" id="challengeEnabledToggle" type="button" role="switch" aria-checked="false">
+              <span class="switch__track" aria-hidden="true"></span>
+              <span id="challengeEnabledText">Aus</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="challengeLocation">Standort dieser Box</label>
+            <p class="setting-row__desc">Bestimmt, für welches Team die Fotos dieser Fotobox im Leaderboard zählen.</p>
+          </div>
+          <div class="setting-control">
+            <select class="field-select" id="challengeLocation" style="max-width: 220px">
+              <option value="lcc">LCC</option>
+              <option value="coburg">Coburg</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="challengeAppUrl">Web-App-Adresse</label>
+            <p class="setting-row__desc">Öffentliche Adresse der Challenge-Seite, ohne Pfad-Anhang. Daraus entsteht der QR-Code auf dem Endscreen.</p>
+          </div>
+          <div class="setting-control">
+            <input class="field-input" id="challengeAppUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…" style="max-width: 360px" />
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="challengeMonthlyGoal">Fotos pro Monat</label>
+            <p class="setting-row__desc">Zielwert auf der Challenge-Karte, zum Beispiel 42. Er ändert nur die Anzeige, nicht die Wertung.</p>
+          </div>
+          <div class="setting-control">
+            <input class="field-input" id="challengeMonthlyGoal" type="number" min="1" max="9999" step="1" inputmode="numeric" style="max-width: 150px" />
+            <span class="section-note">Fotos</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="challengeApiKey">API-Schlüssel</label>
+            <p class="setting-row__desc">Server-Schlüssel der Challenge-App. Wird verschlüsselt nicht angezeigt; ein neuer Wert ersetzt den bisherigen.</p>
+          </div>
+          <div class="setting-control setting-control--stack">
+            <input class="field-input" id="challengeApiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="Noch kein Schlüssel gespeichert" style="max-width: 360px" />
+            <button class="btn btn--ghost" id="challengeKeySave" type="button">Schlüssel speichern</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="section-note" id="challengeKeyStatus" role="status" aria-live="polite">Noch kein API-Schlüssel gespeichert.</p>
+      <p class="section-note" id="challengeTestStatus" role="status" aria-live="polite">Verbindung noch nicht geprüft.</p>
+      <div class="button-row">
+        <button class="btn btn--ghost" id="challengeTestBtn" type="button">Verbindung testen</button>
+      </div>
+    </section>
+
     <!-- Section: Admin Gallery -->
     <section class="section-card" id="adminGallery">
       <div class="section-header">
@@ -2401,7 +2485,11 @@
         secondaryColor: '#00e0d6',
         backgroundColor: '#0d0d0d',
         brandName: 'SnapBox',
-        qrTtlHours: 24
+        qrTtlHours: 24,
+        challengeEnabled: false,
+        challengeLocation: 'lcc',
+        challengeAppUrl: '',
+        challengeMonthlyGoal: 42
       };
       const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS);
       const $settingsStatus = document.getElementById('settingsStatus');
@@ -2415,6 +2503,16 @@
       const $idleWarnValue = document.getElementById('idleWarnValue');
       const $idleSummary = document.getElementById('idleSummary');
       const $qrTtlHours = document.getElementById('qrTtlHours');
+      const $challengeEnabledToggle = document.getElementById('challengeEnabledToggle');
+      const $challengeEnabledText = document.getElementById('challengeEnabledText');
+      const $challengeLocation = document.getElementById('challengeLocation');
+      const $challengeAppUrl = document.getElementById('challengeAppUrl');
+      const $challengeMonthlyGoal = document.getElementById('challengeMonthlyGoal');
+      const $challengeApiKey = document.getElementById('challengeApiKey');
+      const $challengeKeySave = document.getElementById('challengeKeySave');
+      const $challengeKeyStatus = document.getElementById('challengeKeyStatus');
+      const $challengeTestBtn = document.getElementById('challengeTestBtn');
+      const $challengeTestStatus = document.getElementById('challengeTestStatus');
       const $captureModeOptions = Array.from(document.querySelectorAll('[data-capture-mode]'));
       const $countdownOptions = Array.from(document.querySelectorAll('[data-default-countdown]'));
       const $defaultSoundToggle = document.getElementById('defaultSoundToggle');
@@ -2503,6 +2601,7 @@
 
       let networkUrl = window.location.origin;
       let currentSettings = { ...DEFAULT_SETTINGS };
+      let challengeApiKeySet = false;
       let statusTimer = null;
 
       const MIN_BACKGROUND_LUMINANCE = 0.18;
@@ -2611,6 +2710,18 @@
           : `Nur ${ratio.toFixed(1)}:1 Kontrast zwischen Akzent und Hintergrund. Bitte eine deutlichere Akzentfarbe wählen.`;
       }
 
+      function renderChallengeKeyStatus() {
+        if (!$challengeKeyStatus) return;
+        $challengeKeyStatus.textContent = challengeApiKeySet
+          ? 'API-Schlüssel ist gespeichert. Ein neuer Wert ersetzt ihn; der alte wird nie angezeigt.'
+          : 'Noch kein API-Schlüssel gespeichert. Ohne Schlüssel bleibt die Challenge auf der Fotobox aus.';
+        if ($challengeApiKey) {
+          $challengeApiKey.placeholder = challengeApiKeySet
+            ? 'Gespeichert — neuer Schlüssel zum Ersetzen'
+            : 'Noch kein Schlüssel gespeichert';
+        }
+      }
+
       function renderAllSettings() {
         updateLangUI(currentSettings.defaultLanguage);
         updateRetentionUI(currentSettings.trashRetentionDays);
@@ -2618,6 +2729,12 @@
         syncRange($idleProcessRange, $idleProcessValue, currentSettings.idleProcessSeconds);
         syncRange($idleWarnRange, $idleWarnValue, currentSettings.idleWarnSeconds);
         $qrTtlHours.value = String(currentSettings.qrTtlHours);
+        $challengeEnabledToggle.setAttribute('aria-checked', String(currentSettings.challengeEnabled));
+        $challengeEnabledText.textContent = currentSettings.challengeEnabled ? 'Ein' : 'Aus';
+        $challengeLocation.value = currentSettings.challengeLocation;
+        $challengeAppUrl.value = currentSettings.challengeAppUrl;
+        $challengeMonthlyGoal.value = String(currentSettings.challengeMonthlyGoal);
+        renderChallengeKeyStatus();
         $captureModeOptions.forEach((btn) => {
           btn.setAttribute('aria-pressed', String(btn.dataset.captureMode === currentSettings.defaultCaptureMode));
         });
@@ -2651,6 +2768,9 @@
 
       function applyServerSettings(data, { broadcast = false } = {}) {
         if (!data) return;
+        if (typeof data.challengeApiKeySet === 'boolean') {
+          challengeApiKeySet = data.challengeApiKeySet;
+        }
         SETTING_KEYS.forEach((key) => {
           if (data[key] !== undefined) currentSettings[key] = data[key];
         });
@@ -3003,6 +3123,110 @@
           return;
         }
         persistSettings({ qrTtlHours: value }, 'QR-Gültigkeit gespeichert.');
+      });
+
+      // ---- Monats-Challenge ----
+      $challengeEnabledToggle.addEventListener('click', () => {
+        const enabled = !currentSettings.challengeEnabled;
+        persistSettings(
+          { challengeEnabled: enabled },
+          enabled ? 'Challenge auf der Fotobox eingeschaltet.' : 'Challenge auf der Fotobox ausgeschaltet.'
+        );
+      });
+
+      $challengeLocation.addEventListener('change', () => {
+        const value = $challengeLocation.value === 'coburg' ? 'coburg' : 'lcc';
+        if (value === currentSettings.challengeLocation) return;
+        persistSettings({ challengeLocation: value }, 'Challenge-Standort gespeichert.');
+      });
+
+      function normalizeChallengeUrl(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        try {
+          const url = new URL(raw);
+          if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+          if (url.username || url.password || url.search || url.hash) return '';
+          return (url.origin + url.pathname).replace(/\/+$/, '');
+        } catch (err) {
+          return '';
+        }
+      }
+
+      $challengeAppUrl.addEventListener('change', () => {
+        const raw = $challengeAppUrl.value.trim();
+        const url = normalizeChallengeUrl(raw);
+        if (raw && !url) {
+          showToast('Bitte eine vollständige http(s)-Adresse ohne Query oder Fragment eingeben.', true);
+          renderAllSettings();
+          return;
+        }
+        if (url === currentSettings.challengeAppUrl) {
+          renderAllSettings();
+          return;
+        }
+        persistSettings({ challengeAppUrl: url }, 'Web-App-Adresse gespeichert.');
+      });
+
+      $challengeMonthlyGoal.addEventListener('change', () => {
+        const value = Number($challengeMonthlyGoal.value);
+        if (!Number.isInteger(value) || value < 1 || value > 9999) {
+          showToast('Das Monatsziel muss zwischen 1 und 9999 liegen.', true);
+          renderAllSettings();
+          return;
+        }
+        if (value === currentSettings.challengeMonthlyGoal) return;
+        persistSettings({ challengeMonthlyGoal: value }, 'Monatsziel gespeichert.');
+      });
+
+      $challengeKeySave.addEventListener('click', async () => {
+        const key = $challengeApiKey.value.trim();
+        if (!key) {
+          showToast('Bitte den API-Schlüssel der Challenge-App eingeben.', true);
+          $challengeApiKey.focus();
+          return;
+        }
+        if (!/^[A-Za-z0-9_-]{20,128}$/.test(key)) {
+          showToast('Der Schlüssel muss 20–128 Zeichen aus A–Z, a–z, 0–9, _ oder - haben.', true);
+          $challengeApiKey.focus();
+          return;
+        }
+        const saved = await persistSettings({ challengeApiKey: key }, 'API-Schlüssel gespeichert.');
+        if (saved) $challengeApiKey.value = '';
+      });
+
+      $challengeApiKey.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          $challengeKeySave.click();
+        }
+      });
+
+      $challengeTestBtn.addEventListener('click', async () => {
+        $challengeTestBtn.disabled = true;
+        $challengeTestStatus.textContent = 'Verbindung wird geprüft…';
+        try {
+          const res = await fetch('/api/challenge/summary', { cache: 'no-store' });
+          const data = await res.json().catch(() => ({}));
+          if (!data.enabled) {
+            $challengeTestStatus.textContent = 'Challenge ist ausgeschaltet. Erst einschalten, dann testen.';
+            return;
+          }
+          if (!data.configured) {
+            $challengeTestStatus.textContent = 'Noch nicht vollständig eingerichtet: Web-App-Adresse und API-Schlüssel prüfen.';
+            return;
+          }
+          if (!data.online) {
+            $challengeTestStatus.textContent = 'Nicht erreichbar. Adresse, Schlüssel und Internetverbindung prüfen.';
+            return;
+          }
+          const location = data.location === 'coburg' ? 'Coburg' : 'LCC';
+          $challengeTestStatus.textContent = `Verbunden · ${location} · ${data.entries} Fotos · ${data.votes} Likes in diesem Monat.`;
+        } catch (err) {
+          $challengeTestStatus.textContent = 'Nicht erreichbar. Adresse, Schlüssel und Internetverbindung prüfen.';
+        } finally {
+          $challengeTestBtn.disabled = false;
+        }
       });
 
       // ---- Aufnahme-Standards ----
