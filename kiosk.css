@@ -1927,3 +1927,27 @@ html[data-ui="2"] .capture-bar.is-options-open .kiosk-shutter {
 #camera.is-stamping .viewfinder {
   outline: none;
 }
+
+/* Rounded review preview with equal space above it and before the controls. */
+body.orientation-landscape #camera.is-reviewing .camera__stage {
+  grid-template-rows: minmax(0, 1fr) auto;
+  gap: var(--stage-pad);
+  padding-top: var(--stage-pad);
+  padding-bottom: 0;
+  margin: 0;
+}
+body.orientation-landscape #camera.is-reviewing .capture-bar {
+  grid-area: 2 / 1;
+  height: auto;
+}
+body.orientation-landscape #camera.is-reviewing .viewfinder {
+  height: 100%;
+  border-radius: 14px;
+}
+body.orientation-landscape #camera.is-reviewing .stage-photo {
+  object-position: 50% 0%;
+}
+#camera[aria-busy="true"] .capture-bar,
+#camera[aria-busy="true"] .review {
+  pointer-events: none;
+}

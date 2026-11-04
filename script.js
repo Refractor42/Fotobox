@@ -4,6 +4,8 @@
 
 const gsap = window.gsap;
 const { timeline } = gsap;
+const PHOTO_WIDTH = 1920;
+const PHOTO_HEIGHT = 1080;
 
 // --- DOM references ---
 const $splash        = document.getElementById('splash');
@@ -13,7 +15,6 @@ const $countdown     = document.getElementById('countdown');
 const $flash         = document.getElementById('flash');
 const $captureBtn    = document.getElementById('captureBtn');
 const $processing    = document.getElementById('processing');
-const $processingFill = document.getElementById('processingFill');
 const $placeholder   = $camera.querySelector('.camera__placeholder');
 const $viewfinderFrame = $camera.querySelector('.viewfinder__frame');
 const $corners       = $camera.querySelectorAll('.viewfinder__corner');
@@ -46,8 +47,14 @@ let photoCount = 0;
 let videoPlaying = false;
 let viewfinderVisible = false;
 let isCapturing = false;
+let isSavingPhoto = false;
 let captureRunId = 0;
 let captureCommitted = false;
+let captureTaskCancel = null;
+let captureFlash = null;
+let capturePrint = null;
+let processingTimer = 0;
+let processingRevision = 0;
 let countdownState = null;
 
 // ============================================================
@@ -126,6 +133,8 @@ const I18N = {
     scrollUpAria: 'Nach oben scrollen',
     scrollDownAria: 'Nach unten scrollen',
     overlayNone: 'Kein Rahmen',
+    overlaySizeMismatch: 'Dieser Rahmen passt nur auf Aufnahmen mit {width} \u00d7 {height} Pixeln.',
+    permissionResolutionHint: 'Dieser Rahmen ben\u00f6tigt eine Kamera mit 1920 \u00d7 1080 Pixeln. W\u00e4hle eine Kamera, die dieses Aufnahmeformat unterst\u00fctzt.',
     overlayColorFrame: 'Farbrahmen',
     overlayWhiteFrame: 'Weißer Rahmen',
     overlayStripesH: 'Horizontale Streifen',
@@ -136,7 +145,7 @@ const I18N = {
     toastPrintBlocked: 'Druckfenster wurde blockiert — bitte Pop-ups erlauben.',
     toastFullscreenOn: 'Vollbild an — Shift+F zum Verlassen',
     toastFullscreenError: 'Vollbild konnte nicht geöffnet werden.',
-    processing: 'Foto wird verarbeitet…',
+    processing: 'Foto wird erfasst \u2026',
     idleResetTitle: 'Noch da?',
     idleResetText: 'Zurück zum Start in',
     idleResetStay: 'Hier bleiben',
@@ -212,6 +221,7 @@ const I18N = {
     toastSaved: 'Foto gespeichert.',
     toastCaptureCancelled: 'Aufnahme abgebrochen.',
     toastSaveError: 'Foto konnte nicht gespeichert werden — Verbindung prüfen.',
+    toastCaptureError: 'Aufnahme fehlgeschlagen. Bitte erneut versuchen.',
     toastEditError: 'Änderungen konnten nicht gespeichert werden.',
     toastEditErrorKeep: 'Änderungen konnten nicht gespeichert werden — Foto bleibt unverändert.',
     toastEditedSaveError: 'Bearbeitetes Foto konnte nicht gespeichert werden — Original bleibt erhalten.',
@@ -339,6 +349,8 @@ const I18N = {
     scrollUpAria: 'Scroll up',
     scrollDownAria: 'Scroll down',
     overlayNone: 'No frame',
+    overlaySizeMismatch: 'This frame requires a photo of {width} \u00d7 {height} pixels.',
+    permissionResolutionHint: 'This frame requires a camera supporting 1920 \u00d7 1080 pixels. Select a camera that supports this capture format.',
     overlayColorFrame: 'Color frame',
     overlayWhiteFrame: 'White frame',
     overlayStripesH: 'Horizontal stripes',
@@ -349,7 +361,7 @@ const I18N = {
     toastPrintBlocked: 'Print window was blocked — please allow pop-ups.',
     toastFullscreenOn: 'Fullscreen on — Shift+F to exit',
     toastFullscreenError: 'Fullscreen could not be opened.',
-    processing: 'Processing photo…',
+    processing: 'Capturing photo \u2026',
     idleResetTitle: 'Still there?',
     idleResetText: 'Returning to start in',
     idleResetStay: 'Stay here',
@@ -425,6 +437,7 @@ const I18N = {
     toastSaved: 'Photo saved.',
     toastCaptureCancelled: 'Capture cancelled.',
     toastSaveError: 'Photo could not be saved — check the connection.',
+    toastCaptureError: 'Capture failed. Please try again.',
     toastEditError: 'Changes could not be saved.',
     toastEditErrorKeep: 'Changes could not be saved — the photo stays unchanged.',
     toastEditedSaveError: 'Edited photo could not be saved — the original is kept.',
@@ -982,7 +995,8 @@ function cameraErrorHint(err) {
       return 'permissionBusyHint';
     case 'OverconstrainedError':
     case 'ConstraintNotSatisfiedError':
-      return 'permissionConstraintHint';
+      return err && ['width', 'height'].includes(err.constraint)
+        ? 'permissionResolutionHint' : 'permissionConstraintHint';
     default:
       return 'permissionFailedHint';
   }
@@ -1031,7 +1045,11 @@ async function initCamera({ retry = false } = {}) {
     const requestStarted = performance.now();
     try {
       const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: appSettings.cameraFacingMode },
+        video: {
+          facingMode: appSettings.cameraFacingMode,
+          width: { exact: PHOTO_WIDTH },
+          height: { exact: PHOTO_HEIGHT }
+        },
         audio: false
       });
       stream = mediaStream;
@@ -1567,12 +1585,7 @@ function cancelCapture() {
   hideCountdown();
   hideStripProgress();
   gsap.killTweensOf([...$corners, $viewfinderFrame]);
-  gsap.killTweensOf($processing);
-  gsap.killTweensOf($flash);
-  gsap.set($processing, { opacity: 0 });
-  gsap.set($flash, { opacity: 0 });
-  $processingFill.style.width = '0%';
-  $processingFill.style.transition = 'none';
+  clearCapturePresentation();
   isCapturing = false;
   $captureBtn.disabled = false;
   currentState = 'camera';
@@ -1607,7 +1620,9 @@ function showReview() {
       actions.hidden = false;
       // Nur einblenden, nicht verschieben: „Annehmen“ ist fixiert und würde
       // in einem transformierten Eltern-Element für einen Moment falsch sitzen.
-      gsap.from(actions, { opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
+      if (!$camera.classList.contains('is-capture-result')) {
+        gsap.from(actions, { opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
+      }
     }
     renderBarMenu();
     syncBarToggleLabel();
@@ -1617,7 +1632,9 @@ function showReview() {
   }
 
   $review.hidden = false;
-  gsap.from($review, { y: 24, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
+  if (!$camera.classList.contains('is-capture-result')) {
+    gsap.from($review, { y: 24, opacity: 0, duration: 0.35, ease: 'power2.out', clearProps: 'all' });
+  }
   $reviewKeep.focus();
 }
 
@@ -1699,46 +1716,38 @@ function discardUnacceptedPhoto() {
 }
 
 async function keepPhoto() {
-  // Session-Ende: Sprache für den nächsten Gast auf Deutsch zurücksetzen
-  // (HCI: Predictable System State — der Nachfolger in der Warteschlange
-  // darf nicht durch eine fremde Sprache verwirrt werden).
-  applyLanguage(defaultLang);
-  // Im Kiosk wird der Endscreen erst nach dem Speichern gezeigt. Bis dahin
-  // bleibt die Aufnahme-Leiste verborgen, statt für einen Moment wieder
-  // aufzutauchen und sich bedienen zu lassen.
-  if (isKioskLayout()) $camera.classList.add('is-finishing');
-  hideReview();
-  setControlsLocked(false);
-
-  const photo = lastPhoto;
-  const stagePhoto = $camera.querySelector('.viewfinder img.stage-photo');
-  const photoUrl = stagePhoto ? stagePhoto.src : null;
-  const hasEdits = activeStickers.length || currentFilter !== 'standard' || !!currentOverlay;
-
-  // Farbe, Sticker oder Overlay gewählt: Foto neu komponieren und serverseitig
-  // überschreiben. Im Kiosk endet der Flow danach auf dem Endscreen.
-  if (hasEdits) {
-    await saveEditedPhoto({ endScreen: isKioskLayout() });
-    return;
-  }
-
-  if (isKioskLayout()) {
-    if (photo && photo.savePromise) {
-      try { await photo.savePromise; } catch (e) { /* Fehler wurde bereits gemeldet */ }
+  if (isSavingPhoto || !hasPhoto) return;
+  isSavingPhoto = true;
+  const actions = [$reviewKeep, $landscapeKeep, $reviewRetake, $landscapeRetake].filter(Boolean);
+  actions.forEach((button) => { button.disabled = true; });
+  $camera.setAttribute('aria-busy', 'true');
+  try {
+    applyLanguage(defaultLang);
+    const photo = lastPhoto;
+    const stagePhoto = $camera.querySelector('.viewfinder img.stage-photo');
+    const photoUrl = stagePhoto ? stagePhoto.src : null;
+    const hasEdits = activeStickers.length || currentFilter !== 'standard' || !!currentOverlay;
+    // Keep the review and its geometry intact until the edited upload succeeds.
+    if (hasEdits) {
+      await saveEditedPhoto({ endScreen: isKioskLayout() });
+      return;
     }
+    if (photo && photo.savePromise) {
+      try { await photo.savePromise; } catch (e) { /* already reported */ }
+    }
+    hideReview();
+    setControlsLocked(false);
+    if (isKioskLayout()) {
+      if (photo && photo.id) showToast(t('toastSaved'));
+      if (photoUrl) showEndScreen(photoUrl);
+      return;
+    }
+    resetCameraView();
     if (photo && photo.id) showToast(t('toastSaved'));
-    if (photoUrl) showEndScreen(photoUrl);
-    else $camera.classList.remove('is-finishing');
-    return;
-  }
-
-  // Erst „Speichern“ bestätigt das Foto. Die Server-Speicherung läuft
-  // bereits seit der Aufnahme; hier warten wir ihr Ergebnis ab, damit
-  // „Foto gespeichert“ nicht fälschlich vor der Entscheidung erscheint.
-  resetCameraView();
-  if (photo && photo.savePromise) {
-    try { await photo.savePromise; } catch (e) { /* Fehler wurde bereits gemeldet */ }
-    if (photo.id) showToast(t('toastSaved'));
+  } finally {
+    isSavingPhoto = false;
+    $camera.removeAttribute('aria-busy');
+    actions.forEach((button) => { button.disabled = false; });
   }
 }
 
@@ -2087,88 +2096,21 @@ function photoStageRect() {
   const scale = Math.min(vf.width / nw, vf.height / nh);
   const width = nw * scale;
   const height = nh * scale;
+  const topAligned = getComputedStyle(stage).objectPosition.split(/\s+/)[1] === '0%';
+  const top = vf.top + (topAligned ? 0 : (vf.height - height) / 2);
   return {
     left: vf.left + (vf.width - width) / 2,
-    top: vf.top + (vf.height - height) / 2,
+    top,
     width,
     height,
     right: vf.left + (vf.width + width) / 2,
-    bottom: vf.top + (vf.height + height) / 2
+    bottom: top + height
   };
 }
 
-// Rahmen-Overlays haben einen transparenten Innenbereich. Die Ränder werden
-// aus dem Alphakanal des Overlays gemessen, damit Sticker nicht auf dem
-// dekorativen Rahmen landen. Bis die Messung vorliegt, gilt ein ruhiger
-// Standardrand; „Kein Rahmen“ hat keinen Rand.
-const DEFAULT_OVERLAY_INSET = 5;
-const NO_INSET = { left: 0, right: 0, top: 0, bottom: 0 };
-
-function overlaySafeInsets(overlay) {
-  if (!overlay) return NO_INSET;
-  return overlay.safeInsets || {
-    left: DEFAULT_OVERLAY_INSET,
-    right: DEFAULT_OVERLAY_INSET,
-    top: DEFAULT_OVERLAY_INSET,
-    bottom: DEFAULT_OVERLAY_INSET
-  };
-}
-
-function measureOverlaySafeArea(overlay) {
-  if (!overlay || overlay.safeInsets || overlay.safeMeasure) return;
-  overlay.safeMeasure = true;
-  const img = new Image();
-  img.onload = () => {
-    overlay.safeMeasure = false;
-    try {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(img, 0, 0);
-      const W = canvas.width;
-      const H = canvas.height;
-      const data = ctx.getImageData(0, 0, W, H).data;
-      const alphaAt = (x, y) => data[(y * W + x) * 4 + 3];
-      const cx = W >> 1;
-      const cy = H >> 1;
-      let left = cx;
-      let right = cx;
-      let top = cy;
-      let bottom = cy;
-      if (alphaAt(cx, cy) < 10) {
-        while (left > 0 && alphaAt(left - 1, cy) < 10) left--;
-        while (right < W - 1 && alphaAt(right + 1, cy) < 10) right++;
-        while (top > 0 && alphaAt(cx, top - 1) < 10) top--;
-        while (bottom < H - 1 && alphaAt(cx, bottom + 1) < 10) bottom++;
-        overlay.safeInsets = {
-          left: (left / W) * 100,
-          right: ((W - 1 - right) / W) * 100,
-          top: (top / H) * 100,
-          bottom: ((H - 1 - bottom) / H) * 100
-        };
-        if (currentOverlay === overlay) repositionStickers();
-      } else {
-        overlay.safeInsets = NO_INSET;
-      }
-    } catch (err) {
-      // Bei einem nicht lesbaren Bild bleibt der Standardrand aktiv.
-      console.warn('Overlay-Rahmen konnte nicht gemessen werden:', err);
-    }
-  };
-  img.onerror = () => { overlay.safeMeasure = false; };
-  img.src = overlay.src;
-}
-
-// Fotobereich abzüglich des Overlay-Rahmens: hier dürfen Sticker sitzen.
+// Sticker positions are limited to the visible photo area.
 function stickerSafeRect() {
-  const photo = photoStageRect();
-  const ins = overlaySafeInsets(currentOverlay);
-  const left = photo.left + (photo.width * ins.left) / 100;
-  const top = photo.top + (photo.height * ins.top) / 100;
-  const right = photo.right - (photo.width * ins.right) / 100;
-  const bottom = photo.bottom - (photo.height * ins.bottom) / 100;
-  return { left, top, right, bottom, width: right - left, height: bottom - top };
+  return photoStageRect();
 }
 
 // Die +/−/×-Leiste sitzt normalerweise über dem Sticker. Ist dort kein
@@ -2355,82 +2297,196 @@ async function renderEditedPhoto(photoEl) {
     }
   }
 
-  // Bild-Overlay wie in der Vorschau einbrennen: bei der Fotocollage je
-  // Kachel, beim Einzelfoto über die volle Fotofläche.
-  if (currentOverlay && currentOverlay.src) {
-    try {
-      const overlayImg = await loadImg(currentOverlay.src);
-      if (photoEl.classList.contains('stage-photo--strip') && lastStripLayout) {
-        const { w, h, pad, gap, count, cols = 2 } = lastStripLayout;
-        for (let i = 0; i < count; i++) {
-          const x = pad + (i % cols) * (w + gap);
-          const y = pad + Math.floor(i / cols) * (h + gap);
-          ctx.drawImage(overlayImg, x, y, w, h);
-        }
-      } else {
-        ctx.drawImage(overlayImg, 0, 0, base.naturalWidth, base.naturalHeight);
+  if (currentOverlay) {
+    const overlay = currentOverlay;
+    if (!overlayFitsPhoto(overlay, photoEl)) throw new Error('Frame and photo pixel dimensions differ');
+    const img = await loadNativeOverlay(overlay);
+    if (photoEl.classList.contains('stage-photo--strip') && lastStripLayout) {
+      const { w, h, pad, gap, count, cols = 2 } = lastStripLayout;
+      for (let i = 0; i < count; i++) {
+        // Three arguments: native PNG pixels at the tile origin, no scaling.
+        ctx.drawImage(img, pad + (i % cols) * (w + gap), pad + Math.floor(i / cols) * (h + gap));
       }
-    } catch (err) {
-      console.warn('Overlay konnte nicht gerendert werden:', err);
+    } else {
+      ctx.drawImage(img, 0, 0);
     }
   }
+
   return canvas.toDataURL('image/jpeg', 0.92);
 }
 
 async function saveEditedPhoto(options = {}) {
   const photoEl = $camera.querySelector('.viewfinder img.stage-photo');
-  if (!photoEl) { clearStickers(); resetCameraView(); return; }
-  // Original-Speicherung muss durch sein, damit wir ihren Key überschreiben können
-  if (lastPhoto && lastPhoto.savePromise) {
-    try { await lastPhoto.savePromise; } catch (e) { /* Fehler wurde schon gemeldet */ }
+  const photo = lastPhoto;
+  if (!photoEl || !photo) return false;
+  if (photo.savePromise) {
+    try { await photo.savePromise; } catch (e) { /* already reported */ }
   }
   let edited;
   try {
     edited = await renderEditedPhoto(photoEl);
   } catch (err) {
-    console.warn('Foto konnte nicht komponiert werden:', err);
+    console.warn('Photo composition failed:', err);
     showToast(t('toastEditError'), { error: true });
-    clearStickers();
-    resetCameraView();
-    return;
+    return false;
   }
-  clearStickers();
-  if (!lastPhoto || !lastPhoto.id) {
-    showToast(t('toastEditErrorKeep'), { error: true });
-    resetCameraView();
-    return;
-  }
+  if (lastPhoto !== photo || !photoEl.isConnected) return false;
   try {
+    // If the original upload failed, save the edited photo as a new object.
+    const payload = { image: edited };
+    if (photo.id) payload.id = photo.id;
     const res = await fetch('/api/photos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ image: edited, id: lastPhoto.id })
+      body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
-    if (lastPhoto.card && lastPhoto.card.isConnected) {
-      const cardImg = lastPhoto.card.querySelector('img');
-      if (cardImg) cardImg.src = edited;
+    const data = await res.json();
+    const id = data.id || photo.id;
+    if (!id) throw new Error('Photo upload returned no ID');
+    const hadId = !!photo.id;
+    photo.id = id;
+    const card = photo.card;
+    if (card && card.isConnected) {
+      card.dataset.id = id;
+      const image = card.querySelector('img');
+      if (image) image.src = edited;
+      if (!hadId) attachDelete(card, id);
+      if (card._photoRecord) {
+        const index = photos.indexOf(card._photoRecord.url);
+        if (index !== -1) photos[index] = edited;
+        card._photoRecord.id = id;
+        card._photoRecord.url = edited;
+      }
     }
-    showToast(t('toastSaved'));
+    addPhotoIndexId(id);
+    if (data.streak) applyStreak(data.streak);
   } catch (err) {
     console.warn('Edited photo could not be saved:', err);
     showToast(t('toastEditedSaveError'), { error: true });
+    // Preserve the photo, selected frame and stickers for another attempt.
+    return false;
   }
-  if (options.endScreen) {
-    showEndScreen(edited);
-  } else {
-    resetCameraView();
-  }
+  if (lastPhoto !== photo || !photoEl.isConnected) return false;
+  clearStickers();
+  currentOverlay = null;
+  photoEl.src = edited;
+  renderOverlayPreview();
+  hideReview();
+  setControlsLocked(false);
+  showToast(t('toastSaved'));
+  if (options.endScreen) showEndScreen(edited);
+  else resetCameraView();
+  return true;
 }
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function flashCapture() {
-  gsap.to($flash, { opacity: 1, duration: 0.01 });
-  gsap.fromTo($flash, { opacity: 1 }, {
-    opacity: 0, duration: 0.35, ease: 'power2.out', delay: 0.02
+function reducedCaptureMotion() {
+  return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+}
+
+function awaitCaptureTask(task, runId) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const finish = (error, value) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      if (captureTaskCancel === cancel) captureTaskCancel = null;
+      if (error) reject(error); else resolve(value);
+    };
+    const cancel = () => finish(new DOMException('Capture cancelled', 'AbortError'));
+    const timer = window.setTimeout(() => finish(new Error('Capture processing timed out')), 20000);
+    captureTaskCancel = cancel;
+    Promise.resolve(task).then(value => finish(null, value), error => finish(error));
+    if (runId !== captureRunId) cancel();
+  });
+}
+
+function prepareCaptureResult() {
+  // Switch scenes once, while the full-screen flash is at its peak.
+  $camera.classList.add('is-reviewing', 'is-printing', 'is-capture-result');
+  const actions = document.getElementById('reviewActions');
+  if (actions) actions.hidden = !isKioskLayout();
+  $review.hidden = isKioskLayout();
+  gsap.set($placeholder, { opacity: 0 });
+}
+
+function flashCapture(toResult = false) {
+  if (captureFlash) captureFlash.finish();
+  const reduced = reducedCaptureMotion();
+  let resolve, resolveReady;
+  const promise = new Promise(done => { resolve = done; });
+  const ready = new Promise(done => { resolveReady = done; });
+  let finished = false;
+  const effect = { promise, ready, tween: null, finish: () => {
+    if (finished) return;
+    finished = true;
+    if (effect.tween) effect.tween.kill();
+    gsap.set($flash, { opacity: 0 });
+    if (captureFlash === effect) captureFlash = null;
+    resolveReady();
+    resolve();
+  } };
+  captureFlash = effect;
+  effect.tween = timeline({ onComplete: effect.finish, onInterrupt: effect.finish })
+    .to($flash, {
+      opacity: reduced ? 0.16 : 1, duration: reduced ? 0.15 : 0.18, ease: 'power1.out',
+      onComplete: () => {
+        if (toResult) prepareCaptureResult();
+        resolveReady();
+      }
+    })
+    .to($flash, { opacity: 0, duration: reduced ? 0.25 : 0.4, ease: 'power1.inOut' });
+  return promise;
+}
+
+function clearCapturePresentation() {
+  if (captureTaskCancel) captureTaskCancel();
+  if (capturePrint) capturePrint.finish(false);
+  if (captureFlash) captureFlash.finish();
+  stopPrinterSound();
+  clearTimeout(processingTimer);
+  processingTimer = 0;
+  ++processingRevision;
+  gsap.killTweensOf($processing);
+  gsap.set($processing, { opacity: 0 });
+  $processing.hidden = true;
+  $processing.setAttribute('aria-hidden', 'true');
+  $camera.classList.remove('is-printing');
+}
+
+function animatePrintedPhoto(targets, runId) {
+  const reduced = reducedCaptureMotion();
+  const duration = reduced ? 0.18 : 2;
+  const distance = $camera.querySelector('.viewfinder').getBoundingClientRect().height;
+  if (capturePrint) capturePrint.finish(false);
+  return new Promise(resolve => {
+    let finished = false;
+    const effect = { tween: null, finish: (success) => {
+      if (finished) return;
+      finished = true;
+      if (effect.tween) effect.tween.kill();
+      stopPrinterSound();
+      window.removeEventListener('resize', completeOnResize);
+      gsap.set(targets, { opacity: 1, clearProps: 'transform,visibility' });
+      $camera.classList.remove('is-printing');
+      if (capturePrint === effect) capturePrint = null;
+      resolve(!!success && runId === captureRunId);
+    } };
+    const completeOnResize = () => effect.finish(true);
+    capturePrint = effect;
+    window.addEventListener('resize', completeOnResize);
+    gsap.set(targets, { y: reduced ? 0 : -distance, opacity: reduced ? 0 : 1, visibility: 'visible' });
+    effect.tween = gsap.to(targets, {
+      y: 0, opacity: 1, duration, ease: reduced ? 'power1.out' : 'none',
+      onStart: () => { if (!reduced) playPrinterSound(duration); },
+      onComplete: () => effect.finish(true),
+      onInterrupt: () => effect.finish(false)
+    });
   });
 }
 
@@ -2440,14 +2496,9 @@ async function runSingleCapture(runId) {
   if (!(await runCountdown(runId))) return false;
   if (runId !== captureRunId) return false;
 
-  // 2. hide viewfinder + placeholder
-  await hideViewfinder();
-  if (runId !== captureRunId) return false;
-  gsap.to($placeholder, { opacity: 0, duration: 0.2, ease: 'power2.in' });
-
-  // 3. flash + shutter sound
+  // Flash directly after the countdown; switch scenes at the white peak.
   playShutterSound();
-  flashCapture();
+  flashCapture(true);
 
   // 4. process photo. Im Kiosk wird der gewählte Komplett-Filter bereits
   // ins JPEG gebacken; danach wird die Auswahl für die Review-Pipeline auf
@@ -2456,11 +2507,9 @@ async function runSingleCapture(runId) {
     currentFilter = 'standard';
     applyFilterSelection();
   }
-  showProcessing();
-  await sleep(200);
-  if (runId !== captureRunId) return false;
+  showProcessing(runId);
   $video.pause();
-  const photoUrl = await captureFromVideo();
+  const photoUrl = await awaitCaptureTask(captureFromVideo(), runId);
   if (runId !== captureRunId) return false;
   if (isKioskLayout()) {
     currentFilter = 'standard';
@@ -2481,10 +2530,6 @@ async function runStripCapture(runId) {
   const frames = [];
   const total = 4;
 
-  await hideViewfinder();
-  if (runId !== captureRunId) return false;
-  gsap.to($placeholder, { opacity: 0, duration: 0.2, ease: 'power2.in' });
-
   for (let i = 0; i < total; i++) {
     if (runId !== captureRunId) return false;
     showStripProgress(i + 1, total);
@@ -2494,12 +2539,10 @@ async function runStripCapture(runId) {
     }
     if (runId !== captureRunId) return false;
     playShutterSound();
-    flashCapture();
-    await sleep(120);
+    const flashDone = flashCapture(i === total - 1);
+    frames.push(await awaitCaptureTask(captureFromVideo(), runId));
     if (runId !== captureRunId) return false;
-    frames.push(await captureFromVideo());
-    if (runId !== captureRunId) return false;
-    await sleep(550);
+    await awaitCaptureTask(flashDone, runId);
   }
   if (runId !== captureRunId) return false;
   hideStripProgress();
@@ -2508,11 +2551,9 @@ async function runStripCapture(runId) {
     currentFilter = 'standard';
     applyFilterSelection();
   }
-  showProcessing();
-  await sleep(250);
-  if (runId !== captureRunId) return false;
+  showProcessing(runId);
   $video.pause();
-  const stripUrl = await composeStrip(frames);
+  const stripUrl = await awaitCaptureTask(composeStrip(frames), runId);
   if (runId !== captureRunId) return false;
   if (!(await showCaptureResult(stripUrl, runId))) return false;
 
@@ -2551,10 +2592,18 @@ async function runCaptureSequence() {
       : await runSingleCapture(runId);
     if (!completed || runId !== captureRunId) return;
     showReview();
+  } catch (err) {
+    if (runId !== captureRunId) return;
+    console.warn('Photo capture failed:', err);
+    stopCountdown();
+    hideStripProgress();
+    resetCameraView();
+    showToast(t('toastCaptureError'), { error: true });
   } finally {
     // Ein abgebrochener Lauf darf einen bereits gestarteten neuen Lauf
     // nicht mehr zurücksetzen.
     if (runId !== captureRunId) return;
+    clearCapturePresentation();
     isCapturing = false;
     $captureBtn.disabled = false;
     currentState = 'camera';
@@ -2586,6 +2635,9 @@ async function composeStrip(frames) {
   const images = await Promise.all(frames.map(loadImg));
   const w = images[0].naturalWidth || 1280;
   const h = images[0].naturalHeight || 960;
+  if (images.some((img) => img.naturalWidth !== w || img.naturalHeight !== h)) {
+    throw new Error('Collage photos have different pixel dimensions');
+  }
   const cols = 2;
   const rows = Math.ceil(images.length / cols);
   const pad = Math.round(w * 0.035);
@@ -2601,7 +2653,7 @@ async function composeStrip(frames) {
   images.forEach((img, i) => {
     const x = pad + (i % cols) * (w + gap);
     const y = pad + Math.floor(i / cols) * (h + gap);
-    ctx.drawImage(img, x, y, w, h);
+    ctx.drawImage(img, x, y);
   });
   ctx.fillStyle = '#111111';
   ctx.font = '700 ' + Math.round(footer * 0.5) + "px 'SF Pro Display', -apple-system, sans-serif";
@@ -2703,69 +2755,77 @@ function runCountdown(runId) {
   });
 }
 
-function showProcessing() {
-  gsap.to($processing, { opacity: 1, duration: 0.4, pointerEvents: 'none' });
-  $processingFill.style.transition = 'width 0.8s ease';
-  $processingFill.style.width = '100%';
+function showProcessing(runId = captureRunId) {
+  const revision = ++processingRevision;
+  clearTimeout(processingTimer);
+  gsap.killTweensOf($processing);
+  $processing.hidden = true;
+  $processing.setAttribute('aria-hidden', 'true');
+  gsap.set($processing, { opacity: 0 });
+  processingTimer = window.setTimeout(async () => {
+    processingTimer = 0;
+    // Dissolve white into the result surface before showing status.
+    if (captureFlash) await captureFlash.promise;
+    if (revision !== processingRevision || runId !== captureRunId) return;
+    $processing.hidden = false;
+    $processing.setAttribute('aria-hidden', 'false');
+    gsap.to($processing, { opacity: 1, duration: 0.12, ease: 'power1.out' });
+  }, 220);
+}
+
+function hideProcessing() {
+  ++processingRevision;
+  clearTimeout(processingTimer);
+  processingTimer = 0;
+  gsap.killTweensOf($processing);
+  gsap.set($processing, { opacity: 0 });
+  $processing.hidden = true;
+  $processing.setAttribute('aria-hidden', 'true');
+  return Promise.resolve();
 }
 
 async function showCaptureResult(photoUrl, runId = captureRunId) {
   if (runId !== captureRunId) return false;
-  gsap.to($placeholder, { opacity: 0, duration: 0.001 });
-
   const img = document.createElement('img');
   img.className = 'stage-photo';
-  // Die Fotocollage würde mit "cover" beschnitten — deshalb wird sie
-  // vollständig (contain) gezeigt.
   const fit = captureMode === 'strip' ? 'contain' : 'cover';
   if (captureMode === 'strip') img.classList.add('stage-photo--strip');
   img.src = photoUrl;
-  img.style.cssText = `
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: ${fit}; background: #000; opacity: 0;
-    border-radius: 0; filter: grayscale(100%) contrast(1.1);
-  `;
-  $camera.querySelector('.viewfinder').appendChild(img);
-
-  const tl = timeline({ defaults: { ease: 'power2.out' } });
-  await tl.to($flash, { opacity: 0.9, duration: 0.01 })
-    .to($flash, { opacity: 0, duration: 0.3 }, '+=0.05');
-  if (runId !== captureRunId) { img.remove(); return false; }
-
-  gsap.to(img, { opacity: 1, duration: 0.5 });
-  await gsap.to(img, {
-    filter: 'grayscale(0%) contrast(1)', duration: 0.7, delay: 0.2
-  });
-  if (runId !== captureRunId) { img.remove(); return false; }
-
-  gsap.to($processing, { opacity: 0, duration: 0.3, delay: 0.5 });
-  $processingFill.style.width = '0%';
-  $processingFill.style.transition = 'none';
-
-  img.style.cssText = `
-    position: absolute; inset: 0; width: 100%; height: 100%;
-    object-fit: ${fit}; background: #000; opacity: 1; border-radius: 0;
-    filter: grayscale(0%) contrast(1);
-  `;
-  // a photo is now shown in the stage
+  await awaitCaptureTask(img.decode(), runId);
+  if (captureFlash) await awaitCaptureTask(captureFlash.ready, runId);
+  if (runId !== captureRunId) return false;
+  img.style.cssText = 'position: absolute; inset: 0; width: 100%; height: 100%;'
+    + 'object-fit: ' + fit + '; background: transparent; opacity: 0; border-radius: 0;'
+    + 'filter: grayscale(0%) contrast(1);';
+  const viewfinder = $camera.querySelector('.viewfinder');
+  viewfinder.appendChild(img);
+  prepareCaptureResult();
   hasPhoto = true;
-  await new Promise((r) => setTimeout(r, 300));
-  if (runId !== captureRunId) {
+  try {
+    await awaitCaptureTask(renderOverlayPreview(), runId);
+    await awaitCaptureTask(hideProcessing(), runId);
+    if (captureFlash) await awaitCaptureTask(captureFlash.promise, runId);
+    if (runId !== captureRunId) return false;
+    const targets = [img, ...viewfinder.querySelectorAll('.photo-overlay, .photo-overlay-strip')];
+    const completed = await animatePrintedPhoto(targets, runId);
+    if (!completed) img.remove();
+    return completed;
+  } catch (err) {
     img.remove();
-    hasPhoto = false;
-    return false;
+    throw err;
   }
-  return true;
 }
 
 function resetCameraView() {
+  clearCapturePresentation();
+  $review.hidden = true;
   const existingImg = $camera.querySelector('.viewfinder img.stage-photo');
   if (existingImg) existingImg.remove();
   clearStickers();
   currentOverlay = null;
   lastStripLayout = null;
   renderOverlayPreview();
-  $camera.classList.remove('is-reviewing', 'is-stamping', 'is-ended', 'is-finishing');
+  $camera.classList.remove('is-reviewing', 'is-stamping', 'is-ended', 'is-finishing', 'is-capture-result');
   const endScreen = document.getElementById('endScreen');
   if (endScreen) endScreen.hidden = true;
   const reviewActions = document.getElementById('reviewActions');
@@ -3563,6 +3623,65 @@ let shutterBuffer = null;     // decoded AudioBuffer, ready for playback
 let shutterLoadPromise = null;
 let shutterDecodePromise = null;
 
+// No printer recording is bundled. Synthesize a quiet motor and paper
+// friction in the existing, gesture-unlocked AudioContext. No looping asset.
+let printerSoundStop = null;
+
+function stopPrinterSound() {
+  if (printerSoundStop) printerSoundStop();
+}
+
+function playPrinterSound(duration) {
+  stopPrinterSound();
+  if (!soundEnabled) return;
+  const nodes = [];
+  let stopped = false;
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    nodes.forEach(node => {
+      try { if (typeof node.stop === 'function') node.stop(); } catch (e) {}
+      try { node.disconnect(); } catch (e) {}
+    });
+    if (printerSoundStop === stop) printerSoundStop = null;
+  };
+  try {
+    const ctx = getAudioContext();
+    if (!ctx || ctx.state !== 'running') return;
+    printerSoundStop = stop;
+    const now = ctx.currentTime;
+    const gain = ctx.createGain(); nodes.push(gain);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.025, now + 0.08);
+    gain.gain.setValueAtTime(0.025, now + duration - 0.2);
+    gain.gain.linearRampToValueAtTime(0, now + duration);
+    gain.connect(ctx.destination);
+    const motor = ctx.createOscillator(); nodes.push(motor);
+    motor.type = 'triangle';
+    motor.frequency.setValueAtTime(155, now);
+    motor.frequency.linearRampToValueAtTime(185, now + 0.18);
+    motor.frequency.linearRampToValueAtTime(165, now + duration - 0.2);
+    motor.frequency.linearRampToValueAtTime(125, now + duration);
+    motor.connect(gain);
+    const buffer = ctx.createBuffer(1, Math.ceil(ctx.sampleRate * duration), ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      const roller = Math.sin((i / ctx.sampleRate) * Math.PI * 18);
+      data[i] = (Math.random() * 2 - 1) * (0.2 + roller * roller * 0.3);
+    }
+    const paper = ctx.createBufferSource(); nodes.push(paper);
+    paper.buffer = buffer;
+    const band = ctx.createBiquadFilter(); nodes.push(band);
+    band.type = 'bandpass'; band.frequency.value = 950; band.Q.value = 0.6;
+    paper.connect(band).connect(gain);
+    paper.onended = stop;
+    motor.start(now); paper.start(now);
+    motor.stop(now + duration); paper.stop(now + duration);
+  } catch (err) {
+    stop(); // Blocked or missing audio must not interrupt the capture.
+  }
+}
+
 function getAudioContext() {
   const AudioCtx = window.AudioContext || window.webkitAudioContext;
   if (!AudioCtx) return null;
@@ -3789,6 +3908,7 @@ applySoundState();
 
 function toggleSound() {
   soundEnabled = !soundEnabled;
+  if (!soundEnabled) stopPrinterSound();
   localStorage.setItem('soundEnabled', soundEnabled ? '1' : '0');
   applySoundState();
 }
@@ -4239,44 +4359,29 @@ function barMenuChip(kind, value, disc, label) {
 }
 
 // Rahmen als reine Bildquadrate: kein Text, nur das Vorschaubild.
-function barOverlayTile(overlay) {
-  const btn = document.createElement('button');
-  btn.type = 'button';
-  btn.className = 'bar-tile bar-tile--frame';
-  btn.dataset.kind = 'overlay';
-  btn.dataset.value = overlay.id;
-  btn.setAttribute('aria-label', overlayLabel(overlay));
-  btn.setAttribute('aria-pressed', 'false');
-  const img = document.createElement('img');
-  img.src = overlay.src;
-  img.alt = '';
-  img.loading = 'lazy';
-  img.draggable = false;
-  btn.appendChild(img);
-  btn.addEventListener('click', () => {
-    if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
-    setOverlay(overlay.id);
-  });
-  enableMenuDrag(btn, { kind: 'overlay', id: overlay.id, src: overlay.src });
-  return btn;
-}
-
 function renderBarOverlays(list) {
-  const groups = [
-    [NO_OVERLAY_OPTION, ...(OVERLAYS.standard || [])],
-    OVERLAYS.event || [],
-    OVERLAYS.uni || []
-  ];
-  groups.forEach((items, index) => {
-    if (!items.length) return;
-    // Ohne Beschriftung trennen dünne Striche die Rahmen-Serien.
-    if (index > 0 && list.children.length) {
-      const divider = document.createElement('span');
-      divider.className = 'bar-filter-divider';
-      divider.setAttribute('aria-hidden', 'true');
-      list.appendChild(divider);
+  list.replaceChildren();
+  [NO_OVERLAY_OPTION, ...OVERLAYS.standard].forEach((overlay) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'bar-tile bar-tile--frame';
+    btn.dataset.kind = 'overlay';
+    btn.dataset.value = overlay.id;
+    btn.setAttribute('aria-label', overlayLabel(overlay));
+    btn.setAttribute('aria-pressed', 'false');
+    const img = document.createElement('img');
+    img.src = overlay.src;
+    img.alt = '';
+    img.draggable = false;
+    btn.appendChild(img);
+    btn.addEventListener('click', () => {
+      if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
+      setOverlay(overlay.id);
+    });
+    if (overlay.id !== NO_OVERLAY_ID) {
+      enableMenuDrag(btn, { kind: 'overlay', id: overlay.id, src: overlay.src });
     }
-    items.forEach((overlay) => list.appendChild(barOverlayTile(overlay)));
+    list.appendChild(btn);
   });
 }
 
@@ -4332,6 +4437,7 @@ function syncBarToggleLabel() {
   if (!toggle) return;
   const overlaysMode = barMenuShowsOverlays();
   const filtersMode = !overlaysMode && barMenuShowsFilters();
+  setFeatureHidden(toggle, !overlaysMode && (!filtersMode || appSettings.filtersEnabled === false));
   const open = (filtersMode || overlaysMode)
     ? barMenuIsOpen()
     : !!$sideMenu && $sideMenu.classList.contains('is-open');
@@ -4447,10 +4553,10 @@ function hideListScrollHint(hint) {
   if (hint) hint.classList.remove('is-playing');
 }
 
-function playListScrollHint(list, hint) {
+function playListScrollHint(list, hint, always = false) {
   if (!list || !hint) return;
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  if (list.scrollWidth <= list.clientWidth + 2) return;
+  if (!always && list.scrollWidth <= list.clientWidth + 2) return;
   // Weg an der Bandbreite ausrichten: je breiter die Pille, desto weiter
   // fährt der Finger, aber gedeckelt, damit er in der Pille bleibt.
   const travel = Math.round(Math.max(120, Math.min(300, list.clientWidth * 0.42)));
@@ -4497,7 +4603,7 @@ function setBarMenuOpen(open) {
     filterScrollHintTimer = window.setTimeout(() => {
       filterScrollHintTimer = 0;
       hintListScroll(barMenuListEl());
-      playListScrollHint(barMenuListEl(), filterHint);
+      playListScrollHint(barMenuListEl(), filterHint, barMenuShowsOverlays());
     }, 460);
   }
 }
@@ -4617,46 +4723,23 @@ document.addEventListener('click', (e) => {
 
 let sideContext = 'filter';
 let currentOverlay = null;
+let overlayPreviewRevision = 0;
 // Bildpixel-Layout der zuletzt erzeugten Fotocollage, damit das Overlay in
 // der Vorschau und im gespeicherten Foto je Kachel sitzt.
 let lastStripLayout = null;
 let endPhotoUrl = null;
 
-// Bild-Overlays im 16:9-Format (1280×720, transparente Bildmitte). Sie liegen
-// deckungsgleich über dem Foto und werden beim Speichern mit eingebrannt.
-const OVERLAY_DIR = 'assets/overlays/';
+// One unmodified 1920x1080 PNG. Frame and photo pixels must match exactly.
 const NO_OVERLAY_ID = 'none';
-// Leeres, durchgestrichenes 16:9-Feld als Vorschau für „Kein Rahmen“.
-const NO_OVERLAY_THUMB = 'data:image/svg+xml,' + encodeURIComponent(
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 36">'
-  + '<rect x="2" y="2" width="60" height="32" rx="4" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="2" stroke-dasharray="5 4"/>'
-  + '<path d="M18 27 46 9" stroke="#fff" stroke-opacity=".8" stroke-width="3" stroke-linecap="round"/>'
-  + '</svg>'
-);
-const NO_OVERLAY_OPTION = { id: NO_OVERLAY_ID, labelKey: 'overlayNone', src: NO_OVERLAY_THUMB };
+const NO_OVERLAY_OPTION = {
+  id: NO_OVERLAY_ID, labelKey: 'overlayNone',
+  src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 36"><path d="M8 30 56 6" stroke="white" stroke-width="3"/></svg>')
+};
 const OVERLAYS = {
-  standard: [
-    { id: 'color-frame', labelKey: 'overlayColorFrame', src: OVERLAY_DIR + 'standard-farbrahmen.png' },
-    { id: 'white-frame', labelKey: 'overlayWhiteFrame', src: OVERLAY_DIR + 'standard-weiss.png' },
-    { id: 'stripes-h', labelKey: 'overlayStripesH', src: OVERLAY_DIR + 'standard-streifen-horizontal.png' },
-    { id: 'stripes-v', labelKey: 'overlayStripesV', src: OVERLAY_DIR + 'standard-streifen-vertikal.png' }
-  ],
-  event: [
-    { id: 'cobooo-urg', label: 'CoBOOOurg', src: OVERLAY_DIR + 'event-cobooo-urg.png' },
-    { id: 'pumpkins-ahead', label: 'Pumpkins ahead', src: OVERLAY_DIR + 'event-pumpkins-ahead.png' },
-    { id: 'scary-season', label: 'Scary season', src: OVERLAY_DIR + 'event-scary-season.png' },
-    { id: 'cozy-campus-time', label: 'Cozy campus time', src: OVERLAY_DIR + 'event-cozy-campus-time.png' },
-    { id: 'cozy-november', label: 'Cozy november', src: OVERLAY_DIR + 'event-cozy-november.png' }
-  ],
-  uni: [
-    { id: 'uni-co-frame', label: 'CO-Rahmen', src: OVERLAY_DIR + 'uni-rahmen-co.png' },
-    { id: 'uni-come-together', label: 'Come together', src: OVERLAY_DIR + 'uni-come-together.png' },
-    { id: 'uni-cool-to-be-here', label: 'Cool to be here', src: OVERLAY_DIR + 'uni-cool-to-be-here.png' },
-    { id: 'uni-coffee-chaos', label: 'Coffee & chaos', src: OVERLAY_DIR + 'uni-coffee-chaos.png' },
-    { id: 'uni-core-memory', label: 'Core memory', src: OVERLAY_DIR + 'uni-core-memory.png' },
-    { id: 'uni-lcc', label: 'LCC', src: OVERLAY_DIR + 'uni-lcc.png' },
-    { id: 'uni-co-white', label: 'CO weiß', src: OVERLAY_DIR + 'uni-co-white.png' }
-  ]
+  standard: [{
+    id: 'orange-red', labelKey: 'overlayColorFrame',
+    src: 'assets/overlays/orange-red-1920x1080.png', width: PHOTO_WIDTH, height: PHOTO_HEIGHT
+  }]
 };
 
 const STAMPS = {
@@ -4948,37 +5031,6 @@ function renderSideMenu() {
         group.appendChild(btn);
       });
     });
-  } else if (sideContext === 'overlay') {
-    [['standard', 'tabStandard'], ['event', 'tabEvent'], ['uni', 'tabUni']].forEach(([key, labelKey]) => {
-      const overlays = key === 'standard' ? [NO_OVERLAY_OPTION, ...(OVERLAYS[key] || [])] : (OVERLAYS[key] || []);
-      appendSideGroup('overlay-' + key, labelKey, (group) => {
-        overlays.forEach((overlay) => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'side-menu__item side-menu__item--overlay';
-          btn.dataset.kind = 'overlay';
-          btn.dataset.value = overlay.id;
-          const isNone = overlay.id === NO_OVERLAY_ID;
-          const active = isNone ? !currentOverlay : (!!currentOverlay && currentOverlay.id === overlay.id);
-          btn.classList.toggle('is-selected', active);
-          btn.setAttribute('aria-pressed', String(active));
-          const thumb = document.createElement('span');
-          thumb.className = 'side-menu__thumb';
-          const thumbImg = document.createElement('img');
-          thumbImg.src = overlay.src;
-          thumbImg.alt = '';
-          thumbImg.loading = 'lazy';
-          thumb.appendChild(thumbImg);
-          btn.appendChild(thumb);
-          const label = document.createElement('span');
-          label.className = 'side-menu__label';
-          label.textContent = overlayLabel(overlay);
-          btn.appendChild(label);
-          btn.addEventListener('click', () => setOverlay(overlay.id));
-          group.appendChild(btn);
-        });
-      });
-    });
   } else if (sideContext === 'stamp') {
     if (!hasPhoto) {
       appendSideEmpty('stickersNeedPhoto');
@@ -5066,6 +5118,7 @@ if ($sideScrollDown) {
 if ($sideViewport) $sideViewport.addEventListener('scroll', updateScrollHints, { passive: true });
 window.addEventListener('resize', () => {
   updateScrollHints();
+  renderOverlayPreview();
   repositionStickers();
 });
 
@@ -5079,115 +5132,115 @@ function findOverlay(id) {
     .find((overlay) => overlay.id === id) || null;
 }
 
+function overlayFitsPhoto(overlay, photo) {
+  if (!overlay || !photo) return false;
+  const tile = photo.classList.contains('stage-photo--strip') && lastStripLayout;
+  return (tile ? lastStripLayout.w : photo.naturalWidth) === overlay.width
+    && (tile ? lastStripLayout.h : photo.naturalHeight) === overlay.height;
+}
+
+function loadNativeOverlay(overlay) {
+  if (!overlay.imagePromise) {
+    overlay.imagePromise = loadImg(overlay.src).then((img) => {
+      if (img.naturalWidth !== overlay.width || img.naturalHeight !== overlay.height) {
+        throw new Error('Unexpected native frame dimensions');
+      }
+      return img;
+    }).catch((err) => { delete overlay.imagePromise; throw err; });
+  }
+  return overlay.imagePromise;
+}
+
 function setOverlay(id) {
   if (!appSettings.overlaysEnabled) return;
-  if (id === NO_OVERLAY_ID) {
-    currentOverlay = null;
-    renderOverlayPreview();
-    updateSideSelection();
-    repositionStickers();
+  const selected = id === NO_OVERLAY_ID ? null : findOverlay(id);
+  const photo = $camera.querySelector('img.stage-photo');
+  if (selected && !overlayFitsPhoto(selected, photo)) {
+    showToast(t('overlaySizeMismatch', { width: selected.width, height: selected.height }), { error: true });
     return;
   }
-  const found = findOverlay(id);
-  // Erneutes Tippen auf den bereits gewählten Rahmen darf ihn nicht
-  // stillschweigend entfernen; dafür gibt es die sichtbare Option „Kein Rahmen“.
-  currentOverlay = found || null;
+  currentOverlay = selected;
   renderOverlayPreview();
   updateSideSelection();
   repositionStickers();
 }
 
-function renderOverlayPreview() {
+async function renderOverlayPreview() {
+  const revision = ++overlayPreviewRevision;
+  const overlay = currentOverlay;
   const viewfinder = $camera.querySelector('.viewfinder');
   if (!viewfinder) return;
   viewfinder.querySelectorAll('.photo-overlay, .photo-overlay-strip').forEach((el) => el.remove());
-  // Der orange Review-Rahmen würde den Overlay-Rahmen überdecken.
-  $camera.classList.toggle('has-overlay', !!currentOverlay);
-  const stage = viewfinder.querySelector('img.stage-photo');
-  if (!currentOverlay) {
-    // Ohne Overlay wieder randlos wie bisher.
-    if (stage && !stage.classList.contains('stage-photo--strip')) stage.style.objectFit = 'cover';
-    return;
-  }
-  if (!stage) return;
-  measureOverlaySafeArea(currentOverlay);
-
-  // Ist das Foto noch nicht dekodiert, wären die Maße 0 und das Overlay
-  // würde unsichtbar in der Ecke sitzen. Nach dem Laden neu berechnen.
-  if (!stage.naturalWidth || !stage.naturalHeight) {
-    stage.style.objectFit = 'contain';
-    if (!stage.dataset.overlayLoadHooked) {
-      stage.dataset.overlayLoadHooked = '1';
-      stage.addEventListener('load', () => {
-        delete stage.dataset.overlayLoadHooked;
-        if (currentOverlay) {
-          renderOverlayPreview();
-          repositionStickers();
-        }
+  $camera.classList.remove('has-overlay');
+  const photo = viewfinder.querySelector('img.stage-photo');
+  if (!overlay) return;
+  if (!photo) return;
+  if (!photo.naturalWidth || !photo.naturalHeight) {
+    if (!photo.dataset.overlayLoadHooked) {
+      photo.dataset.overlayLoadHooked = '1';
+      photo.addEventListener('load', () => {
+        delete photo.dataset.overlayLoadHooked;
+        renderOverlayPreview();
       }, { once: true });
     }
     return;
   }
-
-  // Die Fotocollage wird vollständig (contain) gezeigt. Das Overlay wird
-  // deshalb je Kachel platziert, nicht über die ganze Collage gezogen.
-  if (stage.classList.contains('stage-photo--strip') && lastStripLayout && stage.naturalWidth) {
-    const vf = viewfinder.getBoundingClientRect();
-    const scale = Math.min(vf.width / stage.naturalWidth, vf.height / stage.naturalHeight);
-    const displayW = stage.naturalWidth * scale;
-    const displayH = stage.naturalHeight * scale;
-    const { w, h, pad, gap, footer, count, cols = 2 } = lastStripLayout;
-    const rows = Math.ceil(count / cols);
-    const totalW = pad * 2 + w * cols + gap * (cols - 1);
-    const totalH = pad * 2 + h * rows + gap * (rows - 1) + footer;
+  if (!overlayFitsPhoto(overlay, photo)) {
+    currentOverlay = null;
+    updateSideSelection();
+    return;
+  }
+  try {
+    await loadNativeOverlay(overlay);
+  } catch (err) {
+    if (revision === overlayPreviewRevision) {
+      currentOverlay = null;
+      updateSideSelection();
+      showToast(t('toastEditError'), { error: true });
+    }
+    return;
+  }
+  if (revision !== overlayPreviewRevision || currentOverlay !== overlay
+    || viewfinder.querySelector('img.stage-photo') !== photo) return;
+  // The overlay follows the existing photo fit and crop without changing it.
+  $camera.classList.add('has-overlay');
+  const bounds = photoStageRect();
+  const vf = viewfinder.getBoundingClientRect();
+  const strip = photo.classList.contains('stage-photo--strip') && lastStripLayout;
+  if (strip) {
     const wrap = document.createElement('div');
     wrap.className = 'photo-overlay-strip';
-    wrap.style.left = Math.round((vf.width - displayW) / 2) + 'px';
-    wrap.style.top = Math.round((vf.height - displayH) / 2) + 'px';
-    wrap.style.width = Math.round(displayW) + 'px';
-    wrap.style.height = Math.round(displayH) + 'px';
+    wrap.style.left = (bounds.left - vf.left) + 'px';
+    wrap.style.top = (bounds.top - vf.top) + 'px';
+    wrap.style.width = bounds.width + 'px';
+    wrap.style.height = bounds.height + 'px';
+    const { w, h, pad, gap, count, cols = 2 } = lastStripLayout;
     for (let i = 0; i < count; i++) {
       const img = document.createElement('img');
-      img.src = currentOverlay.src;
+      img.src = overlay.src;
       img.alt = '';
-      img.style.left = (((pad + (i % cols) * (w + gap)) / totalW) * 100) + '%';
-      img.style.top = (((pad + Math.floor(i / cols) * (h + gap)) / totalH) * 100) + '%';
-      img.style.width = ((w / totalW) * 100) + '%';
-      img.style.height = ((h / totalH) * 100) + '%';
+      img.style.left = ((pad + (i % cols) * (w + gap)) / photo.naturalWidth * 100) + '%';
+      img.style.top = ((pad + Math.floor(i / cols) * (h + gap)) / photo.naturalHeight * 100) + '%';
+      img.style.width = (w / photo.naturalWidth * 100) + '%';
+      img.style.height = (h / photo.naturalHeight * 100) + '%';
       wrap.appendChild(img);
     }
     viewfinder.appendChild(wrap);
-    return;
-  }
-
-  // Einzelfoto: Für die Auswahl wird das ganze Foto gezeigt (contain), damit
-  // der Rahmen ringsum sichtbar ist; das Overlay deckt exakt diese Fläche.
-  stage.style.objectFit = 'contain';
-  const img = document.createElement('img');
-  img.className = 'photo-overlay';
-  img.src = currentOverlay.src;
-  img.alt = '';
-  const vf = viewfinder.getBoundingClientRect();
-  if (stage.naturalWidth && stage.naturalHeight && vf.width && vf.height) {
-    const fit = Math.min(vf.width / stage.naturalWidth, vf.height / stage.naturalHeight);
-    const w = stage.naturalWidth * fit;
-    const h = stage.naturalHeight * fit;
-    img.style.left = Math.round((vf.width - w) / 2) + 'px';
-    img.style.top = Math.round((vf.height - h) / 2) + 'px';
-    img.style.width = Math.round(w) + 'px';
-    img.style.height = Math.round(h) + 'px';
   } else {
-    // Bühne noch nicht vermessen (z. B. direkt nach dem Aufbau): erst die
-    // volle Fläche nutzen und nach dem nächsten Layout neu berechnen.
-    img.style.width = '100%';
-    img.style.height = '100%';
-    requestAnimationFrame(() => {
-      if (!currentOverlay) return;
-      const rect = viewfinder.getBoundingClientRect();
-      if (rect.width && rect.height) renderOverlayPreview();
-    });
+    const frame = document.createElement('div');
+    frame.className = 'photo-overlay';
+    frame.setAttribute('aria-hidden', 'true');
+    // Slice the original 40px edges; keep equal border widths without cropping the PNG.
+    const borderWidth = 40 * Math.min(bounds.width / overlay.width, bounds.height / overlay.height);
+    frame.style.border = borderWidth + 'px solid transparent';
+    frame.style.borderImage = 'url("' + overlay.src + '") 40 stretch';
+    frame.style.left = (bounds.left - vf.left) + 'px';
+    frame.style.top = (bounds.top - vf.top) + 'px';
+    frame.style.width = bounds.width + 'px';
+    frame.style.height = bounds.height + 'px';
+    viewfinder.appendChild(frame);
   }
-  viewfinder.appendChild(img);
+  repositionStickers();
 }
 
 function addEmojiStamp(glyph) {

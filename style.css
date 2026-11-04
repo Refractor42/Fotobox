@@ -500,14 +500,14 @@ section.active { display: block; opacity: 1; }
   z-index: -1;
 }
 
-/* flash effect */
+/* Full-screen flash outside the clipped preview and transformed stage. */
 .flash {
-  position: absolute;
+  position: fixed;
   inset: 0;
-  background: radial-gradient(circle at 50% 50%, rgba(255 255 255 / 0.9) 0%, rgba(255 255 255 / 0) 70%);
+  z-index: 20000;
+  background: #fff;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 0.05s ease;
 }
 
 .camera__placeholder {
@@ -906,37 +906,64 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
 }
 .sticker__ctrl button:hover { background: rgb(var(--c-accent-rgb) / 0.25); }
 
-/* processing overlay */
+/* Indeterminate capture status; no invented progress percentages. */
 .processing {
   position: absolute;
   inset: 0;
+  z-index: 20;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.25rem;
+  gap: 14px;
   opacity: 0;
   pointer-events: none;
   color: var(--c-text);
+  background: transparent;
 }
-.processing__bar {
-  width: 60%;
-  height: 4px;
-  background: var(--c-surface-2);
-  border-radius: 9999px;
-  overflow: hidden;
-}
-.processing__fill {
-  width: 0%;
-  height: 100%;
-  background: linear-gradient(90deg, var(--c-accent), var(--c-accent-2));
-  border-radius: 9999px;
-  transition: width 0.6s ease;
+.processing__spinner {
+  width: 34px;
+  height: 34px;
+  border: 3px solid rgba(255, 255, 255, 0.22);
+  border-top-color: var(--c-highlight);
+  border-radius: 50%;
+  animation: captureSpinner 0.85s linear infinite;
 }
 .processing__label {
   font-size: 0.9rem;
-  color: var(--c-text-2);
+  color: var(--c-text);
   letter-spacing: -0.005em;
+}
+@keyframes captureSpinner { to { transform: rotate(360deg); } }
+#camera.is-printing .capture-bar,
+#camera.is-printing .review,
+#camera.is-capture-result .camera__video,
+#camera.is-capture-result .filter-canvas,
+#camera.is-capture-result .camera__placeholder,
+#camera.is-capture-result .viewfinder__frame,
+#camera.is-capture-result .streak,
+#camera.is-printing .photo-overlay,
+#camera.is-printing .photo-overlay-strip {
+  visibility: hidden;
+  pointer-events: none;
+}
+#camera.is-capture-result .viewfinder {
+  background: transparent;
+}
+/* A fixed lip makes the existing clipping edge read as a printer slot. */
+#camera.is-capture-result.is-printing .viewfinder::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  z-index: 30;
+  border-radius: 999px;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.28), rgba(0, 0, 0, 0.75));
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .processing__spinner { animation: none; }
 }
 
 /* Three columns with identical side tracks keep the shutter exactly in the
