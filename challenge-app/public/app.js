@@ -27,7 +27,25 @@ const $trophyGrid = $('trophyGrid');
 const $liveBadge = $('liveBadge');
 const $toast = $('toast');
 
-let voterId = readVoterId();
+// Einmalige Migration der früheren localStorage-ID in den Server-Cookie.
+let legacyVoterId = (() => {
+  try {
+    const stored = localStorage.getItem('snapboxChallengeVoter');
+    return stored && /^[A-Za-z0-9_-]{8,64}$/.test(stored) ? stored : '';
+  } catch (e) {
+    return '';
+  }
+})();
+const CREDENTIAL_STORAGE_KEY = 'snapboxChallengeCredential';
+const CREDENTIAL_RE = /^[A-Za-z0-9_-]{16,2048}$/;
+let credentialId = (() => {
+  try {
+    const stored = localStorage.getItem(CREDENTIAL_STORAGE_KEY);
+    return stored && CREDENTIAL_RE.test(stored) ? stored : '';
+  } catch (e) {
+    return '';
+  }
+})();
 let state = {
   month: currentMonth(),
   data: null,
@@ -44,21 +62,6 @@ function currentMonth() {
   }).format(new Date());
 }
 
-function readVoterId() {
-  const key = 'snapboxChallengeVoter';
-  try {
-    const stored = localStorage.getItem(key);
-    if (stored && /^[A-Za-z0-9_-]{8,64}$/.test(stored)) return stored;
-    const fresh = typeof crypto !== 'undefined' && crypto.randomUUID
-      ? crypto.randomUUID()
-      : ('v' + Math.random().toString(36).slice(2) + Date.now().toString(36));
-    localStorage.setItem(key, fresh);
-    return fresh;
-  } catch (e) {
-    return 'v' + Math.random().toString(36).slice(2) + Date.now().toString(36);
-  }
-}
-
 function monthLabel(month) {
   const date = new Date(month + '-15T12:00:00Z');
   return new Intl.DateTimeFormat('de-DE', {
@@ -70,6 +73,41 @@ function monthLabel(month) {
 
 function locationName(location) {
   return location === 'lcc' ? 'LCC' : 'Coburg';
+}
+
+function b64urlToBuffer(value) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]+$/.test(value)) {
+    throw new Error('Ungültige Passkey-Daten.');
+  }
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/');
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4);
+  const binary = atob(padded);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+  return bytes.buffer;
+}
+
+function bufferToB64url(value) {
+  const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
+  let binary = '';
+  for (let i = 0; i < bytes.length; i += 1) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function saveCredentialId(value) {
+  if (typeof value !== 'string' || !CREDENTIAL_RE.test(value)) return;
+  credentialId = value;
+  try { localStorage.setItem(CREDENTIAL_STORAGE_KEY, value); } catch (e) {}
+}
+
+async function passkeysAvailable() {
+  if (!window.isSecureContext || !window.PublicKeyCredential || !navigator.credentials) return false;
+  if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable !== 'function') return false;
+  try {
+    return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  } catch (e) {
+    return false;
+  }
 }
 
 function showToast(message) {
@@ -124,11 +162,12 @@ function populateMonths(months) {
   if (!$monthSelect) return;
   const values = new Set();
   const now = currentMonth();
+  if (state.month > now) state.month = now;
   values.add(now);
   values.add(state.month);
 
   for (const month of months || []) {
-    if (/^\d{4}-\d{2}$/.test(month)) values.add(month);
+    if (/^\d{4}-\d{2}$/.test(month) && month <= now) values.add(month);
   }
 
   const [year, month] = now.split('-').map(Number);
@@ -137,7 +176,7 @@ function populateMonths(months) {
     values.add(d.toISOString().slice(0, 7));
   }
 
-  const sorted = [...values].sort().reverse();
+  const sorted = [...values].filter((value) => value <= now).sort().reverse();
   $monthSelect.innerHTML = '';
   for (const value of sorted) {
     const option = document.createElement('option');
@@ -197,15 +236,15 @@ function makeLikeButton(entry) {
   count.textContent = String(entry.votes);
   button.appendChild(count);
   button.setAttribute('aria-label', entry.liked
-    ? `Like für Foto aus ${locationName(entry.location)} entfernen`
+    ? `Foto aus ${locationName(entry.location)} ist bereits geliked`
     : `Foto aus ${locationName(entry.location)} liken`);
   button.setAttribute('aria-pressed', String(entry.liked));
-  button.disabled = !state.data.votingOpen;
+  button.disabled = !state.data.votingOpen || entry.liked;
 
   if (!state.data.votingOpen) {
     button.title = 'Die Abstimmung für diesen Monat ist beendet.';
   }
-  if (state.data.votingOpen) {
+  if (state.data.votingOpen && !entry.liked) {
     button.addEventListener('click', () => toggleLike(entry, button));
   }
   return button;
@@ -248,42 +287,139 @@ function renderGallery() {
   }
 }
 
+function applyVoteResult(entry, data, button) {
+  const wasLiked = entry.liked;
+  entry.votes = Number(data.votes) || 0;
+  entry.liked = data.voted !== undefined
+    ? !!data.voted
+    : (data.liked !== undefined ? !!data.liked : true);
+
+  const location = state.data.locations[entry.location];
+  if (location && entry.liked !== wasLiked) {
+    location.votes = Math.max(0, location.votes + (entry.liked ? 1 : -1));
+    location.score = location.entries + location.votes;
+  }
+
+  button.setAttribute('aria-pressed', String(entry.liked));
+  button.setAttribute('aria-label', entry.liked
+    ? `Foto aus ${locationName(entry.location)} ist bereits geliked`
+    : `Foto aus ${locationName(entry.location)} liken`);
+  const count = button.querySelector('span');
+  if (count) count.textContent = String(entry.votes);
+  renderScoreboard();
+}
+
+async function legacyLike(entry) {
+  const res = await fetch('/api/vote', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entryId: entry.id })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (res.status === 428) {
+    const err = new Error(data.error || 'Bitte bestätige den Like mit deinem Passkey.');
+    err.passkeyRequired = true;
+    throw err;
+  }
+  if (!res.ok) throw new Error(data.error || 'Like konnte nicht gespeichert werden.');
+  return data;
+}
+
+async function likeWithPasskey(entry) {
+  const optionsRes = await fetch('/api/webauthn/options', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ entryId: entry.id, credentialId: credentialId || undefined })
+  });
+  const options = await optionsRes.json().catch(() => ({}));
+  if (!optionsRes.ok) throw new Error(options.error || 'Passkey-Anfrage fehlgeschlagen.');
+  if (!options || !options.publicKey || (options.mode !== 'create' && options.mode !== 'get')) {
+    throw new Error('Ungültige Passkey-Antwort.');
+  }
+
+  const publicKey = { ...options.publicKey };
+  publicKey.challenge = b64urlToBuffer(publicKey.challenge);
+  if (publicKey.user && publicKey.user.id) publicKey.user.id = b64urlToBuffer(publicKey.user.id);
+  for (const listName of ['allowCredentials', 'excludeCredentials']) {
+    if (Array.isArray(publicKey[listName])) {
+      publicKey[listName] = publicKey[listName].map((item) => ({ ...item, id: b64urlToBuffer(item.id) }));
+    }
+  }
+
+  let credential;
+  let endpoint;
+  let payload;
+  if (options.mode === 'create') {
+    credential = await navigator.credentials.create({ publicKey });
+    if (!credential || !credential.response) throw new Error('Passkey konnte nicht erstellt werden.');
+    const response = credential.response;
+    if (typeof response.getPublicKey !== 'function' || typeof response.getPublicKeyAlgorithm !== 'function') {
+      throw new Error('Dieser Browser unterstützt Passkeys nicht vollständig.');
+    }
+    const spki = response.getPublicKey();
+    if (!spki) throw new Error('Passkey-Schlüssel konnte nicht gelesen werden.');
+    endpoint = '/api/webauthn/register';
+    payload = {
+      id: credential.id,
+      publicKey: bufferToB64url(spki),
+      algorithm: response.getPublicKeyAlgorithm(),
+      clientDataJSON: bufferToB64url(response.clientDataJSON)
+    };
+  } else {
+    credential = await navigator.credentials.get({ publicKey });
+    if (!credential || !credential.response) throw new Error('Passkey-Bestätigung fehlgeschlagen.');
+    const response = credential.response;
+    endpoint = '/api/webauthn/vote';
+    payload = {
+      entryId: entry.id,
+      credentialId: credential.id,
+      clientDataJSON: bufferToB64url(response.clientDataJSON),
+      authenticatorData: bufferToB64url(response.authenticatorData),
+      signature: bufferToB64url(response.signature)
+    };
+  }
+
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Like konnte nicht gespeichert werden.');
+  saveCredentialId(data.credentialId || credential.id);
+  return { ...data, registered: options.mode === 'create' && data.registered !== false };
+}
+
 async function toggleLike(entry, button) {
   if (state.pendingVotes.has(entry.id)) return;
   state.pendingVotes.add(entry.id);
   button.disabled = true;
 
+  button.setAttribute('aria-busy', 'true');
   try {
-    const res = await fetch('/api/vote', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ entryId: entry.id, voterId })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(data.error || 'Like konnte nicht gespeichert werden.');
-
-    const delta = data.voted ? 1 : -1;
-    entry.votes = Number(data.votes) || 0;
-    entry.liked = !!data.voted;
-
-    const location = state.data.locations[entry.location];
-    if (location) {
-      location.votes = Math.max(0, location.votes + delta);
-      location.score = location.entries + location.votes;
-    }
-
-    button.setAttribute('aria-pressed', String(entry.liked));
-    button.setAttribute('aria-label', entry.liked
-      ? `Like für Foto aus ${locationName(entry.location)} entfernen`
-      : `Foto aus ${locationName(entry.location)} liken`);
-    button.querySelector('span').textContent = String(entry.votes);
-    renderScoreboard();
+    const usePasskey = await passkeysAvailable();
+    const data = usePasskey ? await likeWithPasskey(entry) : await legacyLike(entry);
+    applyVoteResult(entry, data, button);
+    if (data.registered) showToast('Passkey erstellt – dein Like ist gespeichert.');
   } catch (err) {
-    showToast(err.message || 'Like konnte nicht gespeichert werden.');
-    setLive(false);
+    if (err && err.name === 'NotAllowedError') {
+      showToast('Passkey-Bestätigung abgebrochen.');
+    } else if (err && err.name === 'InvalidStateError') {
+      showToast('Auf diesem Gerät ist bereits ein Passkey hinterlegt. Bitte lade die Seite neu.');
+    } else if (err && err.name === 'SecurityError') {
+      showToast('Passkeys funktionieren nur über HTTPS.');
+    } else if (err && (err.name === 'NotSupportedError' || err.name === 'NotReadableError')) {
+      showToast('Passkey wird auf diesem Gerät nicht unterstützt.');
+    } else if (err && err.passkeyRequired) {
+      showToast(err.message);
+    } else {
+      showToast(err.message || 'Like konnte nicht gespeichert werden.');
+      setLive(false);
+    }
   } finally {
     state.pendingVotes.delete(entry.id);
-    button.disabled = !state.data.votingOpen;
+    button.removeAttribute('aria-busy');
+    button.disabled = !state.data.votingOpen || entry.liked;
   }
 }
 
@@ -337,13 +473,14 @@ function render() {
   const $gallerySub = $('gallerySub');
   if ($gallerySub) {
     $gallerySub.textContent = data.votingOpen
-      ? 'Ein Like pro Foto und Gerät.'
+      ? 'Ein Like pro Foto und Gerät – mit Passkey, wenn verfügbar.'
       : 'Die Abstimmung für diesen Monat ist beendet.';
   }
 }
 
 async function loadOverview({ silent = false } = {}) {
   if (state.loading) return;
+  if (state.month > currentMonth()) state.month = currentMonth();
   state.loading = true;
   $refreshBtn.classList.add('is-spinning');
 
@@ -352,12 +489,18 @@ async function loadOverview({ silent = false } = {}) {
   }
 
   try {
-    const query = new URLSearchParams({ month: state.month, voterId });
+    const query = new URLSearchParams({ month: state.month });
+    if (legacyVoterId) query.set('voterId', legacyVoterId);
+    if (credentialId) query.set('credentialId', credentialId);
     const res = await fetch('/api/overview?' + query.toString(), { cache: 'no-store' });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (!data || !data.ok) throw new Error('Ungültige Antwort');
     state.data = data;
+    if (legacyVoterId) {
+      legacyVoterId = '';
+      try { localStorage.removeItem('snapboxChallengeVoter'); } catch (e) {}
+    }
     render();
   } catch (err) {
     setLive(false);
@@ -374,7 +517,7 @@ async function loadOverview({ silent = false } = {}) {
 
 if ($monthSelect) {
   $monthSelect.addEventListener('change', () => {
-    if (!/^\d{4}-\d{2}$/.test($monthSelect.value)) return;
+    if (!/^\d{4}-\d{2}$/.test($monthSelect.value) || $monthSelect.value > currentMonth()) return;
     state.month = $monthSelect.value;
     state.data = null;
     $galleryGrid.innerHTML = '';

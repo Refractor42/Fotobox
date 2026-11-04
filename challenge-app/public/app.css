@@ -439,6 +439,7 @@ a { color: var(--gold); }
   color: #ff9b9b;
 }
 .like-button:disabled { opacity: 0.55; cursor: default; }
+.like-button[aria-pressed="true"]:disabled { opacity: 1; }
 .like-button:focus-visible, .icon-button:focus-visible, .month-select:focus-visible, .gallery-state button:focus-visible {
   outline: none;
   box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.35);
