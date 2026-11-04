@@ -11,12 +11,12 @@
   "filtersEnabled": true,
   "stickersEnabled": true,
   "overlaysEnabled": true,
-  "cameraFacingMode": "environment",
+  "cameraFacingMode": "user",
   "galleryPageSize": 12,
   "accentColor": "#ffd700",
   "secondaryColor": "#00e0d6",
   "backgroundColor": "#0d0d0d",
   "brandName": "SnapBox",
   "qrTtlHours": 47,
-  "updatedAt": "2026-11-02T09:41:57.737Z"
+  "updatedAt": "2026-11-04T01:00:14.991Z"
 }

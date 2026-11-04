@@ -16,6 +16,9 @@ Thumbs.db
 *.swp
 *.swo
 
+# Lokale Nutzungsstatistik (Laufzeitdaten)
+usage-stats.json
+
 # Logs
 *.log
 npm-debug.log*

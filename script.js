@@ -2797,6 +2797,19 @@ function photoSessionHeaders(extra = {}) {
     : extra;
 }
 
+// Leichtgewichtige Nutzungszählung für das Admin-Dashboard. Fehler dürfen den
+// Gast-Flow nie beeinflussen; deshalb fire-and-forget ohne Rückmeldung.
+function trackUsageEvent(event) {
+  try {
+    fetch('/api/stats/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event }),
+      keepalive: true
+    }).catch(() => {});
+  } catch (e) { /* Statistik ist optional */ }
+}
+
 async function beginPhotoSession() {
   if (photoSessionToken) return photoSessionToken;
   try {
@@ -5166,6 +5179,7 @@ async function shareEndPhoto() {
     const file = new File([blob], brandFileBase() + '.jpg', { type: blob.type || 'image/jpeg' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title: appSettings.brandName });
+      trackUsageEvent('share');
       return;
     }
   } catch (err) {
@@ -5177,6 +5191,7 @@ async function shareEndPhoto() {
   document.body.appendChild(link);
   link.click();
   link.remove();
+  trackUsageEvent('download');
   showToast(t('toastDownloaded'));
 }
 
@@ -5193,6 +5208,7 @@ function printEndPhoto() {
     + 'img{max-width:100%;max-height:100vh;object-fit:contain}'
     + '</style></head><body><img src="' + endPhotoUrl + '" onload="window.print()"></body></html>');
   win.document.close();
+  trackUsageEvent('print');
 }
 
 document.querySelectorAll('.endscreen__action').forEach((btn) => {

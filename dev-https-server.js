@@ -270,6 +270,38 @@ function readBody(req, limit) {
   });
 }
 
+// Lists every .jpg object name under a prefix, beyond Supabase's 1000-object
+// page limit. Only the usage statistics need the complete list; gallery and
+// trash keep their single-page behaviour for fast first paints.
+async function listAllJpgNames(cfg, prefix) {
+  const names = [];
+  const seen = new Set();
+  for (let offset = 0; offset < 20000; offset += 1000) {
+    const listRes = await supabaseFetch(cfg, `/object/list/${encodeURIComponent(cfg.bucket)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prefix,
+        limit: 1000,
+        offset,
+        sortBy: { column: 'name', order: 'asc' }
+      })
+    });
+    const files = await listRes.json();
+    if (!Array.isArray(files) || files.length === 0) break;
+    for (const file of files) {
+      if (!file.name || !file.name.endsWith('.jpg')) continue;
+      const name = file.name.replace(new RegExp('^' + prefix), '');
+      if (!seen.has(name)) {
+        seen.add(name);
+        names.push(name);
+      }
+    }
+    if (files.length < 1000) break;
+  }
+  return names;
+}
+
 // Lists .jpg object names directly under a prefix (no folder recursion).
 async function listJpgNames(cfg, prefix) {
   const listRes = await supabaseFetch(cfg, `/object/list/${encodeURIComponent(cfg.bucket)}`, {
@@ -314,6 +346,210 @@ async function moveObject(cfg, sourceKey, destinationKey) {
       body: JSON.stringify({ bucketId: cfg.bucket, sourceKey, destinationKey })
     });
     await supabaseFetch(cfg, `/object/${encodeURIComponent(cfg.bucket)}/${sourceKey}`, { method: 'DELETE' });
+  }
+}
+
+// ---- Nutzungsstatistik ----
+// Leichtgewichtige Tagesaggregate liegen lokal in usage-stats.json. Fotos
+// werden zusätzlich aus den Zeitstempeln der gespeicherten Objektnamen
+// rekonstruiert (photos/<ms>-....jpg bzw. trash/<expiry>-<ms>-....jpg),
+// dadurch zeigen die Diagramme sofort auch den vorhandenen Bestand.
+// Endaktionen werden ab dem ersten Start nach diesem Update gezählt; ältere
+// Aktionen lassen sich nicht nachträglich ermitteln.
+const USAGE_STATS_FILE = path.join(DIST_DIR, 'usage-stats.json');
+const USAGE_ACTIONS = ['qr', 'print', 'share', 'download'];
+const USAGE_MAX_DAYS = 400;
+const OBJECT_TS_RE = /^(\d{10,13})-/;
+
+function localDateKey(date = new Date()) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')
+  ].join('-');
+}
+
+function emptyUsageDay() {
+  return { photos: 0, actions: { qr: 0, print: 0, share: 0, download: 0 } };
+}
+
+function sanitizeUsageStats(raw) {
+  const stats = { version: 1, startedAt: null, days: {} };
+  if (!raw || typeof raw !== 'object') return stats;
+  if (typeof raw.startedAt === 'string') stats.startedAt = raw.startedAt;
+  const cutoff = localDateKey(new Date(Date.now() - USAGE_MAX_DAYS * 86400000));
+  const days = raw.days && typeof raw.days === 'object' ? raw.days : {};
+  for (const [key, value] of Object.entries(days)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || key < cutoff) continue;
+    const day = emptyUsageDay();
+    day.photos = Math.max(0, Math.floor(Number(value && value.photos) || 0));
+    for (const action of USAGE_ACTIONS) {
+      day.actions[action] = Math.max(0, Math.floor(Number(value && value.actions && value.actions[action]) || 0));
+    }
+    stats.days[key] = day;
+  }
+  return stats;
+}
+
+function loadUsageStats() {
+  try {
+    if (fs.existsSync(USAGE_STATS_FILE)) {
+      return sanitizeUsageStats(JSON.parse(fs.readFileSync(USAGE_STATS_FILE, 'utf8')));
+    }
+  } catch (err) {
+    console.warn('Could not read usage-stats.json:', err.message);
+  }
+  return sanitizeUsageStats(null);
+}
+
+function saveUsageStats(stats) {
+  // Kleine Datei, synchrones Schreiben: Node bedient die Anfragen seriell,
+  // dadurch können parallele Zähler nicht verloren gehen.
+  fs.writeFileSync(USAGE_STATS_FILE, JSON.stringify(stats, null, 2), 'utf8');
+}
+
+function recordUsage({ photos = 0, action = '' } = {}) {
+  try {
+    const stats = loadUsageStats();
+    if (!stats.startedAt) stats.startedAt = new Date().toISOString();
+    const key = localDateKey();
+    const day = stats.days[key] || (stats.days[key] = emptyUsageDay());
+    if (photos > 0) day.photos += Math.floor(photos);
+    if (action && USAGE_ACTIONS.includes(action)) day.actions[action] += 1;
+    const cutoff = localDateKey(new Date(Date.now() - USAGE_MAX_DAYS * 86400000));
+    stats.days = Object.fromEntries(
+      Object.entries(stats.days)
+        .filter(([dateKey]) => dateKey >= cutoff)
+        .sort(([a], [b]) => a.localeCompare(b))
+    );
+    saveUsageStats(stats);
+  } catch (err) {
+    console.warn('Usage statistics could not be recorded:', err.message);
+  }
+}
+
+// Reads the capture timestamp encoded in an object name. Trash names keep the
+// original photo name after the expiry prefix, so deleted photos still count.
+function capturedAtMs(name, fromTrash = false) {
+  let candidate = name;
+  if (fromTrash) {
+    const m = name.match(TRASH_NAME_RE);
+    if (!m) return null;
+    candidate = m[2];
+  }
+  const m = candidate.match(OBJECT_TS_RE);
+  if (!m) return null;
+  let ms = Number(m[1]);
+  if (m[1].length === 10) ms *= 1000;
+  const earliest = Date.UTC(2000, 0, 1);
+  if (!Number.isFinite(ms) || ms < earliest || ms > Date.now() + 86400000) return null;
+  return ms;
+}
+
+async function handleUsageStatsApi(req, res) {
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  // Nutzungsdaten sind interne Betriebsdaten und nur im Admin-Panel sichtbar.
+  if (!isAdmin(req)) {
+    return sendJson(res, 403, { error: 'Admin PIN required' });
+  }
+
+  const url = new URL(req.url, 'http://localhost');
+  const requestedDays = Number.parseInt(url.searchParams.get('days'), 10);
+  const rangeDays = [7, 14, 30].includes(requestedDays) ? requestedDays : 14;
+  const stats = loadUsageStats();
+  const today = new Date();
+  const todayKey = localDateKey(today);
+  const daily = [];
+  const dailyByKey = new Map();
+  for (let i = rangeDays - 1; i >= 0; i -= 1) {
+    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i, 12);
+    const entry = { date: localDateKey(date), photos: 0 };
+    daily.push(entry);
+    dailyByKey.set(entry.date, entry);
+  }
+
+  let photoNames = [];
+  let trashNames = [];
+  let storageError = false;
+  try {
+    const cfg = getSupabaseConfig();
+    [photoNames, trashNames] = await Promise.all([
+      listAllJpgNames(cfg, PHOTO_PREFIX),
+      listAllJpgNames(cfg, TRASH_PREFIX)
+    ]);
+  } catch (err) {
+    storageError = true;
+    console.warn('Usage stats could not read storage:', err.message);
+  }
+
+  const hours = Array(24).fill(0);
+  let capturesInRange = 0;
+  let photosToday = 0;
+  for (const [names, fromTrash] of [[photoNames, false], [trashNames, true]]) {
+    for (const name of names) {
+      const ms = capturedAtMs(name, fromTrash);
+      if (ms == null) continue;
+      const date = new Date(ms);
+      const key = localDateKey(date);
+      if (key === todayKey) photosToday += 1;
+      const row = dailyByKey.get(key);
+      if (!row) continue;
+      row.photos += 1;
+      capturesInRange += 1;
+      hours[date.getHours()] += 1;
+    }
+  }
+
+  const actions = { qr: 0, print: 0, share: 0, download: 0 };
+  for (const entry of daily) {
+    const day = stats.days[entry.date];
+    if (!day) continue;
+    for (const action of USAGE_ACTIONS) actions[action] += day.actions[action];
+  }
+
+  let busiestDay = null;
+  for (const entry of daily) {
+    if (entry.photos > 0 && (!busiestDay || entry.photos > busiestDay.photos)) {
+      busiestDay = { date: entry.date, photos: entry.photos };
+    }
+  }
+  const peakHourValue = Math.max(...hours);
+  const busiestHour = peakHourValue > 0 ? hours.indexOf(peakHourValue) : null;
+
+  return sendJson(res, 200, {
+    rangeDays,
+    generatedAt: new Date().toISOString(),
+    storageError,
+    trackingSince: stats.startedAt,
+    kpis: {
+      totalPhotos: storageError ? null : photoNames.length,
+      trashCount: storageError ? null : trashNames.length,
+      capturesInRange: storageError ? null : capturesInRange,
+      photosToday: storageError ? null : photosToday
+    },
+    daily,
+    hours,
+    actions,
+    busiestDay,
+    busiestHour
+  });
+}
+
+async function handleUsageEventApi(req, res) {
+  if (req.method !== 'POST') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  try {
+    const body = JSON.parse(await readBody(req, 4096));
+    if (!body || !USAGE_ACTIONS.includes(body.event)) {
+      return sendJson(res, 400, { error: 'Invalid event' });
+    }
+    recordUsage({ action: body.event });
+    return sendJson(res, 200, { ok: true });
+  } catch (err) {
+    return sendJson(res, 400, { error: 'Invalid JSON' });
   }
 }
 
@@ -586,6 +822,7 @@ async function handlePhotosApi(req, res) {
       const rel = item.signedUrl || item.signedURL || '';
       if (!rel) throw new Error('no signed url in response');
       const url = rel.startsWith('http') ? rel : cfg.baseUrl + '/storage/v1' + rel;
+      recordUsage({ action: 'qr' });
       return sendJson(res, 200, { url, ttl: qrTtlSeconds });
     }
 
@@ -664,6 +901,9 @@ async function handlePhotosApi(req, res) {
       });
       // Nur Fotos dieser Sitzung dürfen vom Gast später gelöscht werden.
       if (session) session.photoIds.add(key);
+      // Nur neue Aufnahmen zählen; Sticker-/Filter-Bearbeitungen überschreiben
+      // ein vorhandenes Foto und sind keine zusätzliche Nutzung.
+      if (!id) recordUsage({ photos: 1 });
       // The photo is stored, so advance the global streak. A streak failure
       // must not report the upload as failed; the client skips the toast.
       let streak = null;
@@ -1073,6 +1313,7 @@ const BLOCKED_STATIC_FILES = new Set([
   '/.env.local',
   '/dev-https-server.js',
   '/settings.json',
+  '/usage-stats.json',
   '/package.json',
   '/package-lock.json',
   '/Fotobox-Kiosk.cmd'
@@ -1096,6 +1337,12 @@ const requestHandler = (req, res) => {
   }
   if (route === '/api/photo-session') {
     return handlePhotoSessionApi(req, res);
+  }
+  if (route === '/api/stats/event') {
+    return handleUsageEventApi(req, res);
+  }
+  if (route === '/api/stats') {
+    return handleUsageStatsApi(req, res);
   }
   if (route === '/api/streak') {
     return handleStreakApi(req, res);

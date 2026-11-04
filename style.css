@@ -1031,12 +1031,14 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
 }
 .gallery__load-more-btn { min-width: 180px; min-height: 44px; }
 
-/* gallery card */
+/* Galerie-Kachel im Aufnahmeformat. Das Foto wird vollständig gezeigt statt
+   auf ein Hochformat zugeschnitten, damit Bildinhalte erkennbar bleiben. */
 .gallery__card {
   position: relative;
-  aspect-ratio: 3 / 4;
+  aspect-ratio: 16 / 9;
   border-radius: var(--radius-sm);
   overflow: hidden;
+  background: #07080a;
   transform-origin: center bottom;
   box-shadow: 0 10px 30px rgba(0 0 0 / 0.35);
   opacity: 1;
@@ -1045,7 +1047,7 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
 .gallery__card img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
   display: block;
   transition: transform 0.35s ease;
 }
@@ -1894,9 +1896,9 @@ body.orientation-landscape section.gallery {
 }
 
 body.orientation-landscape .gallery__grid {
-  /* Drei große Kacheln pro Reihe: weniger Bilder gleichzeitig, dafür
-     deutlich besser sichtbar. */
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* Zwei große Querformat-Kacheln pro Reihe: weniger Bilder gleichzeitig,
+     dafür bleiben die Fotos trotz 16:9 gut erkennbar. */
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: clamp(16px, 1.4vw, 24px);
 }
 
