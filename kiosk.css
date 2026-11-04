@@ -652,28 +652,49 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
   color: #e8eaf0;
   pointer-events: none;
 }
-.cancel-home__icon--cancel,
-.cancel-home__icon--done { display: none; }
+.cancel-home__icon--cancel { display: none; }
 .cancel-home.is-cancelling .cancel-home__icon--home { display: none; }
 .cancel-home.is-cancelling .cancel-home__icon--cancel { display: block; }
-.cancel-home.is-done .cancel-home__icon--home { display: none; }
-.cancel-home.is-done .cancel-home__icon--done { display: block; }
 .cancel-home.is-cancelling .cancel-home__disc {
   border-color: var(--c-danger-soft);
   color: var(--c-danger-soft);
 }
 .cancel-home.is-cancelling .cancel-home__label { color: #fca5a5; }
 .cancel-home.is-done .cancel-home__disc {
-  border-color: var(--c-success);
-  color: #06230f;
-  background: var(--c-success);
+  display: none;
 }
-.cancel-home.is-done .cancel-home__label { color: #86efac; }
-/* „Fertig“ ist der primäre Abschluss und sitzt deshalb rechts unten — auf
-   derselben Höhe wie der Home-Knopf im Rest des Kiosks. */
+/* The existing return action becomes a text capsule on the final screen. */
 .cancel-home.is-done {
   left: auto;
   right: calc(var(--stage-pad) + var(--bar-edge-inset));
+  min-height: 56px;
+  justify-content: center;
+  gap: 0;
+  padding: clamp(12px, 1vw, 16px) clamp(24px, 2.2vw, 36px);
+  border: 1px solid var(--c-success);
+  border-radius: 9999px;
+  background: var(--c-success);
+  transition: background-color 160ms ease, box-shadow 160ms ease;
+}
+.cancel-home.is-done:hover { background-color: color-mix(in srgb, var(--c-success) 92%, white); }
+.cancel-home.is-done:active { background-color: color-mix(in srgb, var(--c-success) 88%, black); }
+.endscreen__inner > .cancel-home.is-done {
+  position: static;
+  inset: auto;
+  align-self: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cancel-home.is-done { transition: none; }
+}
+.cancel-home.is-done .cancel-home__label {
+  color: #06230f;
+  font-size: clamp(16px, 1.2vw, 20px);
+  font-weight: 700;
+  line-height: 1.2;
+}
+.cancel-home.is-done:focus-visible {
+  outline: 3px solid var(--c-highlight);
+  outline-offset: 4px;
 }
 .cancel-home__label {
   font-size: var(--action-label-size);
@@ -686,7 +707,6 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
   background: rgba(255, 255, 255, 0.08);
   transform: scale(1.06);
 }
-.cancel-home.is-done:hover .cancel-home__disc { background: var(--c-success); }
 .cancel-home:active .cancel-home__disc { transform: scale(0.95); }
 .cancel-home:focus { outline: none; }
 /* Neutraler Fokusring, aber nur bei Tastaturbedienung. Nach einem Tippen oder
@@ -1024,19 +1044,31 @@ body.orientation-landscape .endscreen {
   z-index: 80;
   align-items: center;
   justify-content: center;
+  padding: clamp(16px, 3vh, 32px);
   background: rgba(7, 8, 10, 0.94);
   -webkit-backdrop-filter: blur(16px);
   backdrop-filter: blur(16px);
 }
 .endscreen__inner {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto auto;
   align-items: center;
+  justify-items: center;
   gap: clamp(22px, 3.4vh, 44px);
   max-width: 94vw;
+  max-height: 100%;
+}
+.endscreen__photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 0;
 }
 .endscreen__photo img {
   display: block;
+  width: auto;
+  height: 100%;
   max-width: 66vw;
   max-height: 54vh;
   border-radius: 10px;
@@ -1045,6 +1077,8 @@ body.orientation-landscape .endscreen {
 }
 .endscreen__actions {
   display: flex;
+  flex-wrap: wrap;
+  max-width: 100%;
   align-items: flex-start;
   justify-content: center;
   gap: clamp(30px, 6vw, 96px);
@@ -1455,6 +1489,79 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 }
 .bar-filter-list::-webkit-scrollbar { display: none; }
 
+.bar-slot--menu[data-mode="filters"] .dot-chip__disc { padding: 18%; }
+.bar-slot--menu[data-mode="filters"] :is(.dot-chip__disc--sw, .dot-chip__disc--vintage, .dot-chip__disc--knackig) {
+  position: relative;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: transparent;
+}
+.bar-slot--menu[data-mode="filters"] :is(.dot-chip__disc--sw, .dot-chip__disc--vintage, .dot-chip__disc--knackig) svg {
+  position: absolute;
+  inset: 0;
+  clip-path: circle(50% at 50% 50%);
+}
+.bar-slot--menu[data-mode="filters"] .dot-chip.is-selected :is(.dot-chip__disc--sw, .dot-chip__disc--vintage, .dot-chip__disc--knackig) {
+  outline: 2px solid var(--c-highlight);
+}
+.bar-slot--menu[data-mode="filters"] .dot-chip__emoji {
+  font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
+  font-size: clamp(28px, 2.7vw, 42px);
+  line-height: 1;
+}
+.bar-slot--menu[data-mode="filters"] .dot-chip__disc svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  flex: 0 0 auto;
+  overflow: visible;
+}
+.bar-active-filters {
+  position: absolute;
+  bottom: calc(100% + 12px);
+  left: calc(-1 * var(--bar-side-size) - 6px);
+  right: 0;
+  margin: 0;
+  padding-inline: 12px;
+  color: #eef1f6;
+  font-size: clamp(12px, 1vw, 15px);
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.75);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 70ms ease;
+}
+.bar-slot--menu.is-open .bar-active-filters {
+  opacity: 1;
+  transition: opacity 120ms ease 160ms;
+}
+.bar-slot--menu[data-mode="overlays"] .bar-active-filters { display: none; }
+.bar-filter-remove-hint {
+  position: absolute;
+  bottom: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  font-size: 0.9em;
+  font-weight: 400;
+  opacity: 0;
+  transition: opacity 350ms ease;
+}
+.bar-filter-remove-hint.is-visible {
+  opacity: 0.85;
+  transition: opacity 180ms ease;
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-active-filters,
+  .bar-filter-remove-hint,
+  .bar-slot--menu.is-open .bar-active-filters { transition: none; }
+}
+
 /* Wisch-Hinweis: ein Fingerpunkt mit Nachziehpunkten fährt beim Aufklappen
    über das Filterband und blendet wieder aus. Liegt nur über dem Inhalt
    (pointer-events: none), damit Tippen und Scrollen ungestört bleiben. */
@@ -1473,7 +1580,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 }
 .bar-swipe-hint.is-playing {
   display: block;
-  animation: barSwipeHintSweep 2012ms cubic-bezier(0.33, 0, 0.2, 1) both;
+  animation: barSwipeHintSweep 2000ms linear both;
 }
 .bar-swipe-hint__dot {
   position: absolute;
@@ -1506,10 +1613,9 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 }
 @keyframes barSwipeHintSweep {
   0%   { opacity: 0; transform: translate(calc(-50% + var(--hint-travel) / 2), -50%) scale(0.85); }
-  14%  { opacity: 1; transform: translate(calc(-50% + var(--hint-travel) / 2), -50%) scale(1); }
-  60%  { opacity: 1; transform: translate(calc(-50% - var(--hint-travel) / 2), -50%) scale(1); }
-  72%  { opacity: 1; transform: translate(calc(-50% - var(--hint-travel) / 2), -50%) scale(0.96); }
-  100% { opacity: 0; transform: translate(calc(-50% - var(--hint-travel) / 2), -50%) scale(0.9); }
+  14%  { opacity: 1; transform: translate(calc(-50% + var(--hint-travel) / 2), -50%) scale(1); animation-timing-function: cubic-bezier(0.33, 1, 0.68, 1); }
+  45%  { opacity: 1; transform: translate(calc(-50% - var(--hint-travel) / 2), -50%) scale(1); animation-timing-function: cubic-bezier(0.42, 0, 0.58, 1); }
+  100% { opacity: 0; transform: translate(calc(-50% + var(--hint-travel) / 2), -50%) scale(0.9); }
 }
 @media (prefers-reduced-motion: reduce) {
   .bar-swipe-hint.is-playing { display: none; animation: none; }
@@ -1606,31 +1712,31 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 
 /* ============================================================
    REVIEW-LEISTE
-   Sticker | Neu aufnehmen | Rahmen · Annehmen (rechts unten)
-   „Neu aufnehmen“ bleibt in der Bildmitte, „Annehmen“ sitzt separat in
-   der rechten unteren Ecke. Die beiden Menüknöpfe flankieren die Mitte;
+   Start reserviert | Sticker | Neu aufnehmen + Annehmen | Rahmen
+   Das Aktionspaar sitzt mittig in der Restbreite rechts vom Start-Knopf.
+   Die beiden Menüknöpfe flankieren das Paar;
    ihre Kapseln wachsen vom Knopf nach außen bis an den Rand ihres
    Bereichs. Die Elemente darin sind Quadrate.
    ============================================================ */
 .bar-slot--stamp { display: none; }
 
 #camera.is-reviewing .capture-bar {
-  /* Drei Spalten: links Sticker-Pille, mittig „Neu aufnehmen“, rechts
-     Rahmen-Pille. Die äußeren Spalten sind gleich groß, damit „Neu
-     aufnehmen“ exakt in der Bildmitte steht. */
-  --review-home: calc(var(--home-size) + var(--bar-edge-inset));
-  --review-accept: calc(var(--home-size) + var(--bar-edge-inset) + var(--bar-gap));
+  /* Reserve Start's fixed footprint first; center the action pair within
+     the remaining width. Menu columns no longer need their own reserves. */
+  --review-start-reserve: calc(var(--bar-edge-inset) + var(--home-size) + var(--bar-gap));
+  --review-home: 0px;
+  --review-accept: 0px;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  column-gap: var(--bar-gap);
+  grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
+  column-gap: clamp(20px, 2.5vw, 40px);
   align-items: end;
   align-content: end;
-  padding-left: var(--bar-edge-inset);
+  padding-left: var(--review-start-reserve);
   padding-right: var(--bar-edge-inset);
 }
 /* Die Leiste rückt im Review nicht zur Seite: die Pillen liegen in der Leiste. */
 #camera.is-reviewing .capture-bar.is-menu-open {
-  padding-left: var(--bar-edge-inset);
+  padding-left: var(--review-start-reserve);
   padding-right: var(--bar-edge-inset);
 }
 #camera.is-reviewing .capture-bar > .bar-btn--review-sticker {
@@ -1642,7 +1748,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   width: var(--bar-side-size);
   display: flex;
 }
-/* In der Mitte bleibt „Neu aufnehmen“; „Annehmen“ ist separat fixiert. */
+/* Both primary actions share the center column of the remaining width. */
 #camera.is-reviewing .capture-bar > .review-actions {
   grid-column: 2;
   grid-row: 1;
@@ -1650,22 +1756,69 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   height: auto;
   align-items: flex-end;
   justify-content: center;
-  gap: clamp(8px, 0.9vw, 14px);
+  gap: clamp(16px, 1.8vw, 28px);
   padding: 0;
 }
-/* „Annehmen“ löst sich aus der mittigen Gruppe und sitzt als primäre
-   Aktion rechts unten, auf derselben Unterkante wie der Home-Knopf. */
+/* Keep acceptance in the action pair rather than fixed to the viewport. */
 #camera.is-reviewing #landscapeKeep {
-  position: fixed;
-  right: calc(var(--stage-pad) + var(--bar-edge-inset));
-  bottom: var(--bar-edge-inset);
-  z-index: 10001;
+  position: static;
+  inset: auto;
+  z-index: auto;
+}
+
+/* The shutter/cancel circle provides the size and clear icon hierarchy. */
+body.orientation-landscape #camera.is-reviewing .review-actions .round-action {
+  width: max(var(--bar-shutter-size), calc(var(--action-label-size) * 8));
+  flex: 0 0 auto;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+body.orientation-landscape #camera.is-reviewing .review-actions .round-action__icon {
+  width: var(--bar-shutter-size);
+  border: 3px solid rgba(232, 234, 240, 0.6);
+  background: rgba(18, 22, 30, 0.82);
+  color: #fff;
+  box-shadow: 0 0 0 4px rgba(232, 234, 240, 0.06), 0 8px 22px rgba(0, 0, 0, 0.28);
+  transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
+}
+body.orientation-landscape #camera.is-reviewing .review-actions .round-action__icon svg {
+  width: 44%;
+  height: 44%;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+body.orientation-landscape #camera.is-reviewing .review-actions .round-action--accept .round-action__icon {
+  background: #16a34a;
+  border-color: #22c55e;
+  box-shadow: 0 0 0 5px rgba(22, 163, 74, 0.16), 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+body.orientation-landscape #camera.is-reviewing .review-actions .round-action--accept .round-action__label {
+  color: #86efac;
+}
+body.orientation-landscape #camera.is-reviewing .review-actions .round-action:hover .round-action__icon {
+  transform: scale(1.025);
+}
+body.orientation-landscape #camera.is-reviewing .review-actions .round-action:active .round-action__icon {
+  transform: scale(0.96);
+}
+body.orientation-landscape #camera.is-reviewing .review-actions .round-action:focus-visible .round-action__icon {
+  outline: 3px solid #fff;
+  outline-offset: 4px;
+}
+body.orientation-landscape #camera.is-reviewing .review-actions .round-action:disabled .round-action__icon {
+  opacity: 0.55;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  body.orientation-landscape #camera.is-reviewing .review-actions .round-action__icon { transition: none; }
 }
 #camera .review-actions[hidden] { display: none !important; }
 #camera.is-reviewing .capture-bar > .side-menu-toggle {
   grid-column: 3;
   grid-row: 1;
   justify-self: start;
+  width: var(--bar-side-size);
   order: 0;
 }
 
@@ -1703,8 +1856,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 #camera.is-reviewing .bar-slot--stamp.is-open {
   width: calc(100% - var(--bar-side-size) - var(--bar-slot-gap) - var(--review-home));
 }
-/* Rahmen: linke Kante am Rahmen-Knopf, wächst nach rechts bis vor den
-   „Annehmen“-Knopf. */
+/* Rahmen: linke Kante am Rahmen-Knopf, wächst zum rechten Leistenrand. */
 #camera.is-reviewing .bar-slot--menu {
   grid-column: 3;
   justify-self: start;
@@ -1714,11 +1866,42 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   width: calc(100% - var(--bar-side-size) - var(--bar-slot-gap) - var(--review-accept));
 }
 #camera.is-reviewing .bar-slot__inner { width: 100%; padding-inline: 0; }
-#camera.is-reviewing .bar-filter-list { border-radius: 0; }
+#camera.is-reviewing .bar-slot--stamp .bar-filter-list { border-radius: 0; }
 .bar-slot--stamp .bar-filter-list {
   padding-left: var(--slot-pad-x, 20px);
   padding-right: var(--slot-pad-x, 20px);
 }
+
+/* Only the sticker viewport fades; the capsule and its trigger stay intact. */
+#stampList,
+#barMenuPanel[data-mode="overlays"] .bar-filter-list {
+  gap: clamp(4px, 0.35vw, 6px);
+  scroll-padding-inline: var(--slot-pad-x, 20px);
+}
+#stampList {
+  justify-content: safe flex-end;
+  scroll-snap-type: none;
+  scroll-behavior: auto;
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 20px), transparent);
+  mask-image: linear-gradient(to right, transparent, #000 20px, #000 calc(100% - 20px), transparent);
+}
+#stampList .sticker-category {
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: row-reverse;
+  align-items: center;
+  gap: inherit;
+}
+#stampSwipeHint .bar-swipe-hint__trail { right: auto; left: -10px; }
+#stampSwipeHint .bar-swipe-hint__trail + .bar-swipe-hint__trail { left: -20px; }
+
+/* Same scroll viewport and rounded clipping as filters; fade only overflowing content. */
+#barMenuPanel[data-mode="overlays"] .bar-filter-list {
+  -webkit-mask-image: linear-gradient(to right, var(--frame-fade-left, #000), #000 20px, #000 calc(100% - 20px), var(--frame-fade-right, #000));
+  mask-image: linear-gradient(to right, var(--frame-fade-left, #000), #000 20px, #000 calc(100% - 20px), var(--frame-fade-right, #000));
+}
+#barMenuPanel[data-mode="overlays"] .bar-filter-list.has-scroll-before { --frame-fade-left: transparent; }
+#barMenuPanel[data-mode="overlays"] .bar-filter-list.has-scroll-after { --frame-fade-right: transparent; }
 
 /* Quadrat-Kacheln für Rahmen und Sticker. */
 .bar-tile {
@@ -1755,7 +1938,13 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   border-color: var(--c-highlight);
   box-shadow: 0 0 0 2px rgb(var(--c-highlight-rgb) / 0.35);
 }
-.bar-tile--frame { padding: 6%; background: rgba(0, 0, 0, 0.34); }
+.frame-category {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: inherit;
+}
+.bar-tile--frame { padding: 6px; background: rgba(0, 0, 0, 0.34); }
 .bar-tile--frame img {
   width: 100%;
   height: 100%;
@@ -1763,12 +1952,27 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   pointer-events: none;
 }
 .bar-tile--stamp svg { width: 72%; height: 72%; }
+.bar-tile--reset {
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+.bar-tile--reset.is-selected { box-shadow: none; }
+.bar-tile--reset:is(:hover, :active) { transform: none; filter: none; }
+.bar-tile--reset .dot-chip__disc { padding: 18%; }
+.bar-tile--reset svg { width: 100%; height: 100%; pointer-events: none; }
 .bar-tile--stamp-emoji { font-size: clamp(22px, 2vw, 30px); line-height: 1; }
 .bar-tile__glyph { display: block; line-height: 1; }
 
 /* --- Ziehen aus den Menüs aufs Foto -------------------------------
    Das Element hängt am Finger, die Leiste tritt zurück und der Mülleimer
    erscheint am unteren Bildrand. */
+.sticker-drag-preview {
+  position: fixed;
+  z-index: 10999;
+  pointer-events: none;
+}
 .menu-drag-ghost {
   position: fixed;
   z-index: 2000;
@@ -1791,32 +1995,37 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 .menu-drag-ghost .bar-tile__glyph { font-size: clamp(22px, 2vw, 30px); }
 
 .element-trash {
-  position: absolute;
-  left: 50%;
-  bottom: 20%;
-  z-index: 30;
+  position: fixed;
+  right: calc(var(--stage-pad) + var(--bar-edge-inset));
+  bottom: var(--bar-edge-inset);
+  z-index: 11000;
+  width: var(--home-size);
+  height: calc(var(--home-size) + var(--action-gap) + var(--action-label-size) * var(--action-label-line));
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.18s ease;
+}
+.element-trash__visual {
   display: grid;
   place-items: center;
-  width: clamp(58px, 5.2vw, 74px);
+  width: 100%;
   aspect-ratio: 1;
   border: 2px solid #ef4444;
   border-radius: 50%;
   background: rgba(239, 68, 68, 0.18);
   color: #fecaca;
-  opacity: 0;
-  transform: translate(-50%, 10px) scale(0.94);
-  pointer-events: none;
-  transition: opacity 0.18s ease, transform 0.18s ease, background 0.18s ease;
+  transform: rotate(calc(var(--trash-tilt, 0deg) + var(--trash-wiggle, 0deg)));
+  transform-origin: 50% 85%;
+  transition: background 0.18s ease, color 0.18s ease;
 }
 .element-trash svg { width: 46%; height: 46%; }
-#camera.is-dragging-element .element-trash {
-  opacity: 1;
-  transform: translate(-50%, 0) scale(1);
-}
-.element-trash.is-target {
+.element-trash.is-visible { opacity: 1; }
+.element-trash.is-target .element-trash__visual {
   background: rgba(239, 68, 68, 0.45);
   color: #fff;
-  transform: translate(-50%, 0) scale(1.1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .element-trash__visual { transform: none; }
 }
 /* Beim Ziehen blendet die Leiste aus, damit das Foto frei liegt. */
 #camera.is-dragging-element .capture-bar {
@@ -1824,7 +2033,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   pointer-events: none;
   transition: opacity 0.2s ease;
 }
-#camera.is-dragging-element .capture-bar.is-menu-open { padding-left: var(--bar-edge-inset); }
+#camera.is-dragging-element .capture-bar.is-menu-open { padding-left: var(--review-start-reserve, var(--bar-edge-inset)); }
 
 @media (prefers-reduced-motion: reduce) {
   .bar-slot { transition: none; }
@@ -1928,6 +2137,7 @@ html[data-ui="2"] .capture-bar.is-options-open .kiosk-shutter {
 
 /* Rounded review preview with equal space above it and before the controls. */
 body.orientation-landscape #camera.is-reviewing .camera__stage {
+  container-type: inline-size;
   grid-template-rows: minmax(0, 1fr) auto;
   gap: var(--stage-pad);
   padding-top: var(--stage-pad);
@@ -1941,6 +2151,15 @@ body.orientation-landscape #camera.is-reviewing .capture-bar {
 body.orientation-landscape #camera.is-reviewing .viewfinder {
   height: 100%;
   border-radius: 14px;
+}
+/* Fit the complete single photo into the preview row, leaving the bar fixed. */
+body.orientation-landscape #camera.is-reviewing .viewfinder:has(> .stage-photo:not(.stage-photo--strip)) {
+  width: auto;
+  height: min(100%, calc(100cqw * 9 / 16));
+  max-width: 100%;
+  max-height: 100%;
+  aspect-ratio: 16 / 9;
+  place-self: center;
 }
 body.orientation-landscape #camera.is-reviewing .stage-photo {
   object-position: 50% 0%;
@@ -1985,6 +2204,112 @@ html[data-ui="2"] .bar-slot--options {
 }
 .bar-slot--options .capture-switch { gap: 4px; }
 .bar-slot--options .capture-switch__label { line-height: 1; }
+/* Review menus use the same expanding surface as the capture menus.
+   Keep the existing grid columns and tile widths; only the surface grows. */
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(#barStickerToggle, #sideMenuToggle) {
+  position: relative;
+  z-index: 2;
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu) {
+  position: relative;
+  inset: auto;
+  margin-bottom: calc(var(--action-gap) + clamp(11px, 0.85vw, 13px) * 1.2 - 6px);
+  overflow: visible;
+  clip-path: none;
+  opacity: 1;
+  transform: none;
+  z-index: 1;
+  isolation: isolate;
+  visibility: hidden;
+  pointer-events: none;
+  transition: visibility 0s linear 320ms;
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu).is-open {
+  visibility: visible;
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing .bar-slot--stamp {
+  width: calc(100% - var(--bar-side-size) - var(--bar-slot-gap) - var(--review-home));
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing .bar-slot--menu {
+  width: calc(100% - var(--bar-side-size) - var(--bar-slot-gap) - var(--review-accept));
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu)::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  width: var(--bar-side-size);
+  height: var(--bar-side-size);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+  --menu-shape-motion: 240ms cubic-bezier(0.4, 0, 0.2, 1) 70ms;
+  transition: width var(--menu-shape-motion), height var(--menu-shape-motion),
+    top var(--menu-shape-motion), left var(--menu-shape-motion),
+    right var(--menu-shape-motion), opacity 90ms linear 220ms;
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing .bar-slot--stamp::before {
+  right: calc(-1 * (var(--bar-side-size) + var(--bar-slot-gap)));
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing .bar-slot--menu::before {
+  left: calc(-1 * (var(--bar-side-size) + var(--bar-slot-gap)));
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu).is-open::before {
+  --menu-shape-motion: 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  top: 0;
+  width: calc(100% + var(--bar-side-size) + var(--bar-slot-gap) + 6px);
+  height: 100%;
+  opacity: 1;
+  transition: width var(--menu-shape-motion), height var(--menu-shape-motion),
+    top var(--menu-shape-motion), left var(--menu-shape-motion),
+    right var(--menu-shape-motion), opacity 60ms linear;
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing .bar-slot--stamp.is-open::before {
+  right: calc(-1 * (var(--bar-side-size) + var(--bar-slot-gap) + 6px));
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing .bar-slot--menu.is-open::before {
+  left: calc(-1 * (var(--bar-side-size) + var(--bar-slot-gap) + 6px));
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu) .bar-slot__inner {
+  height: calc(var(--bar-side-size) + 12px);
+  padding-block: 4px;
+  border-color: transparent;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  opacity: 0;
+  transition: opacity 70ms ease;
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu).is-open .bar-slot__inner {
+  opacity: 1;
+  transition: opacity 120ms ease 160ms;
+}
+html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(#barStickerToggle, #sideMenuToggle)[aria-expanded="true"] .bar-btn__icon {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu),
+  html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu).is-open,
+  html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu)::before,
+  html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu).is-open::before,
+  html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu) .bar-slot__inner,
+  html[data-ui="2"] body.orientation-landscape #camera.is-reviewing :is(.bar-slot--stamp, .bar-slot--menu).is-open .bar-slot__inner {
+    transition: none;
+  }
+}
+
 /* One rounded surface grows from each trigger to enclose its menu content. */
 html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(#captureOptionsToggle, #sideMenuToggle) {
   position: relative;

@@ -119,16 +119,6 @@
           <span class="streak__count" id="streakCount">0</span>
         </div>
         <div class="countdown" id="countdown" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">3</div>
-        <!-- Mülleimer: erscheint, während ein Element aus den Menüs gezogen wird. -->
-        <div class="element-trash" id="elementTrash" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-            <path d="M4 7h16"></path>
-            <path d="M10 4h4"></path>
-            <path d="M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7"></path>
-            <path d="M10 11v6"></path>
-            <path d="M14 11v6"></path>
-          </svg>
-        </div>
         <button class="camera__sound" id="soundToggle" type="button" aria-label="Ton ausschalten" aria-pressed="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
@@ -187,6 +177,10 @@
                selbst sind runde, horizontal scrollbare Knöpfe und schieben den
                Auslöser beim Öffnen animiert nach rechts. -->
           <div class="bar-slot bar-slot--menu" id="barMenuPanel" aria-hidden="true" inert>
+            <p class="bar-active-filters" id="barActiveFilters" role="status" aria-live="polite" aria-atomic="true">
+              <span id="barActiveFilterNames"></span>
+              <span class="bar-filter-remove-hint" id="barFilterRemoveHint" data-i18n="filterRemoveHint" aria-hidden="true">Erneut tippen zum Entfernen</span>
+            </p>
             <div class="bar-slot__inner">
               <div class="bar-filter-band">
                 <div class="bar-filter-list" id="barMenuList" role="group" aria-label="Filter" data-i18n-aria="barMenuAria"></div>
@@ -513,13 +507,23 @@
           <svg class="cancel-home__icon cancel-home__icon--cancel" viewBox="0 0 24 24" focusable="false">
             <path fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" d="M6 6l12 12M18 6 6 18"></path>
           </svg>
-          <svg class="cancel-home__icon cancel-home__icon--done" viewBox="0 0 24 24" focusable="false">
-            <path fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" d="M4 12.5l5 5L20 6.5"></path>
-          </svg>
         </span>
         <span class="cancel-home__label" data-i18n="startHomeLabel">Start</span>
       </button>
     </div>
+  </div>
+
+  <!-- Fixed drop zone outside the clipped photo; only the drawing rotates. -->
+  <div class="element-trash" id="elementTrash" aria-hidden="true">
+    <span class="element-trash__visual">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+        <path d="M4 7h16"></path>
+        <path d="M10 4h4"></path>
+        <path d="M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7"></path>
+        <path d="M10 11v6"></path>
+        <path d="M14 11v6"></path>
+      </svg>
+    </span>
   </div>
 
   <!-- Gallery -->
@@ -652,11 +656,11 @@
 
   <!-- Inaktivitäts-Warnung: Countdown in der im Admin-Panel gesetzten Warnzeit; jeder Tipp bricht ab -->
   <div class="idle-warning" id="idleWarning" hidden>
-    <div class="idle-warning__card" role="alertdialog" aria-modal="true" aria-labelledby="idleWarningTitle" aria-describedby="idleWarningText">
-      <p class="idle-warning__title" id="idleWarningTitle" data-i18n="idleResetTitle">Noch da?</p>
+    <div class="idle-warning__card" id="idleWarningCard" role="alertdialog" aria-modal="true" aria-labelledby="idleWarningTitle" aria-describedby="idleWarningText idleWarningHint" tabindex="-1">
+      <p class="idle-warning__title" id="idleWarningTitle" data-i18n="idleResetTitle">Hey, bist du noch da?</p>
       <p class="idle-warning__text" id="idleWarningText" data-i18n="idleResetText">Zurück zum Start in</p>
       <p class="idle-warning__count"><span id="idleCount">15</span><span class="idle-warning__unit">s</span></p>
-      <button class="btn btn--primary idle-warning__btn" id="idleStay" type="button" data-i18n="idleResetStay">Hier bleiben</button>
+      <p class="idle-warning__hint" id="idleWarningHint" data-i18n="idleResetStay">Irgendwo tippen zum Bleiben</p>
     </div>
   </div>
 

@@ -2217,7 +2217,12 @@ body.orientation-landscape .gallery__grid {
   font-size: 0.45em;
   font-weight: 700;
 }
-.idle-warning__btn { min-width: 190px; }
+.idle-warning__hint {
+  margin: 0;
+  color: #eef1f6;
+  font-size: clamp(1rem, 1.2vw, 1.15rem);
+  font-weight: 700;
+}
 
 /* ============================================================
    EINSTELLUNGEN: FARBMODUS FÜR FARBSEHSCHWÄCHEN (CVD)

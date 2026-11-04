@@ -88,12 +88,12 @@ const I18N = {
     modeStrip: 'Fotocollage',
     startHomeAria: 'Zum Startbildschirm',
     startHomeLabel: 'Start',
-    endHomeAria: 'Fertig — zurück zum Startbildschirm',
+    endHomeAria: 'Zurück zum Start',
     captureCancel: 'Abbrechen',
     captureCancelAria: 'Aufnahme abbrechen',
     acceptAria: 'Foto annehmen',
     btnAccept: 'Annehmen',
-    btnDone: 'Fertig',
+    btnDone: 'Zurück zum Start',
     endQr: 'QR-Code',
     endInsta: 'Instagram',
     endPrint: 'Drucken',
@@ -140,15 +140,18 @@ const I18N = {
     overlayStripesH: 'Horizontale Streifen',
     overlayStripesV: 'Vertikale Streifen',
     filterStandard: 'Standard',
+    filterNone: 'Keine Filter',
+    filtersNoneActive: 'Keine Filter aktiv',
+    filterRemoveHint: 'Erneut tippen zum Entfernen',
     filterVintage: 'Vintage',
     toastDownloaded: 'Foto heruntergeladen.',
     toastPrintBlocked: 'Druckfenster wurde blockiert — bitte Pop-ups erlauben.',
     toastFullscreenOn: 'Vollbild an — Shift+F zum Verlassen',
     toastFullscreenError: 'Vollbild konnte nicht geöffnet werden.',
     processing: 'Foto wird erfasst \u2026',
-    idleResetTitle: 'Noch da?',
+    idleResetTitle: 'Hey, bist du noch da?',
     idleResetText: 'Zurück zum Start in',
-    idleResetStay: 'Hier bleiben',
+    idleResetStay: 'Irgendwo tippen zum Bleiben',
     permissionText: 'Kamerazugriff für SnapBox erforderlich',
     permissionHint: 'Dauerhaft blockiert? Erlaube die Kamera in den Browser-Einstellungen (Schloss-Symbol in der Adressleiste) und lade die Seite neu.',
     permissionBtn: 'Kamera erlauben',
@@ -187,6 +190,7 @@ const I18N = {
     stickerSmaller: 'Sticker verkleinern',
     stickerBigger: 'Sticker vergrößern',
     stickerRemove: 'Sticker entfernen',
+    stickerClearAll: 'Alle Sticker löschen',
     galleryBtn: 'Galerie',
     galleryOpenAria: 'Galerie öffnen',
     galleryBack: 'Zurück',
@@ -304,12 +308,12 @@ const I18N = {
     modeStrip: 'Photo collage',
     startHomeAria: 'Home — go to start screen',
     startHomeLabel: 'Home',
-    endHomeAria: 'Done — go to start screen',
+    endHomeAria: 'Back to start',
     captureCancel: 'Cancel',
     captureCancelAria: 'Cancel capture',
     acceptAria: 'Accept photo',
     btnAccept: 'Accept',
-    btnDone: 'Done',
+    btnDone: 'Back to start',
     endQr: 'QR Code',
     endInsta: 'Instagram',
     endPrint: 'Print',
@@ -356,15 +360,18 @@ const I18N = {
     overlayStripesH: 'Horizontal stripes',
     overlayStripesV: 'Vertical stripes',
     filterStandard: 'Standard',
+    filterNone: 'No filters',
+    filtersNoneActive: 'No active filters',
+    filterRemoveHint: 'Tap again to remove',
     filterVintage: 'Vintage',
     toastDownloaded: 'Photo downloaded.',
     toastPrintBlocked: 'Print window was blocked — please allow pop-ups.',
     toastFullscreenOn: 'Fullscreen on — Shift+F to exit',
     toastFullscreenError: 'Fullscreen could not be opened.',
     processing: 'Capturing photo \u2026',
-    idleResetTitle: 'Still there?',
+    idleResetTitle: 'Hey, are you still there?',
     idleResetText: 'Returning to start in',
-    idleResetStay: 'Stay here',
+    idleResetStay: 'Tap anywhere to stay',
     permissionText: 'Camera access required for SnapBox',
     permissionHint: 'Blocked permanently? Allow the camera in your browser settings (lock icon in the address bar), then reload the page.',
     permissionBtn: 'Allow Camera',
@@ -403,6 +410,7 @@ const I18N = {
     stickerSmaller: 'Shrink sticker',
     stickerBigger: 'Enlarge sticker',
     stickerRemove: 'Remove sticker',
+    stickerClearAll: 'Delete all stickers',
     galleryBtn: 'Gallery',
     galleryOpenAria: 'Open gallery',
     galleryBack: 'Back',
@@ -1235,6 +1243,7 @@ function startSession() {
   unlockAudio(); // create the AudioContext inside the user gesture
   playUiSound('cancel.mp3', true);
   playUiSound('switch.mp3', true);
+  playUiSound('afk_timer.mp3', true);
   currentState = 'camera';
   initCamera(); // request camera immediately to preserve user-gesture context
   $splash.classList.remove('is-eye-idle');
@@ -1384,12 +1393,19 @@ function syncFaceFilterSelection() {
     chip.classList.toggle('is-selected', isActive);
     chip.setAttribute('aria-pressed', String(isActive));
   });
+  updateBarMenuSelection();
 }
 
 // Setzt alle gastbezogenen Aufnahme-Einstellungen auf den neutralen Zustand.
 // Betreiber-Einstellungen (Ausrichtung, Standardsprache, Aufbewahrung) bleiben
 // davon unberührt, weil sie nicht in dieser Funktion liegen.
 function resetGuestCaptureSettings() {
+  hideFilterRemoveHint();
+  filterRemoveHintShown = false;
+  // Scroll-Demonstrationen gelten je Gast-Sitzung und Menü genau einmal.
+  filterScrollDemoShown = false;
+  stampScrollDemoShown = false;
+  frameScrollDemoShown = false;
   document.querySelectorAll('.option-cycle.is-used').forEach(button => button.classList.remove('is-used'));
   captureMode = appSettings.defaultCaptureMode;
   countdownSeconds = appSettings.defaultCountdownSeconds;
@@ -1555,6 +1571,11 @@ function isKioskLayout() {
 function syncCancelHome() {
   if (!$cancelHome) return;
   const onSplash = currentState === 'splash';
+  // Reuse the same button and handler in the final layout; keep it available in the gallery.
+  const homeHost = currentState === 'camera' && $camera.classList.contains('is-ended')
+    ? document.querySelector('#endScreen .endscreen__inner')
+    : document.querySelector('.side-rail__home');
+  if (homeHost && $cancelHome.parentElement !== homeHost) homeHost.appendChild($cancelHome);
   $splash.classList.toggle('is-eye-idle', onSplash);
   $cancelHome.hidden = onSplash || $camera.classList.contains('is-capture-cancellable');
   if ($sideRail) $sideRail.hidden = onSplash;
@@ -1571,9 +1592,8 @@ function syncCancelHome() {
   }
 }
 
-// Derselbe Button hat drei Zustände: normal „Start“, während der Aufnahme
-// „Abbrechen“ und auf dem Endscreen „Fertig“. Die Höhe bleibt gleich;
-// „Fertig“ rückt als primäre Abschlussaktion nach rechts unten.
+// Derselbe Button zeigt Start/Abbrechen und auf dem Endscreen die
+// Rückkehr zum Start unter den Ausgabeoptionen; der Click-Handler bleibt gleich.
 function setHomeMode(mode = 'default') {
   if (!$cancelHome) return;
   const cancelling = mode === 'cancel';
@@ -2119,6 +2139,7 @@ function applyFilterSelection() {
   });
   applyStageFilter();
   applyColorPreview();
+  updateBarMenuSelection();
 }
 
 $filterChips.forEach((chip) => chip.addEventListener('click', () => {
@@ -2134,6 +2155,107 @@ applyFilterSelection();
 const $stickerPalette = document.getElementById('stickerPalette');
 let activeStickers = [];   // { el, x, y, w } — x/y/w in % der Bühne
 let selectedSticker = null;
+let activeStickerDragCancel = null;
+
+function enablePlacedStickerDrag(st) {
+  st.el.addEventListener('pointerdown', (e) => {
+    if (e.target.closest('.sticker__ctrl') || e.button !== 0 || e.isPrimary === false) return;
+    if (activeStickerDragCancel) activeStickerDragCancel();
+    if (st.dragReturnCancel) st.dragReturnCancel();
+    e.preventDefault();
+    e.stopPropagation();
+    selectSticker(st);
+    const frame = photoStageRect();
+    const origin = st.el.getBoundingClientRect();
+    const originalOpacity = st.el.style.opacity;
+    const originalTransform = st.el.style.transform;
+    const pointerId = e.pointerId;
+    let dragging = false;
+    let ghost = null;
+    let ghostCleaned = false;
+    const cleanupGhost = () => {
+      if (ghostCleaned) return;
+      ghostCleaned = true;
+      if (ghost) { gsap.killTweensOf(ghost); ghost.remove(); }
+      st.el.style.opacity = originalOpacity;
+      delete st.dragReturnCancel;
+    };
+    try { st.el.setPointerCapture(pointerId); } catch (err) {}
+    const move = (ev) => {
+      if (ev.pointerId !== pointerId) return;
+      if (!dragging) {
+        if (Math.hypot(ev.clientX - e.clientX, ev.clientY - e.clientY) < 6) return;
+        dragging = true;
+        ghost = document.createElement('div');
+        ghost.className = 'sticker-drag-preview';
+        ghost.setAttribute('aria-hidden', 'true');
+        ghost.inert = true;
+        const stickerStyle = getComputedStyle(st.el);
+        const width = parseFloat(stickerStyle.width);
+        const height = parseFloat(stickerStyle.height);
+        Object.assign(ghost.style, {
+          left: (origin.left + origin.width / 2 - width / 2) + 'px',
+          top: (origin.top + origin.height / 2 - height / 2) + 'px',
+          width: width + 'px', height: height + 'px'
+        });
+        const copy = st.el.cloneNode(true);
+        copy.classList.remove('is-selected');
+        copy.removeAttribute('id');
+        copy.querySelectorAll('.sticker__ctrl').forEach(el => el.remove());
+        Object.assign(copy.style, { left: '50%', top: '50%', width: '100%', height: '100%' });
+        ghost.appendChild(copy);
+        document.body.appendChild(ghost);
+        st.el.style.opacity = '0';
+        startElementTrash();
+      }
+      ev.preventDefault();
+      updateElementTrash(ev.clientX, ev.clientY);
+      ghost.style.transform = 'translate(' + (ev.clientX - e.clientX) + 'px, ' + (ev.clientY - e.clientY) + 'px)';
+    };
+    const up = (ev) => {
+      if (ev.pointerId !== undefined && ev.pointerId !== pointerId) return;
+      const remove = dragging && ev.type === 'pointerup' && elementTrashContains(ev.clientX, ev.clientY);
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', up);
+      window.removeEventListener('pointercancel', up);
+      window.removeEventListener('blur', cancel);
+      window.removeEventListener('resize', cancel, true);
+      window.removeEventListener('keydown', keydown, true);
+      try { st.el.releasePointerCapture(pointerId); } catch (err) {}
+      activeStickerDragCancel = null;
+      if (dragging) stopElementTrash();
+      if (remove) {
+        cleanupGhost();
+        removeSticker(st);
+      } else if (dragging && ev.type === 'pointerup' && pointerInside(frame, ev.clientX, ev.clientY)) {
+        st.x = ((origin.left + origin.width / 2 + ev.clientX - e.clientX - frame.left) / frame.width) * 100;
+        st.y = ((origin.top + origin.height / 2 + ev.clientY - e.clientY - frame.top) / frame.height) * 100;
+        positionSticker(st);
+        st.el.style.transform = originalTransform;
+        positionStickerControls(st);
+        cleanupGhost();
+      } else if (dragging && ev.type === 'pointerup' && !reducedCaptureMotion()) {
+        // Invalid drop: only the temporary drawing returns; saved coordinates never moved.
+        st.dragReturnCancel = cleanupGhost;
+        gsap.to(ghost, { x: 0, y: 0, duration: 0.22, ease: 'power2.out', onComplete: cleanupGhost, onInterrupt: cleanupGhost });
+      } else cleanupGhost();
+    };
+    const cancel = () => up({ type: 'pointercancel', pointerId });
+    const keydown = (ev) => {
+      if (ev.key !== 'Escape') return;
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      cancel();
+    };
+    activeStickerDragCancel = cancel;
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('pointerup', up);
+    window.addEventListener('pointercancel', up);
+    window.addEventListener('blur', cancel);
+    window.addEventListener('resize', cancel, true);
+    window.addEventListener('keydown', keydown, true);
+  });
+}
 
 function stickerSvgUrl(kind) {
   const svg = $stickerPalette.querySelector('[data-sticker="' + kind + '"] svg').cloneNode(true);
@@ -2160,28 +2282,7 @@ function addSticker(kind) {
   activeStickers.push(st);
   positionSticker(st);
 
-  el.addEventListener('pointerdown', (e) => {
-    // Tippen auf die Größen-/Löschen-Buttons darf keinen Drag starten:
-    // sonst springt der Sticker beim Touch-Tap auf die Button-Position.
-    if (e.target.closest('.sticker__ctrl')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    selectSticker(st);
-    const frame = photoStageRect();
-    const move = (ev) => {
-      st.x = ((ev.clientX - frame.left) / frame.width) * 100;
-      st.y = ((ev.clientY - frame.top) / frame.height) * 100;
-      positionSticker(st);
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
-  });
+  enablePlacedStickerDrag(st);
 
   selectSticker(st);
 }
@@ -2322,14 +2423,20 @@ function scaleSticker(st, factor) {
 }
 
 function removeSticker(st) {
+  if (st.dragReturnCancel) st.dragReturnCancel();
   if (selectedSticker === st) deselectSticker();
   st.el.remove();
   activeStickers = activeStickers.filter((s) => s !== st);
 }
 
 function clearStickers() {
+  if (activeStickerDragCancel) activeStickerDragCancel();
+  cancelMenuDrag();
   deselectSticker();
-  [...activeStickers].forEach((st) => st.el.remove());
+  [...activeStickers].forEach((st) => {
+    if (st.dragReturnCancel) st.dragReturnCancel();
+    st.el.remove();
+  });
   activeStickers = [];
 }
 
@@ -2517,9 +2624,12 @@ function awaitCaptureTask(task, runId) {
 function prepareCaptureResult() {
   // Switch scenes once, while the full-screen flash is at its peak.
   $camera.classList.add('is-reviewing', 'is-printing', 'is-capture-result');
+  // Focus in an expanded menu can leave the clipped stage scrolled sideways.
+  $camera.querySelector('.camera__stage').scrollLeft = 0;
   const actions = document.getElementById('reviewActions');
   if (actions) actions.hidden = !isKioskLayout();
   $review.hidden = isKioskLayout();
+  syncBarToggleLabel();
   gsap.set($placeholder, { opacity: 0 });
 }
 
@@ -2572,6 +2682,16 @@ function animatePrintedPhoto(targets, runId) {
   const duration = reduced ? 0.18 : 2;
   const distance = $camera.querySelector('.viewfinder').getBoundingClientRect().height;
   if (capturePrint) capturePrint.finish(false);
+  // Start sits outside captureBar; both share one offset and timeline track.
+  const controls = (isKioskLayout()
+    ? [document.getElementById('captureBar'), $cancelHome]
+    : [$review]).filter(Boolean);
+  const controlStates = controls.map(el => ({ el, inert: el.inert }));
+  const homeWasHidden = $cancelHome && $cancelHome.hidden;
+  if (isKioskLayout() && $cancelHome) $cancelHome.hidden = false;
+  const controlsTop = Math.min(...controls.map(el => el.getBoundingClientRect().top));
+  const controlsDistance = Math.max(0, window.innerHeight - controlsTop) + 1;
+  controls.forEach(el => { el.inert = true; });
   return new Promise(resolve => {
     let finished = false;
     const effect = { tween: null, finish: (success) => {
@@ -2581,6 +2701,9 @@ function animatePrintedPhoto(targets, runId) {
       stopPrinterSound();
       window.removeEventListener('resize', completeOnResize);
       gsap.set(targets, { opacity: 1, clearProps: 'transform,visibility' });
+      gsap.set(controls, { clearProps: 'transform,visibility,opacity' });
+      controlStates.forEach(({ el, inert }) => { el.inert = inert; });
+      if (!success && isKioskLayout() && $cancelHome) $cancelHome.hidden = homeWasHidden;
       $camera.classList.remove('is-printing');
       if (capturePrint === effect) capturePrint = null;
       resolve(!!success && runId === captureRunId);
@@ -2589,12 +2712,15 @@ function animatePrintedPhoto(targets, runId) {
     capturePrint = effect;
     window.addEventListener('resize', completeOnResize);
     gsap.set(targets, { y: reduced ? 0 : -distance, opacity: reduced ? 0 : 1, visibility: 'visible' });
-    effect.tween = gsap.to(targets, {
-      y: 0, opacity: 1, duration, ease: reduced ? 'power1.out' : 'none',
+    gsap.set(controls, { y: reduced ? 0 : controlsDistance, opacity: reduced ? 0 : 1, visibility: 'visible' });
+    effect.tween = gsap.timeline({
+      defaults: { duration, ease: reduced ? 'power1.out' : 'none' },
       onStart: () => { if (!reduced) playPrinterSound(duration); },
       onComplete: () => effect.finish(true),
       onInterrupt: () => effect.finish(false)
-    });
+    })
+      .to(targets, { y: 0, opacity: 1 }, 0)
+      .to(controls, { y: 0, opacity: 1 }, 0);
   });
 }
 
@@ -3729,19 +3855,37 @@ const UI_SOUND_SRCS = {
   'switch.mp3': 'assets/audio/switch.mp3',
   'start.mp3': 'assets/audio/start.mp3',
   'Button_push.mp3': 'assets/audio/Button_push.mp3',
-  'paper_crush.mp3': 'assets/audio/paper_crush.mp3'
+  'paper_crush.mp3': 'assets/audio/paper_crush.mp3',
+  'afk_timer.mp3': 'assets/audio/afk_timer.MP3'
 };
+const afkTimerSources = new Set();
+let afkTimerSoundGeneration = 0;
+
+function stopAfkTimerSounds() {
+  afkTimerSoundGeneration++;
+  afkTimerSources.forEach((source) => {
+    try { source.stop(); } catch (e) {}
+    try { source.disconnect(); } catch (e) {}
+  });
+  afkTimerSources.clear();
+}
 
 function playUiSound(name, preload = false) {
   if (!soundEnabled) return;
   const ctx = getAudioContext();
   if (!ctx) return;
+  const afkGeneration = name === 'afk_timer.mp3' ? afkTimerSoundGeneration : null;
   const play = (buffer) => {
     if (!buffer || !soundEnabled || ctx.state !== 'running') return;
+    if (name === 'afk_timer.mp3' && (!idleWarnVisible || afkGeneration !== afkTimerSoundGeneration)) return;
     try {
       const source = ctx.createBufferSource();
       source.buffer = buffer;
       source.connect(ctx.destination);
+      if (name === 'afk_timer.mp3') {
+        afkTimerSources.add(source);
+        source.onended = () => afkTimerSources.delete(source);
+      }
       source.start();
     } catch (err) {
       // Optional UI sounds must never interrupt the camera flow.
@@ -3753,7 +3897,7 @@ function playUiSound(name, preload = false) {
   }
   const src = UI_SOUND_SRCS[name];
   if (!src) return;
-  fetch(src)
+  fetch(src, name === 'afk_timer.mp3' ? { cache: 'no-store' } : undefined)
     .then((res) => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.arrayBuffer(); })
     .then((bytes) => ctx.decodeAudioData(bytes))
     .then((buffer) => { uiSoundBuffers.set(name, buffer); if (!preload) play(buffer); })
@@ -4054,7 +4198,10 @@ applySoundState();
 
 function toggleSound() {
   soundEnabled = !soundEnabled;
-  if (!soundEnabled) stopPrinterSound();
+  if (!soundEnabled) {
+    stopPrinterSound();
+    stopAfkTimerSounds();
+  }
   localStorage.setItem('soundEnabled', soundEnabled ? '1' : '0');
   applySoundState();
 }
@@ -4220,12 +4367,33 @@ document.addEventListener('pointerdown', () => {
 // var statt let: applyLanguage() kann laufen, bevor die Filtervariablen
 // weiter oben im Skript initialisiert sind.
 var barMenuReady = false;
+var filterRemoveHintShown = false;
+var filterRemoveHintTimer = 0;
+
+function hideFilterRemoveHint() {
+  clearTimeout(filterRemoveHintTimer);
+  filterRemoveHintTimer = 0;
+  const hint = document.getElementById('barFilterRemoveHint');
+  if (hint) {
+    hint.classList.remove('is-visible');
+    hint.setAttribute('aria-hidden', 'true');
+  }
+}
+
+function showFilterRemoveHint() {
+  if (filterRemoveHintShown || !barMenuIsOpen() || !barMenuShowsFilters()) return;
+  const hint = document.getElementById('barFilterRemoveHint');
+  if (!hint) return;
+  filterRemoveHintShown = true;
+  hint.classList.add('is-visible');
+  hint.setAttribute('aria-hidden', 'false');
+  filterRemoveHintTimer = window.setTimeout(hideFilterRemoveHint, 1500);
+}
 
 function barMenuPanelEl() { return document.getElementById('barMenuPanel'); }
 function barMenuListEl() { return document.getElementById('barMenuList'); }
 
 const BAR_COLOR_FILTERS = {
-  standard: 'filterStandard',
   sw: 'filterSw',
   vintage: 'filterVintage',
   knackig: 'filterKnackig'
@@ -4265,31 +4433,46 @@ function renderStampPanel() {
   const list = stampListEl();
   if (!list) return;
   list.innerHTML = '';
-  const addDivider = () => {
-    const divider = document.createElement('span');
-    divider.className = 'bar-filter-divider';
-    divider.setAttribute('aria-hidden', 'true');
-    list.appendChild(divider);
-  };
-  SHAPE_STICKERS.forEach((sticker) => {
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'bar-tile bar-tile--stamp';
-    btn.setAttribute('aria-label', t(sticker.ariaKey));
-    const source = $stickerPalette.querySelector('[data-sticker="' + sticker.kind + '"] svg');
-    if (source) btn.appendChild(source.cloneNode(true));
-    btn.addEventListener('click', () => {
-      if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
-      addSticker(sticker.kind);
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.className = 'bar-tile bar-tile--reset dot-chip';
+  clear.style.order = '1';
+  clear.dataset.action = 'clear-stickers';
+  clear.setAttribute('aria-label', t('stickerClearAll'));
+  clear.title = t('stickerClearAll');
+  clear.appendChild(menuResetDisc('stickers'));
+  clear.addEventListener('click', clearStickers);
+  list.appendChild(clear);
+  STICKER_CATEGORIES.filter(category => category.items.length).forEach((category, index) => {
+    if (index) {
+      const divider = document.createElement('span');
+      divider.className = 'bar-filter-divider';
+      divider.style.order = String(1 - index * 2);
+      divider.setAttribute('aria-hidden', 'true');
+      list.appendChild(divider);
+    }
+    const group = document.createElement('div');
+    group.className = 'sticker-category';
+    group.dataset.category = category.id;
+    group.style.order = String(-index * 2);
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', category.label);
+    list.appendChild(group);
+    category.items.filter(sticker => sticker.kind).forEach((sticker) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'bar-tile bar-tile--stamp';
+      btn.setAttribute('aria-label', t(sticker.ariaKey));
+      const source = $stickerPalette.querySelector('[data-sticker="' + sticker.kind + '"] svg');
+      if (source) btn.appendChild(source.cloneNode(true));
+      btn.addEventListener('click', () => {
+        if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
+        addSticker(sticker.kind);
+      });
+      enableMenuDrag(btn, { kind: 'sticker', sticker: sticker.kind });
+      group.appendChild(btn);
     });
-    enableMenuDrag(btn, { kind: 'sticker', sticker: sticker.kind });
-    list.appendChild(btn);
-  });
-  ['emoji', 'uni'].forEach((key) => {
-    const stamps = STAMPS[key] || [];
-    if (!stamps.length) return;
-    addDivider();
-    stamps.forEach((stamp) => {
+    category.items.filter(sticker => sticker.glyph).forEach((stamp) => {
       const btn = document.createElement('button');
       btn.type = 'button';
       btn.className = 'bar-tile bar-tile--stamp bar-tile--stamp-emoji';
@@ -4303,7 +4486,7 @@ function renderStampPanel() {
         addEmojiStamp(stamp.glyph);
       });
       enableMenuDrag(btn, { kind: 'sticker', glyph: stamp.glyph });
-      list.appendChild(btn);
+      group.appendChild(btn);
     });
   });
 }
@@ -4331,10 +4514,15 @@ function setStampMenuOpen(open) {
   const swipeHint = document.getElementById('stampSwipeHint');
   if (!next) hideListScrollHint(swipeHint);
   if (next) {
+    const list = stampListEl();
+    if (list) list.scrollLeft = list.scrollWidth - list.clientWidth;
     stampScrollHintTimer = window.setTimeout(() => {
       stampScrollHintTimer = 0;
-      hintListScroll(stampListEl());
-      playListScrollHint(stampListEl(), swipeHint);
+      if (!stampMenuIsOpen() || stampScrollDemoShown) return;
+      if (hintListScroll(stampListEl(), 70, 40)) {
+        stampScrollDemoShown = true;
+        playListScrollHint(stampListEl(), swipeHint, false, -1);
+      }
     }, 460);
   }
 }
@@ -4344,8 +4532,70 @@ function setStampMenuOpen(open) {
 // nimmt das Element am Finger mit: die Leiste blendet aus, über dem Foto
 // bleibt es liegen, über dem Mülleimer wird es verworfen.
 var menuDrag = null;
+var menuDragCleanup = null;
+var trashWiggle = null;
 
 function elementTrashEl() { return document.getElementById('elementTrash'); }
+
+function startElementTrash() {
+  stopElementTrash();
+  const trash = elementTrashEl();
+  if (!trash) return;
+  const home = $cancelHome && $cancelHome.getBoundingClientRect();
+  // Mirror the complete Home touch area; animate only the inner drawing.
+  ['right', 'bottom', 'width', 'height'].forEach(name => trash.style.removeProperty(name));
+  if (home && home.width && home.height) {
+    trash.style.right = home.left + 'px';
+    trash.style.bottom = (window.innerHeight - home.bottom) + 'px';
+    trash.style.width = home.width + 'px';
+    trash.style.height = home.height + 'px';
+  }
+  trash.classList.add('is-visible');
+  $camera.classList.add('is-dragging-element');
+  if (!reducedCaptureMotion()) {
+    trashWiggle = gsap.timeline({ delay: 3, repeat: -1, repeatDelay: 5 })
+      .to(trash, { '--trash-wiggle': '-3deg', duration: 0.08 })
+      .to(trash, { '--trash-wiggle': '3deg', duration: 0.12 })
+      .to(trash, { '--trash-wiggle': '-2deg', duration: 0.1 })
+      .to(trash, { '--trash-wiggle': '0deg', duration: 0.1 });
+  }
+}
+
+function elementTrashContains(x, y) {
+  const trash = elementTrashEl();
+  if (!trash || !trash.classList.contains('is-visible')) return false;
+  const rect = trash.getBoundingClientRect();
+  const padding = 12;
+  return pointerInside({ left: rect.left - padding, right: rect.right + padding,
+    top: rect.top - padding, bottom: rect.bottom + padding }, x, y);
+}
+
+function updateElementTrash(x, y) {
+  const trash = elementTrashEl();
+  if (!trash || !trash.classList.contains('is-visible')) return;
+  trash.classList.toggle('is-target', elementTrashContains(x, y));
+  if (reducedCaptureMotion()) return;
+  const rect = trash.getBoundingClientRect();
+  const angle = Math.atan2(x - rect.left - rect.width / 2,
+    Math.max(240, Math.abs(y - rect.top - rect.height / 2))) * 180 / Math.PI * 0.22;
+  gsap.to(trash, {
+    '--trash-tilt': Math.max(-20, Math.min(20, angle)) + 'deg',
+    duration: 0.28, ease: 'power2.out', overwrite: 'auto'
+  });
+}
+
+function stopElementTrash() {
+  if (trashWiggle) trashWiggle.kill();
+  trashWiggle = null;
+  const trash = elementTrashEl();
+  if (trash) {
+    gsap.killTweensOf(trash);
+    trash.classList.remove('is-visible', 'is-target');
+    trash.style.removeProperty('--trash-tilt');
+    trash.style.removeProperty('--trash-wiggle');
+  }
+  $camera.classList.remove('is-dragging-element');
+}
 
 function pointerInside(rect, x, y) {
   return !!rect && x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
@@ -4357,8 +4607,7 @@ function paintMenuGhost(x, y) {
   menuDrag.y = y;
   menuDrag.ghost.style.left = x + 'px';
   menuDrag.ghost.style.top = y + 'px';
-  const trash = elementTrashEl();
-  if (trash) trash.classList.toggle('is-target', pointerInside(trash.getBoundingClientRect(), x, y));
+  updateElementTrash(x, y);
 }
 
 function beginMenuDrag(btn, payload, ev) {
@@ -4380,28 +4629,26 @@ function beginMenuDrag(btn, payload, ev) {
       const source = $stickerPalette.querySelector('[data-sticker="' + payload.sticker + '"] svg');
       if (source) ghost.appendChild(source.cloneNode(true));
     }
-    setStampMenuOpen(false);
   }
   document.body.appendChild(ghost);
   menuDrag = { btn, payload, ghost, x: ev.clientX, y: ev.clientY };
-  $camera.classList.add('is-dragging-element');
+  startElementTrash();
   paintMenuGhost(ev.clientX, ev.clientY);
 }
 
 function cancelMenuDrag() {
+  if (menuDragCleanup) menuDragCleanup();
   if (!menuDrag) return;
+  menuDrag.btn.dataset.dragged = '1';
   menuDrag.ghost.remove();
   menuDrag = null;
-  $camera.classList.remove('is-dragging-element');
-  const trash = elementTrashEl();
-  if (trash) trash.classList.remove('is-target');
+  stopElementTrash();
 }
 
 function endMenuDrag(x, y) {
   if (!menuDrag) return;
   const { btn, payload } = menuDrag;
-  const trash = elementTrashEl();
-  const overTrash = pointerInside(trash && trash.getBoundingClientRect(), x, y);
+  const overTrash = elementTrashContains(x, y);
   const viewfinder = $camera.querySelector('.viewfinder');
   const overPhoto = pointerInside(viewfinder && viewfinder.getBoundingClientRect(), x, y);
   cancelMenuDrag();
@@ -4434,12 +4681,15 @@ function endMenuDrag(x, y) {
 function enableMenuDrag(btn, payload) {
   btn.addEventListener('pointerdown', (e) => {
     if (e.button !== undefined && e.button !== 0) return;
+    if (e.isPrimary === false) return;
+    if (menuDragCleanup) cancelMenuDrag();
     delete btn.dataset.dragged;
     const startX = e.clientX;
     const startY = e.clientY;
     let dragging = false;
 
     const move = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
       if (!dragging) {
         const dx = Math.abs(ev.clientX - startX);
         const dy = Math.abs(ev.clientY - startY);
@@ -4452,17 +4702,33 @@ function enableMenuDrag(btn, payload) {
       ev.preventDefault();
       paintMenuGhost(ev.clientX, ev.clientY);
     };
-    const up = (ev) => {
+    const cleanup = () => {
       window.removeEventListener('pointermove', move);
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
+      window.removeEventListener('blur', cancelMenuDrag);
+      window.removeEventListener('keydown', keydown, true);
+      menuDragCleanup = null;
+    };
+    const keydown = (ev) => {
+      if (ev.key !== 'Escape') return;
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      cancelMenuDrag();
+    };
+    const up = (ev) => {
+      if (ev.pointerId !== e.pointerId) return;
+      cleanup();
       if (!dragging) return;
       if (ev.type === 'pointercancel') cancelMenuDrag();
       else endMenuDrag(ev.clientX, ev.clientY);
     };
+    menuDragCleanup = cleanup;
     window.addEventListener('pointermove', move, { passive: false });
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
+    window.addEventListener('blur', cancelMenuDrag);
+    window.addEventListener('keydown', keydown, true);
   });
 }
 
@@ -4471,30 +4737,79 @@ function barMenuIsOpen() {
   return !!panel && panel.classList.contains('is-open');
 }
 
-function barMenuChip(kind, value, disc, label) {
+function barFilterIcon(kind, value) {
+  if (kind === 'color' && (value === 'vintage' || value === 'knackig')) {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('focusable', 'false');
+    const colors = value === 'vintage' ? ['#f4e3c2', '#c9a06a', '#6b4a2f'] : ['#4ee1a0', '#2f7dff', '#ff3d81'];
+    const id = 'bar-filter-' + value;
+    svg.innerHTML = '<defs><clipPath id="' + id + '-circle"><circle cx="50" cy="50" r="50"/></clipPath><linearGradient id="' + id + '-fill" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="' + colors[0] + '"/><stop offset="55%" stop-color="' + colors[1] + '"/><stop offset="100%" stop-color="' + colors[2] + '"/></linearGradient></defs><rect width="100" height="100" fill="url(#' + id + '-fill)" clip-path="url(#' + id + '-circle)"/>';
+    return svg;
+  }
+  if (kind === 'color' && value === 'sw') {
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 100 100');
+    svg.setAttribute('focusable', 'false');
+    svg.innerHTML = '<defs><clipPath id="bar-filter-sw-circle"><circle cx="50" cy="50" r="50"/></clipPath></defs><g clip-path="url(#bar-filter-sw-circle)"><rect width="100" height="100" fill="#fff"/><path d="M0 100 100 0v100Z" fill="#000"/></g>';
+    return svg;
+  }
+  if (kind === 'face') {
+    const emoji = document.createElement('span');
+    emoji.className = 'dot-chip__emoji';
+    const filter = ((window.SnapBoxFilters && window.SnapBoxFilters.FILTERS) || []).find(filter => filter.id === value);
+    emoji.textContent = filter ? filter.emoji : '';
+    return emoji;
+  }
+  if (kind !== 'reset') return null;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('fill', 'none');
+  svg.setAttribute('stroke', 'currentColor');
+  svg.setAttribute('stroke-width', '1.7');
+  svg.setAttribute('stroke-linecap', 'round');
+  svg.setAttribute('stroke-linejoin', 'round');
+  svg.setAttribute('focusable', 'false');
+  svg.innerHTML = '<circle cx="12" cy="12" r="8"/><path d="m6.343 6.343 11.314 11.314"/>';
+  return svg;
+}
+
+function menuResetDisc(kind) {
+  const svg = barFilterIcon('reset');
+  svg.innerHTML = kind === 'frame'
+    ? '<rect x="5" y="5" width="14" height="14" rx="2"/><path d="m3.5 3.5 17 17"/>'
+    : '<path d="M4 7h16M10 4h4M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7M10 11v6M14 11v6"/>';
+  const disc = document.createElement('span');
+  disc.className = 'dot-chip__disc';
+  disc.setAttribute('aria-hidden', 'true');
+  disc.appendChild(svg);
+  return disc;
+}
+
+function barMenuChip(kind, value, label) {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'dot-chip';
   btn.dataset.kind = kind;
   btn.dataset.value = value;
   btn.setAttribute('aria-label', label);
+  btn.title = label;
   btn.setAttribute('aria-pressed', 'false');
   const discEl = document.createElement('span');
   discEl.className = 'dot-chip__disc';
   discEl.setAttribute('aria-hidden', 'true');
   if (kind === 'color') discEl.classList.add('dot-chip__disc--' + value);
-  else discEl.textContent = disc;
-  const labelEl = document.createElement('span');
-  labelEl.className = 'dot-chip__label';
-  labelEl.textContent = label;
+  const icon = barFilterIcon(kind, value);
+  if (icon) discEl.appendChild(icon);
   btn.appendChild(discEl);
-  // Die Beschriftung sitzt im Kreis, damit der Kreis das hohe Menü füllt.
-  discEl.appendChild(labelEl);
   btn.addEventListener('click', () => {
     if (!appSettings.filtersEnabled) return;
-    // Ein zweiter Tipp auf den schon gewählten Filter hebt ihn wieder auf:
-    // Gesichtsfilter zurück auf „Original“, Farbfilter zurück auf „Standard“.
-    if (kind === 'face') {
+    if (kind === 'reset') {
+      currentFilter = 'standard';
+      if (filterEngine) filterEngine.setFilter('none');
+      applyFilterSelection();
+      syncFaceFilterSelection();
+    } else if (kind === 'face') {
       if (!filterEngine) return;
       const active = filterEngine.getFilter();
       filterEngine.setFilter(active === value ? 'none' : value);
@@ -4505,6 +4820,8 @@ function barMenuChip(kind, value, disc, label) {
     }
     updateBarMenuSelection();
     updateSideSelection();
+    if ((kind === 'color' && currentFilter === value)
+      || (kind === 'face' && filterEngine && filterEngine.getFilter() === value)) showFilterRemoveHint();
   });
   return btn;
 }
@@ -4512,19 +4829,25 @@ function barMenuChip(kind, value, disc, label) {
 // Rahmen als reine Bildquadrate: kein Text, nur das Vorschaubild.
 function renderBarOverlays(list) {
   list.replaceChildren();
-  [NO_OVERLAY_OPTION, ...OVERLAYS.standard].forEach((overlay) => {
+  const appendOverlay = (parent, overlay) => {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'bar-tile bar-tile--frame';
     btn.dataset.kind = 'overlay';
     btn.dataset.value = overlay.id;
     btn.setAttribute('aria-label', overlayLabel(overlay));
+    btn.title = overlayLabel(overlay);
     btn.setAttribute('aria-pressed', 'false');
-    const img = document.createElement('img');
-    img.src = overlay.src;
-    img.alt = '';
-    img.draggable = false;
-    btn.appendChild(img);
+    if (overlay.id === NO_OVERLAY_ID) {
+      btn.classList.add('bar-tile--reset', 'dot-chip');
+      btn.appendChild(menuResetDisc('frame'));
+    } else {
+      const img = document.createElement('img');
+      img.src = overlay.src;
+      img.alt = '';
+      img.draggable = false;
+      btn.appendChild(img);
+    }
     btn.addEventListener('click', () => {
       if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
       setOverlay(overlay.id);
@@ -4532,8 +4855,27 @@ function renderBarOverlays(list) {
     if (overlay.id !== NO_OVERLAY_ID) {
       enableMenuDrag(btn, { kind: 'overlay', id: overlay.id, src: overlay.src });
     }
-    list.appendChild(btn);
+    parent.appendChild(btn);
+  };
+  appendOverlay(list, NO_OVERLAY_OPTION);
+  OVERLAY_CATEGORIES.forEach((category, index) => {
+    const overlays = OVERLAYS[category.id];
+    if (!overlays || !overlays.length) return;
+    if (index) {
+      const divider = document.createElement('span');
+      divider.className = 'bar-filter-divider';
+      divider.setAttribute('aria-hidden', 'true');
+      list.appendChild(divider);
+    }
+    const group = document.createElement('div');
+    group.className = 'frame-category';
+    group.dataset.category = category.id;
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', category.label);
+    overlays.forEach(overlay => appendOverlay(group, overlay));
+    list.appendChild(group);
   });
+  list.scrollLeft = 0;
 }
 
 function renderBarMenu() {
@@ -4548,16 +4890,21 @@ function renderBarMenu() {
     updateBarMenuSelection();
     return;
   }
+  const divider = () => {
+    const el = document.createElement('span');
+    el.className = 'bar-filter-divider';
+    el.setAttribute('aria-hidden', 'true');
+    list.appendChild(el);
+  };
+  list.appendChild(barMenuChip('reset', 'none', t('filterNone')));
+  divider();
   Object.keys(BAR_COLOR_FILTERS).forEach((id) => {
-    list.appendChild(barMenuChip('color', id, '', t(BAR_COLOR_FILTERS[id])));
+    list.appendChild(barMenuChip('color', id, t(BAR_COLOR_FILTERS[id])));
   });
-  const divider = document.createElement('span');
-  divider.className = 'bar-filter-divider';
-  divider.setAttribute('aria-hidden', 'true');
-  list.appendChild(divider);
+  divider();
   const filters = (window.SnapBoxFilters && window.SnapBoxFilters.FILTERS) || [];
-  filters.forEach((filter) => {
-    list.appendChild(barMenuChip('face', filter.id, filter.emoji || '✕', faceLabel(filter)));
+  filters.filter(filter => filter.id !== 'none').forEach((filter) => {
+    list.appendChild(barMenuChip('face', filter.id, faceLabel(filter)));
   });
   updateBarMenuSelection();
 }
@@ -4570,7 +4917,8 @@ function updateBarMenuSelection() {
   list.querySelectorAll('[data-kind]').forEach((btn) => {
     const kind = btn.dataset.kind;
     let active;
-    if (kind === 'face') active = face === btn.dataset.value;
+    if (kind === 'reset') active = currentFilter === 'standard' && face === 'none';
+    else if (kind === 'face') active = face === btn.dataset.value;
     else if (kind === 'overlay') {
       active = btn.dataset.value === NO_OVERLAY_ID
         ? !currentOverlay
@@ -4579,6 +4927,15 @@ function updateBarMenuSelection() {
     btn.classList.toggle('is-selected', active);
     btn.setAttribute('aria-pressed', String(active));
   });
+  const summary = document.getElementById('barActiveFilterNames');
+  if (summary) {
+    const names = [];
+    if (currentFilter !== 'standard' && BAR_COLOR_FILTERS[currentFilter]) names.push(t(BAR_COLOR_FILTERS[currentFilter]));
+    const faceFilter = ((window.SnapBoxFilters && window.SnapBoxFilters.FILTERS) || []).find(filter => filter.id === face);
+    if (face !== 'none' && faceFilter) names.push(faceLabel(faceFilter));
+    const text = names.length ? names.join(' + ') : t('filtersNoneActive');
+    if (summary.textContent !== text) summary.textContent = text;
+  }
 }
 
 // Derselbe Button in der Leiste heißt in der Kamera „Filter“ und im Review
@@ -4633,6 +4990,9 @@ function syncBarToggleLabel() {
 // Rand neu sichtbare Bereich wird nicht fertig gezeichnet (rechts).
 var filterScrollHintTimer = 0;
 var stampScrollHintTimer = 0;
+var filterScrollDemoShown = false;
+var stampScrollDemoShown = false;
+var frameScrollDemoShown = false;
 var filterScrollPulse = 0;
 var filterScrollPulseCleanup = null;
 
@@ -4648,11 +5008,11 @@ function endFilterScrollPulse() {
   }
 }
 
-function hintListScroll(list) {
-  if (!list) return;
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+function hintListScroll(list, maxDistance = 260, minDistance = 70) {
+  if (!list) return false;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
   const max = list.scrollWidth - list.clientWidth;
-  if (max <= 2) return;
+  if (max <= 2) return false;
   const start = Math.max(0, Math.min(list.scrollLeft, max));
   // Platz in Scrollrichtung nehmen; steht das Band schon am Ende, läuft der
   // Ruck nach links statt ins Leere.
@@ -4662,8 +5022,8 @@ function hintListScroll(list) {
     direction = -1;
     room = start;
   }
-  const distance = Math.round(Math.min(room, Math.max(70, Math.min(260, list.clientWidth * 0.3))));
-  if (distance <= 4) return;
+  const distance = Math.round(Math.min(room, Math.max(minDistance, Math.min(maxDistance, list.clientWidth * 0.3))));
+  if (distance <= 4) return false;
   endFilterScrollPulse();
   // Snapping und weiches Scrollen würden die Einzelbilder verschlucken: jede
   // gesetzte Position würde sofort auf einen Rastpunkt gezogen bzw. neu
@@ -4689,6 +5049,7 @@ function hintListScroll(list) {
     if (p >= 1) endFilterScrollPulse();
   };
   filterScrollPulse = requestAnimationFrame(step);
+  return true;
 }
 
 // Wisch-Hinweis über dem Filterband: der Fingerpunkt fährt einmal quer
@@ -4704,14 +5065,14 @@ function hideListScrollHint(hint) {
   if (hint) hint.classList.remove('is-playing');
 }
 
-function playListScrollHint(list, hint, always = false) {
+function playListScrollHint(list, hint, always = false, direction = 1) {
   if (!list || !hint) return;
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   if (!always && list.scrollWidth <= list.clientWidth + 2) return;
   // Weg an der Bandbreite ausrichten: je breiter die Pille, desto weiter
   // fährt der Finger, aber gedeckelt, damit er in der Pille bleibt.
   const travel = Math.round(Math.max(120, Math.min(300, list.clientWidth * 0.42)));
-  hint.style.setProperty('--hint-travel', travel + 'px');
+  hint.style.setProperty('--hint-travel', travel * direction + 'px');
   hint.classList.remove('is-playing');
   // Reflow erzwingen, damit die Animation bei jedem Öffnen neu startet.
   void hint.offsetWidth;
@@ -4721,6 +5082,15 @@ function playListScrollHint(list, hint, always = false) {
 }
 
 // Menü und Optionen sind Geschwister: Es ist immer nur eines offen.
+function updateFrameScrollEdges() {
+  const list = barMenuListEl();
+  if (!list) return;
+  const frames = barMenuShowsOverlays();
+  const max = Math.max(0, list.scrollWidth - list.clientWidth);
+  list.classList.toggle('has-scroll-before', frames && list.scrollLeft > 1);
+  list.classList.toggle('has-scroll-after', frames && list.scrollLeft < max - 1);
+}
+
 function setBarMenuOpen(open) {
   const panel = barMenuPanelEl();
   if (!panel) return;
@@ -4741,20 +5111,32 @@ function setBarMenuOpen(open) {
   const bar = document.getElementById('captureBar');
   if (bar) bar.classList.toggle('is-menu-open', next);
   syncBarToggleLabel();
+  updateFrameScrollEdges();
   if (filterScrollHintTimer) {
     window.clearTimeout(filterScrollHintTimer);
     filterScrollHintTimer = 0;
   }
   const filterHint = document.getElementById('barSwipeHint');
-  if (!next) hideListScrollHint(filterHint);
+  if (!next) {
+    hideListScrollHint(filterHint);
+    hideFilterRemoveHint();
+  }
   if (next) {
     updateBarMenuSelection();
     // Erst nach dem Aufklappen messen: während die Pille wächst, ist die
     // sichtbare Breite des Bandes noch nicht die endgültige.
     filterScrollHintTimer = window.setTimeout(() => {
       filterScrollHintTimer = 0;
-      hintListScroll(barMenuListEl());
-      playListScrollHint(barMenuListEl(), filterHint, barMenuShowsOverlays());
+      if (!barMenuIsOpen()) return;
+      updateFrameScrollEdges();
+      const isFrameMenu = barMenuShowsOverlays();
+      const alreadyShown = isFrameMenu ? frameScrollDemoShown : filterScrollDemoShown;
+      if (alreadyShown) return;
+      if (hintListScroll(barMenuListEl())) {
+        if (isFrameMenu) frameScrollDemoShown = true;
+        else filterScrollDemoShown = true;
+        playListScrollHint(barMenuListEl(), filterHint);
+      }
     }, 460);
   }
 }
@@ -4764,12 +5146,42 @@ barMenuReady = true;
 updateBarMenuSelection();
 // Mausrad scrollt das Filterband waagerecht (Kiosk mit Maus).
 if (barMenuListEl()) {
-  barMenuListEl().addEventListener('wheel', (e) => {
+  const list = barMenuListEl();
+  list.addEventListener('scroll', updateFrameScrollEdges, { passive: true });
+  const stopHint = () => {
+    window.clearTimeout(filterScrollHintTimer);
+    filterScrollHintTimer = 0;
+    hideListScrollHint(document.getElementById('barSwipeHint'));
+  };
+  list.addEventListener('pointerdown', stopHint, { passive: true });
+  list.addEventListener('keydown', stopHint);
+  list.addEventListener('click', stopHint, true);
+  list.addEventListener('wheel', (e) => {
+    stopHint();
     const list = barMenuListEl();
     if (!list) return;
     if (Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
     if (list.scrollWidth <= list.clientWidth + 1) return;
     list.scrollLeft += e.deltaY;
+    e.preventDefault();
+  }, { passive: false });
+}
+
+if (stampListEl()) {
+  const list = stampListEl();
+  const stopHint = () => {
+    window.clearTimeout(stampScrollHintTimer);
+    stampScrollHintTimer = 0;
+    hideListScrollHint(document.getElementById('stampSwipeHint'));
+  };
+  list.addEventListener('pointerdown', stopHint, { passive: true });
+  list.addEventListener('keydown', stopHint);
+  list.addEventListener('click', stopHint, true);
+  list.addEventListener('wheel', (e) => {
+    stopHint();
+    if (list.scrollWidth <= list.clientWidth + 1 || Math.abs(e.deltaX) >= Math.abs(e.deltaY)) return;
+    const unit = e.deltaMode === 1 ? 20 : e.deltaMode === 2 ? list.clientWidth : 1;
+    list.scrollLeft -= e.deltaY * unit;
     e.preventDefault();
   }, { passive: false });
 }
@@ -4880,17 +5292,54 @@ let overlayPreviewRevision = 0;
 let lastStripLayout = null;
 let endPhotoUrl = null;
 
-// One unmodified 1920x1080 PNG. Frame and photo pixels must match exactly.
+// Frame and photo pixels must match exactly.
 const NO_OVERLAY_ID = 'none';
 const NO_OVERLAY_OPTION = {
   id: NO_OVERLAY_ID, labelKey: 'overlayNone',
   src: 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 36"><path d="M8 30 56 6" stroke="white" stroke-width="3"/></svg>')
 };
+// Static inventory from the actual PNG files; dimensions are native image pixels.
+const OVERLAY_CATEGORIES = [
+  { id: 'standard', label: 'Standard' },
+  { id: 'minimalistic', label: 'Minimalistic' },
+  { id: 'uni', label: 'Hochschule' },
+  { id: 'events', label: 'Event' }
+];
 const OVERLAYS = {
-  standard: [{
-    id: 'orange-red', labelKey: 'overlayColorFrame',
-    src: 'assets/overlays/orange-red-1920x1080.png', width: PHOTO_WIDTH, height: PHOTO_HEIGHT
-  }]
+  standard: [
+    { id: 'standard/Standard_01', label: 'Standard 01', src: 'assets/overlays/standard/Standard_01.png', width: 1920, height: 1080 },
+    { id: 'standard/Standard_02', label: 'Standard 02', src: 'assets/overlays/standard/Standard_02.png', width: 1920, height: 1080 }
+  ],
+  minimalistic: [
+    { id: 'minimalistic/01', label: 'Minimalistic 01', src: 'assets/overlays/minimalistic/01.png', width: 1920, height: 1080 },
+    { id: 'minimalistic/02', label: 'Minimalistic 02', src: 'assets/overlays/minimalistic/02.png', width: 1920, height: 1080 },
+    { id: 'minimalistic/03', label: 'Minimalistic 03', src: 'assets/overlays/minimalistic/03.png', width: 1920, height: 1080 },
+    { id: 'minimalistic/04', label: 'Minimalistic 04', src: 'assets/overlays/minimalistic/04.png', width: 1920, height: 1080 },
+    { id: 'minimalistic/05', label: 'Minimalistic 05', src: 'assets/overlays/minimalistic/05.png', width: 1920, height: 1080 },
+    { id: 'minimalistic/06', label: 'Minimalistic 06', src: 'assets/overlays/minimalistic/06.png', width: 1920, height: 1080 },
+    { id: 'minimalistic/07', label: 'Minimalistic 07', src: 'assets/overlays/minimalistic/07.png', width: 1920, height: 1080 },
+    { id: 'minimalistic/08', label: 'Minimalistic 08', src: 'assets/overlays/minimalistic/08.png', width: 1920, height: 1080 }
+  ],
+  uni: [
+    { id: 'uni/Hochschule_01', label: 'Hochschule 01', src: 'assets/overlays/uni/Hochschule_01.png', width: 1920, height: 1080 },
+    { id: 'uni/Hochschule_02', label: 'Hochschule 02', src: 'assets/overlays/uni/Hochschule_02.png', width: 1920, height: 1080 },
+    { id: 'uni/Hochschule_03', label: 'Hochschule 03', src: 'assets/overlays/uni/Hochschule_03.png', width: 1920, height: 1080 },
+    { id: 'uni/Hochschule_04', label: 'Hochschule 04', src: 'assets/overlays/uni/Hochschule_04.png', width: 1920, height: 1080 },
+    { id: 'uni/Hochschule_05', label: 'Hochschule 05', src: 'assets/overlays/uni/Hochschule_05.png', width: 1920, height: 1080 },
+    { id: 'uni/Hochschule_06', label: 'Hochschule 06', src: 'assets/overlays/uni/Hochschule_06.png', width: 1920, height: 1080 },
+    { id: 'uni/Hochschule_07', label: 'Hochschule 07', src: 'assets/overlays/uni/Hochschule_07.png', width: 1920, height: 1080 },
+    { id: 'uni/Hochschule_08', label: 'Hochschule 08', src: 'assets/overlays/uni/Hochschule_08.png', width: 1920, height: 1080 }
+  ],
+  events: [
+    { id: 'events/halloween_01', label: 'Halloween 01', src: 'assets/overlays/events/halloween_01.png', width: 1920, height: 1080 },
+    { id: 'events/halloween_02', label: 'Halloween 02', src: 'assets/overlays/events/halloween_02.png', width: 1920, height: 1080 },
+    { id: 'events/halloween_03', label: 'Halloween 03', src: 'assets/overlays/events/halloween_03.png', width: 1920, height: 1080 },
+    { id: 'events/halloween_EXCLUSIVE', label: 'Halloween EXCLUSIVE', src: 'assets/overlays/events/halloween_EXCLUSIVE.png', width: 1920, height: 1080 },
+    { id: 'events/herbst_05', label: 'Herbst 05', src: 'assets/overlays/events/herbst_05.png', width: 1920, height: 1080 },
+    { id: 'events/herbst_06', label: 'Herbst 06', src: 'assets/overlays/events/herbst_06.png', width: 1920, height: 1080 },
+    { id: 'events/weihnachten_07', label: 'Weihnachten 07', src: 'assets/overlays/events/weihnachten_07.png', width: 1920, height: 1080 },
+    { id: 'events/weihnachten_08', label: 'Weihnachten 08', src: 'assets/overlays/events/weihnachten_08.png', width: 1920, height: 1080 }
+  ]
 };
 
 const STAMPS = {
@@ -4903,6 +5352,13 @@ const STAMPS = {
     { glyph: '🧪' }, { glyph: '🏛️' }, { glyph: '🎒' }
   ]
 };
+
+// Navigation starts at the right: Reactions, then accessories; stamps stay empty.
+const STICKER_CATEGORIES = [
+  { id: 'reactions', label: 'Reactions', items: STAMPS.emoji.slice(0, 3) },
+  { id: 'accessories', label: 'Accessoires', items: SHAPE_STICKERS },
+  { id: 'stamps', label: 'Stempel', items: [] }
+];
 
 function photoTimestamp(id) {
   const match = /^photos\/(\d+)-/.exec(String(id || ''));
@@ -5269,6 +5725,7 @@ if ($sideScrollDown) {
 if ($sideViewport) $sideViewport.addEventListener('scroll', updateScrollHints, { passive: true });
 window.addEventListener('resize', () => {
   updateScrollHints();
+  updateFrameScrollEdges();
   renderOverlayPreview();
   repositionStickers();
 });
@@ -5378,13 +5835,15 @@ async function renderOverlayPreview() {
     }
     viewfinder.appendChild(wrap);
   } else {
-    const frame = document.createElement('div');
+    const frame = document.createElement('img');
     frame.className = 'photo-overlay';
+    frame.src = overlay.src;
+    frame.alt = '';
     frame.setAttribute('aria-hidden', 'true');
-    // Slice the original 40px edges; keep equal border widths without cropping the PNG.
-    const borderWidth = 40 * Math.min(bounds.width / overlay.width, bounds.height / overlay.height);
-    frame.style.border = borderWidth + 'px solid transparent';
-    frame.style.borderImage = 'url("' + overlay.src + '") 40 stretch';
+    // Match the photo's fit/crop; motifs inside the PNG must remain visible.
+    const photoStyle = getComputedStyle(photo);
+    frame.style.objectFit = photoStyle.objectFit;
+    frame.style.objectPosition = photoStyle.objectPosition;
     frame.style.left = (bounds.left - vf.left) + 'px';
     frame.style.top = (bounds.top - vf.top) + 'px';
     frame.style.width = bounds.width + 'px';
@@ -5410,28 +5869,7 @@ function addEmojiStamp(glyph) {
   activeStickers.push(st);
   positionSticker(st);
 
-  el.addEventListener('pointerdown', (e) => {
-    // Tippen auf die Größen-/Löschen-Buttons darf keinen Drag starten:
-    // sonst springt der Sticker beim Touch-Tap auf die Button-Position.
-    if (e.target.closest('.sticker__ctrl')) return;
-    e.preventDefault();
-    e.stopPropagation();
-    selectSticker(st);
-    const frame = photoStageRect();
-    const move = (ev) => {
-      st.x = ((ev.clientX - frame.left) / frame.width) * 100;
-      st.y = ((ev.clientY - frame.top) / frame.height) * 100;
-      positionSticker(st);
-    };
-    const up = () => {
-      window.removeEventListener('pointermove', move);
-      window.removeEventListener('pointerup', up);
-      window.removeEventListener('pointercancel', up);
-    };
-    window.addEventListener('pointermove', move);
-    window.addEventListener('pointerup', up);
-    window.addEventListener('pointercancel', up);
-  });
+  enablePlacedStickerDrag(st);
 
   selectSticker(st);
 }
@@ -5824,7 +6262,7 @@ document.head.appendChild(style);
 // ============================================================
 const $idleWarning = document.getElementById('idleWarning');
 const $idleCount = document.getElementById('idleCount');
-const $idleStay = document.getElementById('idleStay');
+const $idleWarningCard = document.getElementById('idleWarningCard');
 
 // Die Fristen sind Admin-Einstellungen; Änderungen greifen beim nächsten
 // Zustandswechsel bzw. beim nächsten Zurücksetzen auf den Startbildschirm.
@@ -5835,7 +6273,47 @@ function idleProcessMs() { return appSettings.idleProcessSeconds * 1000; }
 let idleDeadline = 0;
 let idleWarnUntil = 0;
 let idleWarnVisible = false;
+let idleWarnLastSoundSecond = null;
+let idleWarningPreviousFocus = null;
 let idleStateKey = 'splash';
+
+function handleIdleWarningInput(event) {
+  if (!idleWarnVisible) return;
+  // Keep the modal in place through the full pointer/touch sequence so its
+  // synthesized click cannot land on a control underneath it.
+  if (['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend'].includes(event.type)) {
+    event.stopImmediatePropagation();
+    return;
+  }
+  if (event.cancelable) event.preventDefault();
+  event.stopImmediatePropagation();
+  const previousFocus = idleWarningPreviousFocus;
+  hideIdleWarning();
+  resetIdleDeadline();
+  if (previousFocus && previousFocus.isConnected && previousFocus !== document.body) {
+    previousFocus.focus({ preventScroll: true });
+  }
+}
+
+const idleWarningInputEvents = [
+  ['pointerdown', true],
+  ['pointerup', true],
+  ['mousedown', true],
+  ['mouseup', true],
+  ['touchstart', { capture: true, passive: false }],
+  ['touchend', { capture: true, passive: false }],
+  ['click', true],
+  ['keydown', true],
+  ['wheel', { capture: true, passive: false }]
+];
+
+function addIdleWarningInputListeners() {
+  idleWarningInputEvents.forEach(([type, options]) => window.addEventListener(type, handleIdleWarningInput, options));
+}
+
+function removeIdleWarningInputListeners() {
+  idleWarningInputEvents.forEach(([type]) => window.removeEventListener(type, handleIdleWarningInput, true));
+}
 
 function currentIdleStateKey() {
   if (currentState === 'splash') return 'splash';
@@ -5862,19 +6340,28 @@ function resetIdleDeadline() {
 }
 
 function hideIdleWarning() {
+  removeIdleWarningInputListeners();
+  stopAfkTimerSounds();
+  idleWarnLastSoundSecond = null;
   if (!idleWarnVisible) return;
   idleWarnVisible = false;
   if ($idleWarning) $idleWarning.hidden = true;
+  idleWarningPreviousFocus = null;
 }
 
 function showIdleWarning() {
-  if (!$idleWarning) return;
+  if (!$idleWarning || idleWarnVisible) return;
+  idleWarningPreviousFocus = document.activeElement;
   idleWarnVisible = true;
   idleWarnUntil = Date.now() + idleWarnMs();
-  if ($idleCount) $idleCount.textContent = String(Math.round(idleWarnMs() / 1000));
+  const initialSeconds = Math.round(idleWarnMs() / 1000);
+  idleWarnLastSoundSecond = initialSeconds;
+  if ($idleCount) $idleCount.textContent = String(initialSeconds);
   $idleWarning.hidden = false;
+  addIdleWarningInputListeners();
+  if ($idleWarningCard) $idleWarningCard.focus({ preventScroll: true });
   gsap.fromTo(
-    $idleWarning.querySelector('.idle-warning__card'),
+    $idleWarningCard,
     { y: 16, opacity: 0, scale: 0.96 },
     { y: 0, opacity: 1, scale: 1, duration: 0.3, ease: 'power2.out', clearProps: 'all' }
   );
@@ -5894,13 +6381,7 @@ function resetToStartScreen() {
 // Jede echte Eingabe zählt als Aktivität. Während der Warnung wird die
 // Eingabe geschluckt, damit sie nicht zusätzlich eine App-Aktion auslöst.
 function noteIdleActivity(e) {
-  if (idleWarnVisible) {
-    if (e && e.type === 'keydown') {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    hideIdleWarning();
-  }
+  if (idleWarnVisible) return;
   resetIdleDeadline();
 }
 
@@ -5910,13 +6391,6 @@ window.addEventListener('wheel', noteIdleActivity, { capture: true, passive: tru
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) resetIdleDeadline();
 });
-
-if ($idleStay) {
-  $idleStay.addEventListener('click', () => {
-    hideIdleWarning();
-    resetIdleDeadline();
-  });
-}
 
 resetIdleDeadline();
 
@@ -5949,6 +6423,10 @@ setInterval(() => {
 
   const left = Math.max(0, Math.ceil((idleWarnUntil - now) / 1000));
   if ($idleCount && $idleCount.textContent !== String(left)) $idleCount.textContent = String(left);
+  if (left !== idleWarnLastSoundSecond) {
+    idleWarnLastSoundSecond = left;
+    if (left === 5) playUiSound('afk_timer.mp3');
+  }
   if (now >= idleWarnUntil) resetToStartScreen();
 }, 250);
 
