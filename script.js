@@ -799,6 +799,7 @@ const ACCESSIBILITY_DEFAULTS = Object.freeze({ colorScheme: 'standard', buttonSi
 const accessibilitySettings = { ...ACCESSIBILITY_DEFAULTS };
 let accessibilityOnStart = false;
 let accessibilityLastActivity = 0;
+let accessibilityResetAnimation = null;
 
 function applyColorScheme(scheme) {
   const colorScheme = CVD_SCHEMES.includes(scheme) ? scheme : 'standard';
@@ -835,21 +836,150 @@ function resetAccessibilitySettings() {
     if (key === 'colorScheme') applyColorScheme(value);
     else applyAccessibilitySize(key, value);
   });
+  if (soundEnabled !== appSettings.defaultSound) toggleSound();
+  try { localStorage.removeItem('soundEnabled'); } catch (e) {}
+}
+
+function cancelAccessibilityResetAnimation(complete = false) {
+  const animation = accessibilityResetAnimation;
+  accessibilityResetAnimation = null;
+  if (!animation) return;
+  if (animation.timeline) animation.timeline.kill();
+  if (animation.restoreStyles) animation.restoreStyles.forEach(restore => restore());
+  if (animation.marker) animation.marker.removeAttribute('data-reset-marker');
+  if (animation.previousSettings && !complete) {
+    const previous = animation.previousSettings;
+    applyColorScheme(previous.colorScheme);
+    applyAccessibilitySize('buttonSize', previous.buttonSize);
+    applyAccessibilitySize('textSize', previous.textSize);
+    if (soundEnabled !== previous.sound) toggleSound();
+    try {
+      if (previous.storedSound === null) localStorage.removeItem('soundEnabled');
+      else localStorage.setItem('soundEnabled', previous.storedSound);
+    } catch (e) {}
+  }
+  applySoundState();
+  animation.element.remove();
+}
+
+function animateAccessibilityReset() {
+  const rootTheme = getComputedStyle(document.documentElement);
+  const colors = Object.fromEntries(Array.from(rootTheme).filter(name => name.startsWith('--c-'))
+    .map(name => [name, rootTheme.getPropertyValue(name)]));
+  const previousSettings = { ...accessibilitySettings, sound: soundEnabled, storedSound: null };
+  try { previousSettings.storedSound = localStorage.getItem('soundEnabled'); } catch (e) {}
+  // The line is at x + y = (2 * easedProgress - .5) * (width + height).
+  const crossingTime = el => {
+    const r = el.getBoundingClientRect();
+    const p = Math.max(0, Math.min(1, ((r.left + r.width / 2 + r.top + r.height / 2) / (innerWidth + innerHeight) + 0.5) / 2));
+    return 2 * (p < 0.5 ? Math.sqrt(p / 2) : 1 - Math.sqrt((1 - p) / 2)) - 0.14;
+  };
+  const groups = Array.from(document.querySelectorAll('.splash, .splash__bg, .splash__content, .splash__tool, .splash__settings, .splash__top-branding, .challenge-card, .lang-switch--splash'))
+    .filter(el => el.getClientRects().length)
+    .map(el => ({ el, time: crossingTime(el), font: getComputedStyle(el).fontSize }));
+  const card = document.getElementById('splashStart');
+  const cardWidth = card && card.getBoundingClientRect().width ? getComputedStyle(card).width : null;
+  const audioIcon = $splashSound.querySelector('.splash__tool-icon');
+  const audioColor = getComputedStyle(audioIcon).color;
+  const marker = $splashSettings.querySelector('.splash__settings-icon');
+  const hasMarker = Object.entries(ACCESSIBILITY_DEFAULTS).some(([key, value]) => previousSettings[key] !== value);
+  const element = document.createElement('div');
+  element.className = 'accessibility-reset-scan';
+  element.setAttribute('aria-hidden', 'true');
+  element.appendChild(document.createElement('span'));
+  $splash.appendChild(element);
+  const animation = { element, timeline: null, previousSettings, restoreStyles: [], marker: hasMarker ? marker : null };
+  accessibilityResetAnimation = animation;
+  // Prepare the standard state in one task, retaining the old appearance locally.
+  // Any input rolls this transaction back before its own button handler executes.
+  if (hasMarker) marker.setAttribute('data-reset-marker', '');
+  resetAccessibilitySettings();
+  const standardTheme = getComputedStyle(document.documentElement);
+  groups.forEach(group => { group.standardFont = getComputedStyle(group.el).fontSize; });
+  const standardCardWidth = cardWidth ? getComputedStyle(card).width : null;
+  const audioTransition = [audioIcon.style.getPropertyValue('transition'), audioIcon.style.getPropertyPriority('transition')];
+  audioIcon.style.setProperty('transition', 'none');
+  const standardAudioColor = getComputedStyle(audioIcon).color;
+  if (audioTransition[0]) audioIcon.style.setProperty('transition', ...audioTransition);
+  else audioIcon.style.removeProperty('transition');
+  animation.timeline = gsap.timeline({
+    paused: true,
+    onComplete: () => {
+      syncAccessibilityIdle();
+      if (accessibilityResetAnimation !== animation) return;
+      const busy = isCapturing || isSavingPhoto || isDiscardingPhoto || capturePrint;
+      cancelAccessibilityResetAnimation(!busy);
+      if (busy) return;
+      accessibilityLastActivity = 0;
+    },
+    onInterrupt: () => {
+      if (accessibilityResetAnimation === animation) cancelAccessibilityResetAnimation();
+    }
+  })
+    .fromTo(element, { xPercent: -100, yPercent: -100 },
+      { xPercent: 100, yPercent: 100, duration: 2, ease: 'power1.inOut' }, 0)
+    .fromTo(element, { opacity: 0 }, { opacity: 0.6, duration: 0.25 }, 0)
+    .to(element, { opacity: 0, duration: 0.25 }, 1.75);
+  const blend = (el, from, to, time) => {
+    const saved = Object.keys(from).map(name => {
+      const cssName = name.startsWith('--') ? name : name.replace(/[A-Z]/g, c => '-' + c.toLowerCase());
+      return [cssName, el.style.getPropertyValue(cssName), el.style.getPropertyPriority(cssName)];
+    });
+    animation.restoreStyles.push(() => saved.forEach(([name, value, priority]) => {
+      if (value) el.style.setProperty(name, value, priority);
+      else el.style.removeProperty(name);
+    }));
+    gsap.set(el, { ...from, autoRound: false });
+    animation.timeline.to(el, { ...to, autoRound: false, duration: 0.28, ease: 'power1.inOut' }, time);
+  };
+  groups.forEach(({ el, time, font, standardFont }) => {
+    const from = { '--a11y-control-scale': previousSettings.buttonSize === 'large' ? 1.25 : 1,
+      '--a11y-text-scale': previousSettings.textSize === 'large' ? 1.25 : 1, fontSize: font };
+    const to = { '--a11y-control-scale': 1, '--a11y-text-scale': 1, fontSize: standardFont };
+    Object.entries(colors).forEach(([name, value]) => {
+      const standard = standardTheme.getPropertyValue(name);
+      if (value && standard && value !== standard) { from[name] = value; to[name] = standard; }
+    });
+    blend(el, from, to, time);
+  });
+  if (cardWidth) blend(card, { width: cardWidth }, { width: standardCardWidth }, crossingTime(card));
+  const audioTime = crossingTime($splashSound);
+  blend(audioIcon, { color: audioColor, transition: 'none' }, { color: standardAudioColor, transition: 'none' }, audioTime);
+  $splashSound.querySelectorAll('.sound-on, .sound-off').forEach(path => {
+    const on = path.classList.contains('sound-on');
+    path.style.display = '';
+    blend(path, { opacity: on === previousSettings.sound ? 1 : 0 }, { opacity: on === soundEnabled ? 1 : 0 }, audioTime);
+  });
+  if (hasMarker) blend(marker, { '--reset-marker-opacity': 1, '--reset-marker-color': colors['--c-accent'] },
+    { '--reset-marker-opacity': 0, '--reset-marker-color': colors['--c-accent'] }, crossingTime($splashSettings));
+  animation.timeline.play();
 }
 
 function syncAccessibilityIdle() {
-  const onStart = currentState === 'splash';
+  const onStart = currentState === 'splash'
+    && (!$settingsModal || $settingsModal.hidden)
+    && (!$creditsModal || $creditsModal.hidden)
+    && !sessionCompletion;
+  if (!onStart) cancelAccessibilityResetAnimation();
   if (onStart === accessibilityOnStart) return;
   accessibilityOnStart = onStart;
   accessibilityLastActivity = onStart ? Date.now() : 0;
 }
 
 function checkAccessibilityIdle() {
+  syncAccessibilityIdle();
   if (!accessibilityOnStart || currentState !== 'splash' || !accessibilityLastActivity) return;
-  if (Date.now() - accessibilityLastActivity < 180000) return;
+  if (Date.now() - accessibilityLastActivity < 12000) return;
   if (isCapturing || isSavingPhoto || isDiscardingPhoto || capturePrint) return;
-  resetAccessibilitySettings();
-  accessibilityLastActivity = 0;
+  if (accessibilityResetAnimation) return;
+  const changed = Object.entries(ACCESSIBILITY_DEFAULTS)
+    .some(([key, value]) => accessibilitySettings[key] !== value)
+    || soundEnabled !== appSettings.defaultSound;
+  if (!changed) { accessibilityLastActivity = 0; return; }
+  if (reducedCaptureMotion()) {
+    resetAccessibilitySettings();
+    accessibilityLastActivity = 0;
+  } else animateAccessibilityReset();
 }
 
 document.querySelectorAll('[data-accessibility]').forEach(input => {
@@ -872,6 +1002,7 @@ function openSettings() {
   if (!$settingsModal || !$settingsModal.hidden) return;
   settingsReturnFocus = document.activeElement;
   $settingsModal.hidden = false;
+  syncAccessibilityIdle();
   playUiSound('enlargement.mp3', true);
   // Fokus in den Dialog: die aktuelle Auswahl, sonst der Schließen-Knopf.
   const current = $settingsModal.querySelector('[data-accessibility="buttonSize"]:checked')
@@ -887,6 +1018,7 @@ function openSettings() {
 function closeSettings() {
   if (!$settingsModal || $settingsModal.hidden) return;
   $settingsModal.hidden = true;
+  syncAccessibilityIdle();
   // Fokus zurück zum Barrierefreiheitsbutton.
   if (settingsReturnFocus && settingsReturnFocus.isConnected) settingsReturnFocus.focus();
   settingsReturnFocus = null;
@@ -896,6 +1028,50 @@ if ($splashSettings) $splashSettings.addEventListener('click', openSettings);
 if ($settingsClose) $settingsClose.addEventListener('click', closeSettings);
 if ($settingsModal) {
   $settingsModal.addEventListener('click', (e) => { if (e.target === $settingsModal) closeSettings(); });
+}
+
+const $creditsModal = document.getElementById('creditsModal');
+const $creditsClose = document.getElementById('creditsClose');
+const $splashCredits = document.getElementById('splashCredits');
+let creditsReturnFocus = null;
+let creditsInertScreens = [];
+
+function openCredits() {
+  if (!$creditsModal || !$creditsModal.hidden || currentState !== 'splash') return;
+  creditsReturnFocus = document.activeElement;
+  creditsInertScreens = [$splash, $camera, $gallery, $sideRail, $splashLang].filter(Boolean)
+    .map(el => ({ el, inert: el.inert }));
+  creditsInertScreens.forEach(({ el }) => { el.inert = true; });
+  $creditsModal.hidden = false;
+  syncAccessibilityIdle();
+  $creditsModal.querySelector('.settings-modal__body').scrollTop = 0;
+  $creditsModal.querySelector('details').open = false;
+  $creditsClose.focus({ preventScroll: true });
+}
+
+function closeCredits() {
+  if (!$creditsModal || $creditsModal.hidden) return;
+  $creditsModal.hidden = true;
+  syncAccessibilityIdle();
+  creditsInertScreens.forEach(({ el, inert }) => { el.inert = inert; });
+  creditsInertScreens = [];
+  if (creditsReturnFocus && creditsReturnFocus.isConnected) creditsReturnFocus.focus({ preventScroll: true });
+  creditsReturnFocus = null;
+}
+
+if ($splashCredits) $splashCredits.addEventListener('click', openCredits);
+if ($creditsClose) $creditsClose.addEventListener('click', closeCredits);
+if ($creditsModal) {
+  $creditsModal.addEventListener('click', (e) => { if (e.target === $creditsModal) closeCredits(); });
+  $creditsModal.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const controls = Array.from($creditsModal.querySelectorAll('button, a[href], summary'))
+      .filter(el => el.getClientRects().length);
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
 }
 
 if ($cvdOptions) {
@@ -1315,6 +1491,7 @@ function startSession() {
   playUiSound('afk_timer.mp3', true);
   currentState = 'camera';
   initCamera(); // request camera immediately to preserve user-gesture context
+  syncAccessibilityIdle();
   $splash.classList.remove('is-eye-idle');
 
   // Menü-Inhalt vorbereiten, aber geschlossen lassen: Die Vorschau startet
@@ -1327,7 +1504,7 @@ function startSession() {
 
   const tl = timeline();
   tl.to(['.splash__content--portrait', '.splash__content--kiosk', '.lang-switch--splash',
-    '.splash__brand', '.challenge-card', '.splash__sound', '.splash__gallery'], {
+    '.splash__brand', '.challenge-card', '.splash__sound', '.splash__gallery', '.splash__settings'], {
     y: -24, opacity: 0, duration: 0.45, ease: 'power2.in'
   }).to($splash, {
     opacity: 0, duration: 0.01
@@ -4002,6 +4179,12 @@ function playUiSound(name, preload = false) {
         };
         enlargementSoundStop = stop;
         source.onended = stop;
+      } else if (name === 'start.mp3') {
+        const gain = ctx.createGain();
+        gain.gain.value = 0.35;
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        source.onended = () => { source.disconnect(); gain.disconnect(); };
       } else source.connect(ctx.destination);
       if (name === 'afk_timer.mp3') {
         afkTimerSources.add(source);
@@ -6087,7 +6270,7 @@ function showEndScreen(url) {
 }
 
 function returnToIdle(options = {}) {
-  resetGuestCaptureSettings(options);
+  resetGuestCaptureSettings({ ...options, preserveSound: true });
   galleryReturnState = 'camera';
   if ($endScreen) $endScreen.hidden = true;
   $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping', 'is-finishing');
@@ -6102,7 +6285,7 @@ function returnToIdle(options = {}) {
   $splash.style.display = 'flex';
   // Beim Start wurden Brand, Challenge-Karte und Ton-Button ausgeblendet;
   // für den nächsten Gast müssen sie wieder sichtbar sein.
-  gsap.set(['.splash__brand', '.challenge-card', '.splash__sound', '.splash__content--kiosk', '.splash__gallery'], { clearProps: 'all' });
+  gsap.set(['.splash__brand', '.challenge-card', '.splash__sound', '.splash__content--kiosk', '.splash__gallery', '.splash__settings'], { clearProps: 'all' });
   if (options.animate !== false) {
     gsap.fromTo($splash, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
     gsap.fromTo('.splash__content--kiosk', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out', delay: 0.1, clearProps: 'all' });
@@ -6237,10 +6420,9 @@ async function completePhotoSession() {
           try {
             progress.value = 100;
             paint();
-            // Hide the settings change completely; reveal only the prepared, neutral splash.
+            // Prepare the splash beneath the opaque overlay before revealing it.
             overlay.style.backgroundColor = '#08090c';
             resetToStartScreen({ preserveSound: true, animate: false });
-            resetAccessibilitySettings();
             committed = true;
             playUiSound('success.mp3');
           } catch (err) { reject(err); }
@@ -6256,6 +6438,7 @@ async function completePhotoSession() {
     if (completion.overlay) completion.overlay.remove();
     screens.forEach(({ el, inert }) => { el.inert = inert; });
     if (sessionCompletion === completion) sessionCompletion = null;
+    syncAccessibilityIdle();
     if (currentState === 'splash') {
       const start = isKioskLayout() ? document.getElementById('splashStart') : document.querySelector('.splash__cta');
       if (start) start.focus({ preventScroll: true });
@@ -6404,6 +6587,10 @@ window.addEventListener('load', async () => {
     // Der Punkt auf Kiosk-Fernbedienungen ist Abbrechen/Home.
     const dotKey = e.key === '.' || e.key === 'Decimal'
       || e.code === 'Period' || e.code === 'NumpadDecimal';
+    if ($creditsModal && !$creditsModal.hidden) {
+      if (e.key === 'Escape' || dotKey) { e.preventDefault(); closeCredits(); }
+      return;
+    }
     // Einstellungen offen: nur der Dialog selbst reagiert, damit Leertaste
     // und Enter nicht dahinter die Sitzung starten (Tastaturbedienbarkeit).
     if ($settingsModal && !$settingsModal.hidden) {
@@ -6670,7 +6857,10 @@ function resetToStartScreen(options = {}) {
 // Jede echte Eingabe zählt als Aktivität. Während der Warnung wird die
 // Eingabe geschluckt, damit sie nicht zusätzlich eine App-Aktion auslöst.
 function noteAccessibilityActivity(e) {
-  if (e.isTrusted && currentState === 'splash') accessibilityLastActivity = Date.now();
+  if (e.isTrusted && accessibilityOnStart && currentState === 'splash') {
+    cancelAccessibilityResetAnimation();
+    accessibilityLastActivity = Date.now();
+  }
 }
 
 function noteIdleActivity(e) {

@@ -14,7 +14,13 @@
       <div class="splash__gradient"></div>
     </div>
     <div class="splash__chain" id="splashChain" aria-hidden="true"></div>
-    <button class="splash__credits" type="button" aria-label="Credits">Credits</button>
+    <div class="splash__top-branding">
+      <div class="splash__institution" aria-label="Ein Projekt der Hochschule Coburg">
+        <img src="assets/icons/CO.png" alt="CO-Logo der Hochschule Coburg" />
+        <span>Ein Projekt der Hochschule Coburg</span>
+      </div>
+      <button class="splash__credits" id="splashCredits" type="button" aria-label="Credits" aria-haspopup="dialog" aria-controls="creditsModal">Credits</button>
+    </div>
 
     <div class="splash__content splash__content--portrait">
       <h1 class="splash__title">SnapBox</h1>
@@ -661,6 +667,60 @@
         </button>
       </div>
       </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="settings-modal credits-modal" id="creditsModal" hidden>
+    <div class="settings-modal__card" role="dialog" aria-modal="true" aria-labelledby="creditsTitle" aria-describedby="creditsProject">
+      <div class="settings-modal__header">
+        <button class="settings-modal__close" id="creditsClose" type="button" aria-label="Zurück" title="Zurück" data-i18n-aria="settingsCloseAria" data-i18n-title="settingsCloseAria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button>
+        <h2 class="settings-modal__title" id="creditsTitle">Credits</h2>
+      </div>
+      <div class="settings-modal__body credits-modal__body">
+        <div role="group" aria-labelledby="creditsTeamTitle">
+          <h3 id="creditsTeamTitle">Projektteam</h3>
+          <p class="credits-modal__intro" id="creditsProject">Ein Projekt der Hochschule Coburg</p>
+          <ul class="credits-modal__team">
+            <li>Alek Vassinskiy</li>
+            <li>Benedikt Zeltner</li>
+            <li>Luca Taumann</li>
+          </ul>
+        </div>
+        <div class="credits-modal__sections">
+          <div role="group" aria-labelledby="creditsImagesTitle">
+            <h3 id="creditsImagesTitle">Bildquellen und Gestaltung</h3>
+            <h4>Rahmen und Overlays</h4>
+            <p>Mit Canva erstellt. Komposition: Luca Taumann.</p>
+            <h4>Logos</h4>
+            <p>Offizielle Logos der Hochschule Coburg und des Campus.</p>
+          </div>
+          <div role="group" aria-labelledby="creditsAiTitle">
+            <h3 id="creditsAiTitle">KI-gestützte Entwicklung</h3>
+            <ul class="credits-modal__list">
+              <li>GPT-6.1 Sol</li>
+              <li>DeepSeek 4.1 Flash</li>
+            </ul>
+            <h3 class="credits-modal__subsection">Physischer Prototyp</h3>
+            <p><strong>Material und Werkstatt:</strong> MakerSpace LCC</p>
+          </div>
+        </div>
+        <details class="credits-modal__sounds">
+          <summary>Soundquellen anzeigen</summary>
+          <table>
+            <thead><tr><th scope="col">Sound</th><th scope="col">Urheber / Quelle</th></tr></thead>
+            <tbody>
+              <tr><td>afk_timer.mp3</td><td><a href="https://pixabay.com/de/users/u_lfmkadc0ha-50423639/" target="_blank" rel="noopener noreferrer">u_lfmkadc0ha – Pixabay</a></td></tr>
+              <tr><td>Button_push.mp3</td><td>Emilianodleon – Pixabay</td></tr>
+              <tr><td>cancel.mp3</td><td>UI Sounds pack 4 (12) – Pixabay</td></tr>
+              <tr><td>enlargement.mp3</td><td>ejah_music – Pixabay</td></tr>
+              <tr><td>OK.mp3</td><td><a href="https://pixabay.com/de/users/soundshelfstudio-46480698/" target="_blank" rel="noopener noreferrer">SoundShelfStudio – Pixabay</a></td></tr>
+              <tr><td>paper_crush.mp3</td><td>freesound_community – Pixabay</td></tr>
+              <tr><td>success.mp3</td><td><a href="https://pixabay.com/de/users/soundshelfstudio-46480698/" target="_blank" rel="noopener noreferrer">SoundShelfStudio – Pixabay</a></td></tr>
+              <tr><td>switch.mp3</td><td><a href="https://pixabay.com/de/users/juniorsoundays-19205462/" target="_blank" rel="noopener noreferrer">juniorsoundays – Pixabay</a></td></tr>
+            </tbody>
+          </table>
+        </details>
       </div>
     </div>
   </div>

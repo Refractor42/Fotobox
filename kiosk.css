@@ -35,7 +35,7 @@ body.orientation-landscape .splash__content--kiosk {
   z-index: 4;
 }
 
-/* Audio und Galerie bilden dieselbe untere Utility-Reihe: runde Icons mit
+/* Galerie und Audio bilden dieselbe untere Utility-Reihe: runde Icons mit
    sichtbarem Label. Beide Buttons bleiben als ganze Spalte klickbar. */
 body.orientation-landscape .splash__gallery,
 body.orientation-landscape .splash__sound {
@@ -51,7 +51,7 @@ body.orientation-landscape .splash__sound {
   backdrop-filter: none;
 }
 body.orientation-landscape .splash__gallery {
-  left: calc(clamp(22px, 2.6vw, 44px) + var(--splash-tool-size) + 32px);
+  left: clamp(22px, 2.6vw, 44px);
   right: auto;
   bottom: clamp(16px, 2.6vh, 32px);
 }
@@ -69,6 +69,8 @@ body.orientation-landscape .splash__settings {
 body.orientation-landscape .splash__settings-icon {
   border-color: rgba(255, 255, 255, 0.18);
   background: rgba(18, 19, 24, 0.72);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
 }
 body.orientation-landscape .splash__settings-label {
@@ -358,7 +360,7 @@ body.orientation-landscape .challenge-card {
 /* Ton im Idle */
 body.orientation-landscape .splash__sound {
   position: absolute;
-  left: clamp(22px, 2.6vw, 44px);
+  left: calc(clamp(22px, 2.6vw, 44px) + var(--splash-tool-size) + 32px);
   bottom: clamp(16px, 2.6vh, 32px);
   z-index: 5;
   color: #fff;
@@ -1205,8 +1207,8 @@ body.orientation-landscape .endscreen {
   body.orientation-landscape .splash__sound {
     --splash-tool-size: calc((68px) * var(--a11y-control-scale, 1));
   }
-  body.orientation-landscape .splash__sound { left: 16px; }
-  body.orientation-landscape .splash__gallery { left: calc(48px + var(--splash-tool-size)); }
+  body.orientation-landscape .splash__gallery { left: 16px; }
+  body.orientation-landscape .splash__sound { left: calc(48px + var(--splash-tool-size)); }
   body.orientation-landscape .splash__settings { left: calc(48px + (2 * var(--splash-tool-size)) + 32px); }
 }
 
