@@ -945,6 +945,15 @@ body.orientation-landscape .side-rail__home { display: contents; }
   width: 42px;
   height: 32px;
 }
+.side-menu__item--textstamp .side-menu__glyph {
+  width: 40px;
+  height: 40px;
+}
+.side-menu__item--textstamp .side-menu__glyph svg {
+  display: block;
+  width: 26px;
+  height: 26px;
+}
 
 .side-menu__empty {
   display: flex;
@@ -1766,6 +1775,27 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   pointer-events: none;
 }
 .bar-tile--stamp svg { width: 72%; height: 72%; }
+.bar-tile--stamp-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(2px, 0.25vw, 4px);
+  color: #f2f4f8;
+  text-align: center;
+}
+.bar-tile__stamp-icon { display: grid; place-items: center; }
+.bar-tile__stamp-icon svg {
+  width: clamp(18px, 1.5vw, 22px);
+  height: clamp(18px, 1.5vw, 22px);
+}
+.bar-tile__stamp-label {
+  font-size: clamp(8px, 0.6vw, 10px);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
 .bar-tile--stamp-emoji { font-size: clamp(22px, 2vw, 30px); line-height: 1; }
 .bar-tile__glyph { display: block; line-height: 1; }
 

@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const { execFile } = require('child_process');
 
 const selfsigned = require('selfsigned');
 
@@ -1307,6 +1308,73 @@ async function handleSettingsApi(req, res) {
   return sendJson(res, 405, { error: 'Method not allowed' });
 }
 
+// ---- Druckerstatus ----
+// Der Kiosk druckt ohne Dialog direkt auf den Standarddrucker. Ist dieser
+// ein virtueller PDF-/XPS-Drucker, würde Windows einen Speichern-Dialog
+// öffnen. Das muss die Fotobox vorher erkennen und den Druck abbrechen.
+const VIRTUAL_PRINTER_RE = /(print to pdf|xps document writer|onenote|fax|pdf24|adobe pdf|cutepdf|bullzip|dopdf)/i;
+const PRINTER_CACHE_MS = 30000;
+let printerCache = null;
+
+function queryDefaultPrinter() {
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') {
+      return resolve({ supported: false, printer: null, virtual: false, offline: false });
+    }
+    const script = 'Get-CimInstance Win32_Printer -Filter "Default=True" | '
+      + 'Select-Object -First 1 Name,WorkOffline,PrinterStatus,PortName | ConvertTo-Json -Compress';
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+      { timeout: 5000, windowsHide: true },
+      (err, stdout) => {
+        if (err) {
+          return resolve({ supported: true, printer: null, virtual: false, offline: false, error: true });
+        }
+        let raw = null;
+        try {
+          raw = JSON.parse(String(stdout).trim() || 'null');
+        } catch (e) {
+          raw = null;
+        }
+        if (!raw || !raw.Name) {
+          return resolve({ supported: true, printer: null, virtual: false, offline: false });
+        }
+        const name = String(raw.Name);
+        const port = String(raw.PortName || '').toUpperCase();
+        const virtual = VIRTUAL_PRINTER_RE.test(name)
+          || port === 'PORTPROMPT:'
+          || port === 'FILE:'
+          || port === 'NUL:';
+        resolve({
+          supported: true,
+          printer: name,
+          virtual,
+          offline: !!raw.WorkOffline,
+          status: Number(raw.PrinterStatus) || 0
+        });
+      }
+    );
+  });
+}
+
+async function getPrinterInfo() {
+  if (printerCache && Date.now() - printerCache.at < PRINTER_CACHE_MS) {
+    return printerCache.data;
+  }
+  const data = await queryDefaultPrinter();
+  printerCache = { at: Date.now(), data };
+  return data;
+}
+
+async function handlePrinterApi(req, res) {
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  const info = await getPrinterInfo();
+  return sendJson(res, 200, info);
+}
+
 // Nur Dateien ausliefern, die die Fotobox wirklich braucht. Insbesondere
 // dürfen .env, settings.json und der Servercode nicht über HTTP abrufbar sein.
 const BLOCKED_STATIC_FILES = new Set([
@@ -1366,6 +1434,9 @@ const requestHandler = (req, res) => {
   }
   if (route === '/api/admin/session') {
     return handleAdminSessionApi(req, res);
+  }
+  if (route === '/api/printer') {
+    return handlePrinterApi(req, res);
   }
 
   let urlPath = decodeURIComponent(req.url.split('?')[0]);

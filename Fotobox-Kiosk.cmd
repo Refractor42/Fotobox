@@ -7,6 +7,8 @@ rem  Fotobox im Kioskmodus starten / beenden
 rem  - Strg+Alt+K (Windows-Verknuepfung) schaltet den Kiosk um
 rem  - startet den lokalen HTTPS-Server, falls er nicht laeuft
 rem  - oeffnet Chrome/Edge mit --kiosk: keine Adressleiste, kein X
+rem  - --kiosk-printing druckt direkt auf den Standarddrucker,
+rem    ohne Windows-Druckdialog (Drucken-Button am Endscreen)
 rem  - eigenes Browserprofil, damit der Kiosk nicht am bereits
 rem    laufenden Browser haengt
 rem  Beenden: Strg+Alt+K (dieses Skript) oder Alt+F4.
@@ -81,5 +83,5 @@ if /i "%~1"=="--dry-run" (
 )
 
 echo Starte Kiosk ...
-start "" "%BROWSER%" --kiosk --user-data-dir="%KIOSK_PROFILE%" --allow-insecure-localhost --use-fake-ui-for-media-stream --no-first-run --no-default-browser-check --disable-session-crashed-bubble "%URL%"
+start "" "%BROWSER%" --kiosk --kiosk-printing --user-data-dir="%KIOSK_PROFILE%" --allow-insecure-localhost --use-fake-ui-for-media-stream --no-first-run --no-default-browser-check --disable-session-crashed-bubble "%URL%"
 exit /b 0

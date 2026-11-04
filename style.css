@@ -905,6 +905,11 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
   transform: scale(0.92);
 }
 .sticker__ctrl button:hover { background: rgb(var(--c-accent-rgb) / 0.25); }
+.sticker__ctrl button svg {
+  width: 22px;
+  height: 22px;
+  pointer-events: none;
+}
 
 /* processing overlay */
 .processing {

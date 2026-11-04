@@ -134,6 +134,10 @@ const I18N = {
     filterVintage: 'Vintage',
     toastDownloaded: 'Foto heruntergeladen.',
     toastPrintBlocked: 'Druckfenster wurde blockiert — bitte Pop-ups erlauben.',
+    toastNoPrinter: 'Kein Drucker eingerichtet — bitte in Windows einen Drucker als Standard festlegen.',
+    toastVirtualPrinter: '„{name}“ ist ein PDF-Drucker. Bitte einen echten Drucker als Standard festlegen.',
+    toastPrinterOffline: 'Der Drucker „{name}“ ist offline.',
+    toastPrinterUnknown: 'Druckerstatus konnte nicht geprüft werden.',
     toastFullscreenOn: 'Vollbild an — Shift+F zum Verlassen',
     toastFullscreenError: 'Vollbild konnte nicht geöffnet werden.',
     processing: 'Foto wird verarbeitet…',
@@ -175,6 +179,11 @@ const I18N = {
     stickerKroneAria: 'Krone hinzufügen',
     stickerBrilleAria: 'Sonnenbrille hinzufügen',
     stickerHutAria: 'Partyhut hinzufügen',
+    stickerDate: 'Datum',
+    stickerTime: 'Uhrzeit',
+    stickerDateAria: 'Datum als Sticker hinzufügen',
+    stickerTimeAria: 'Uhrzeit als Sticker hinzufügen',
+    stickerTextGroup: 'Datum & Uhrzeit',
     stickerSmaller: 'Sticker verkleinern',
     stickerBigger: 'Sticker vergrößern',
     stickerRemove: 'Sticker entfernen',
@@ -331,6 +340,10 @@ const I18N = {
     filterVintage: 'Vintage',
     toastDownloaded: 'Photo downloaded.',
     toastPrintBlocked: 'Print window was blocked — please allow pop-ups.',
+    toastNoPrinter: 'No printer set up — please set a printer as default in Windows.',
+    toastVirtualPrinter: '“{name}” is a PDF printer. Please set a real printer as default.',
+    toastPrinterOffline: 'The printer “{name}” is offline.',
+    toastPrinterUnknown: 'Could not check the printer status.',
     toastFullscreenOn: 'Fullscreen on — Shift+F to exit',
     toastFullscreenError: 'Fullscreen could not be opened.',
     processing: 'Processing photo…',
@@ -372,6 +385,11 @@ const I18N = {
     stickerKroneAria: 'Add crown',
     stickerBrilleAria: 'Add sunglasses',
     stickerHutAria: 'Add party hat',
+    stickerDate: 'Date',
+    stickerTime: 'Time',
+    stickerDateAria: 'Add date sticker',
+    stickerTimeAria: 'Add time sticker',
+    stickerTextGroup: 'Date & time',
     stickerSmaller: 'Shrink sticker',
     stickerBigger: 'Enlarge sticker',
     stickerRemove: 'Remove sticker',
@@ -1944,7 +1962,60 @@ const $stickerPalette = document.getElementById('stickerPalette');
 let activeStickers = [];   // { el, x, y, w } — x/y/w in % der Bühne
 let selectedSticker = null;
 
+function textStickerSpec(kind) {
+  return TEXT_STICKERS.find((item) => item.kind === kind) || null;
+}
+
+// Datum und Uhrzeit beziehen sich auf den Moment der Aufnahme, nicht auf
+// den Zeitpunkt, an dem der Sticker aus dem Menü gezogen wird.
+function stickerStampDate() {
+  const capturedAt = lastPhoto && lastPhoto.capturedAt ? lastPhoto.capturedAt : Date.now();
+  return new Date(capturedAt);
+}
+
+function stickerStampValue(kind) {
+  const date = stickerStampDate();
+  const locale = currentLang === 'en' ? 'en-GB' : 'de-DE';
+  try {
+    if (kind === 'date') {
+      return new Intl.DateTimeFormat(locale, {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      }).format(date);
+    }
+    if (kind === 'time') {
+      return new Intl.DateTimeFormat(locale, {
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+      }).format(date);
+    }
+  } catch (e) {}
+  return kind === 'date' ? date.toLocaleDateString() : date.toTimeString().slice(0, 5);
+}
+
+function escapeXmlText(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
+  })[ch]);
+}
+
+// Text-Sticker werden als SVG gerendert. Dadurch laufen Vorschau und
+// exportiertes Foto durch dieselbe Sticker-Pipeline wie Formen und Emojis.
+function textStickerSvg(kind) {
+  const spec = textStickerSpec(kind);
+  if (!spec) return '';
+  const text = escapeXmlText(stickerStampValue(kind));
+  const width = spec.svgWidth;
+  const height = spec.svgHeight;
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + width + ' ' + height + '" width="' + width + '" height="' + height + '">'
+    + '<rect x="2" y="2" width="' + (width - 4) + '" height="' + (height - 4) + '" rx="' + ((height - 4) / 2) + '" fill="#090a0e" fill-opacity="0.78" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2"/>'
+    + '<text x="' + (width / 2) + '" y="' + (height / 2) + '" text-anchor="middle" dominant-baseline="central" font-family="Segoe UI, Arial, sans-serif" font-size="' + spec.fontSize + '" font-weight="700" letter-spacing="2" fill="#ffffff">' + text + '</text>'
+    + '</svg>';
+}
+
 function stickerSvgUrl(kind) {
+  const textSvg = textStickerSvg(kind);
+  if (textSvg) {
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(textSvg);
+  }
   const svg = $stickerPalette.querySelector('[data-sticker="' + kind + '"] svg').cloneNode(true);
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   // width/height für verlässliche naturalWidth beim Canvas-Rendering
@@ -1964,7 +2035,10 @@ function addSticker(kind) {
   img.alt = '';
   el.appendChild(img);
 
-  const st = { el, x: 50, y: 35, w: 26 };
+  const textSpec = textStickerSpec(kind);
+  const st = textSpec
+    ? { el, x: textSpec.x, y: textSpec.y, w: textSpec.w }
+    : { el, x: 50, y: 35, w: 26 };
   $camera.querySelector('.viewfinder').appendChild(el);
   activeStickers.push(st);
   positionSticker(st);
@@ -2097,8 +2171,8 @@ function stickerSafeRect() {
   return { left, top, right, bottom, width: right - left, height: bottom - top };
 }
 
-// Die +/−/×-Leiste sitzt normalerweise über dem Sticker. Ist dort kein
-// Platz, klappt sie unter den Sticker und wird an den Fotorändern gehalten.
+// Die +/−/Mülleimer-Leiste sitzt normalerweise über dem Sticker. Ist dort
+// kein Platz, klappt sie unter den Sticker und wird an den Fotorändern gehalten.
 function positionStickerControls(st) {
   const ctrl = st.el.querySelector('.sticker__ctrl');
   if (!ctrl || !ctrl.isConnected) return;
@@ -2179,7 +2253,11 @@ function selectSticker(st) {
   };
   ctrl.appendChild(mk('−', t('stickerSmaller'), () => scaleSticker(st, 0.85)));
   ctrl.appendChild(mk('+', t('stickerBigger'), () => scaleSticker(st, 1.18)));
-  ctrl.appendChild(mk('×', t('stickerRemove'), () => removeSticker(st)));
+  const remove = mk('', t('stickerRemove'), () => removeSticker(st));
+  // Derselbe Papierkorb wie an den Galerie-Fotos, damit dieselbe Aktion
+  // überall gleich aussieht.
+  remove.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>';
+  ctrl.appendChild(remove);
   st.el.appendChild(ctrl);
   requestAnimationFrame(() => positionStickerControls(st));
 }
@@ -3127,7 +3205,7 @@ function addToGallery(photoUrl, save = true, photoId = null, options = {}) {
   if (prepend) photoRecords.unshift(record);
   else photoRecords.push(record);
   card._photoRecord = record;
-  if (save) lastPhoto = { card, id: null, savePromise };
+  if (save) lastPhoto = { card, id: null, savePromise, capturedAt: Date.now() };
 
   if (countNew) {
     if (photoId) addPhotoIndexId(photoId);
@@ -3832,6 +3910,26 @@ function renderStampPanel() {
     divider.setAttribute('aria-hidden', 'true');
     list.appendChild(divider);
   };
+  TEXT_STICKERS.forEach((sticker) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'bar-tile bar-tile--stamp bar-tile--stamp-text';
+    btn.setAttribute('aria-label', t(sticker.ariaKey));
+    const icon = document.createElement('span');
+    icon.className = 'bar-tile__stamp-icon';
+    icon.innerHTML = sticker.icon;
+    const label = document.createElement('span');
+    label.className = 'bar-tile__stamp-label';
+    label.textContent = t(sticker.labelKey);
+    btn.append(icon, label);
+    btn.addEventListener('click', () => {
+      if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
+      addSticker(sticker.kind);
+    });
+    enableMenuDrag(btn, { kind: 'sticker', sticker: sticker.kind });
+    list.appendChild(btn);
+  });
+  if (SHAPE_STICKERS.length) addDivider();
   SHAPE_STICKERS.forEach((sticker) => {
     const btn = document.createElement('button');
     btn.type = 'button';
@@ -3938,6 +4036,11 @@ function beginMenuDrag(btn, payload, ev) {
       span.className = 'bar-tile__glyph';
       span.textContent = payload.glyph;
       ghost.appendChild(span);
+    } else if (textStickerSpec(payload.sticker)) {
+      const img = document.createElement('img');
+      img.src = stickerSvgUrl(payload.sticker);
+      img.alt = '';
+      ghost.appendChild(img);
     } else {
       const source = $stickerPalette.querySelector('[data-sticker="' + payload.sticker + '"] svg');
       if (source) ghost.appendChild(source.cloneNode(true));
@@ -4395,6 +4498,32 @@ const SHAPE_STICKERS = [
   { kind: 'brille', labelKey: 'stickerBrille', ariaKey: 'stickerBrilleAria' },
   { kind: 'hut', labelKey: 'stickerHut', ariaKey: 'stickerHutAria' }
 ];
+const TEXT_STICKERS = [
+  {
+    kind: 'date',
+    labelKey: 'stickerDate',
+    ariaKey: 'stickerDateAria',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M8 3v4M16 3v4M3 10h18"></path><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01"></path></svg>',
+    w: 30,
+    x: 28,
+    y: 82,
+    svgWidth: 430,
+    svgHeight: 104,
+    fontSize: 52
+  },
+  {
+    kind: 'time',
+    labelKey: 'stickerTime',
+    ariaKey: 'stickerTimeAria',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>',
+    w: 18,
+    x: 72,
+    y: 82,
+    svgWidth: 250,
+    svgHeight: 104,
+    fontSize: 58
+  }
+];
 
 function sideTabElementId(context) {
   return 'sideTab-' + context;
@@ -4846,6 +4975,24 @@ function renderSideMenu() {
     if (!hasPhoto) {
       appendSideEmpty('stickersNeedPhoto');
     } else {
+      appendSideGroup('sticker-text', 'stickerTextGroup', (group) => {
+        TEXT_STICKERS.forEach((sticker) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'side-menu__item side-menu__item--textstamp';
+          btn.setAttribute('aria-label', t(sticker.ariaKey));
+          const glyph = document.createElement('span');
+          glyph.className = 'side-menu__glyph';
+          glyph.innerHTML = sticker.icon;
+          btn.appendChild(glyph);
+          const label = document.createElement('span');
+          label.className = 'side-menu__label';
+          label.textContent = t(sticker.labelKey);
+          btn.appendChild(label);
+          btn.addEventListener('click', () => addSticker(sticker.kind));
+          group.appendChild(btn);
+        });
+      });
       appendSideGroup('sticker-shapes', 'stickerShapes', (group) => {
         SHAPE_STICKERS.forEach((sticker) => {
           const btn = document.createElement('button');
@@ -5101,6 +5248,9 @@ function showEndScreen(url) {
   $camera.classList.remove('is-finishing');
   if (currentState !== 'camera') return;
   endPhotoUrl = url;
+  // Druckerstatus schon vorwärmen, damit der Druck-Button später schnell
+  // reagiert (die PowerShell-Abfrage wird serverseitig 30 s gecacht).
+  fetch('/api/printer', { cache: 'no-store' }).catch(() => {});
   const wrap = document.getElementById('endPhoto');
   if (wrap) {
     wrap.innerHTML = '';
@@ -5174,20 +5324,126 @@ async function shareEndPhoto() {
   showToast(t('toastDownloaded'));
 }
 
+// Druckt über einen unsichtbaren iframe. So öffnet sich weder ein neuer Tab
+// noch ein sichtbares Fenster. Den System-Druckdialog kann eine Webseite
+// nicht selbst unterdrücken; im Kioskmodus erledigt das der Browserstart mit
+// --kiosk-printing (siehe Fotobox-Kiosk.cmd).
 function printEndPhoto() {
   if (!endPhotoUrl) return;
-  const win = window.open('', '_blank');
-  if (!win) {
-    showToast(t('toastPrintBlocked'), { error: true });
-    return;
-  }
-  win.document.write('<!doctype html><html><head><title>' + appSettings.brandName + '</title><style>'
+
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.setAttribute('tabindex', '-1');
+  // Nicht display:none, sonst druckt Chrome gelegentlich eine leere Seite.
+  // Deshalb nur außerhalb des sichtbaren Bereichs platzieren.
+  frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1123px;'
+    + 'border:0;pointer-events:none;';
+  document.body.appendChild(frame);
+
+  let cleanupTimer = null;
+  let loadTimer = null;
+  let started = false;
+  const cleanup = () => {
+    if (cleanupTimer) window.clearTimeout(cleanupTimer);
+    if (loadTimer) window.clearTimeout(loadTimer);
+    if (frame.parentNode) frame.parentNode.removeChild(frame);
+  };
+
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write('<!doctype html><html><head><title>' + appSettings.brandName + '</title><style>'
+    + '@page{margin:0}'
     + 'html,body{margin:0;height:100%;background:#fff}'
     + 'body{display:flex;align-items:center;justify-content:center}'
     + 'img{max-width:100%;max-height:100vh;object-fit:contain}'
-    + '</style></head><body><img src="' + endPhotoUrl + '" onload="window.print()"></body></html>');
-  win.document.close();
+    + '</style></head><body><img alt="" src="' + endPhotoUrl + '"></body></html>');
+  doc.close();
+
+  const img = doc.querySelector('img');
+  const startPrint = () => {
+    if (started) return;
+    started = true;
+    if (loadTimer) window.clearTimeout(loadTimer);
+    // Kurz warten, damit das Bild fertig layoutet ist, bevor gedruckt wird.
+    window.setTimeout(() => {
+      // Nach dem Druck aufräumen; der Fallback greift, falls afterprint
+      // im Kioskmodus nicht ausgelöst wird.
+      try {
+        frame.contentWindow.addEventListener('afterprint', () => window.setTimeout(cleanup, 150));
+      } catch (err) {
+        /* ignore */
+      }
+      try {
+        frame.contentWindow.print();
+      } catch (err) {
+        /* Druck nicht verfügbar */
+      }
+      cleanupTimer = window.setTimeout(cleanup, 60000);
+    }, 60);
+  };
+
+  // Ein kaputtes Bild ist laut complete=true ebenfalls "fertig" — dann darf
+  // nicht gedruckt werden, sonst käme eine leere Seite aus dem Drucker.
+  if (img && img.complete && img.naturalWidth > 0) {
+    startPrint();
+  } else if (img) {
+    img.addEventListener('load', startPrint, { once: true });
+    img.addEventListener('error', cleanup, { once: true });
+    // Falls das Laden hängt, den unsichtbaren iframe wieder entfernen.
+    loadTimer = window.setTimeout(cleanup, 15000);
+  } else {
+    cleanup();
+  }
+
   trackUsageEvent('print');
+}
+
+// Prüft vor dem Druck, ob überhaupt ein echter Drucker als Standard gesetzt
+// ist. Ein virtueller PDF-Drucker würde sonst den Windows-Speicherdialog
+// öffnen — dann lieber gar nicht drucken und klar Bescheid sagen.
+let printCheckInFlight = false;
+
+async function startPrintFlow() {
+  if (!endPhotoUrl || printCheckInFlight) return;
+  printCheckInFlight = true;
+
+  let info = null;
+  try {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 5000);
+    const res = await fetch('/api/printer', { cache: 'no-store', signal: controller.signal });
+    window.clearTimeout(timer);
+    if (res.ok) info = await res.json();
+  } catch (err) {
+    /* unten als unbekannter Status behandelt */
+  } finally {
+    printCheckInFlight = false;
+  }
+
+  if (!info || info.error) {
+    showToast(t('toastPrinterUnknown'), { error: true, duration: 6000 });
+    return;
+  }
+  // Auf Nicht-Windows-Servern gibt es keine Druckerabfrage — dort wie bisher
+  // den Browser drucken lassen, statt das Drucken pauschal zu blockieren.
+  if (info.supported === false) {
+    printEndPhoto();
+    return;
+  }
+  if (!info.printer) {
+    showToast(t('toastNoPrinter'), { error: true, duration: 6000 });
+    return;
+  }
+  if (info.virtual) {
+    showToast(t('toastVirtualPrinter').replace('{name}', info.printer), { error: true, duration: 6000 });
+    return;
+  }
+  if (info.offline) {
+    showToast(t('toastPrinterOffline').replace('{name}', info.printer), { error: true, duration: 6000 });
+    return;
+  }
+
+  printEndPhoto();
 }
 
 document.querySelectorAll('.endscreen__action').forEach((btn) => {
@@ -5198,7 +5454,7 @@ document.querySelectorAll('.endscreen__action').forEach((btn) => {
     } else if (btn.dataset.end === 'insta') {
       shareEndPhoto();
     } else if (btn.dataset.end === 'print') {
-      printEndPhoto();
+      startPrintFlow();
     } else if (btn.dataset.end === 'gallery') {
       openGallery('end');
     }
