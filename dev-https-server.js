@@ -1094,7 +1094,7 @@ function hexLuminance(hex) {
 }
 
 const DEFAULT_SETTINGS = Object.freeze({
-  orientation: 'portrait',
+  orientation: 'landscape',
   defaultLanguage: 'de',
   trashRetentionDays: 7,
   idleEndSeconds: 40,
@@ -1133,7 +1133,9 @@ function sanitizeSettings(data) {
     ? background : DEFAULT_SETTINGS.backgroundColor;
 
   const settings = {
-    orientation: raw.orientation === 'landscape' ? 'landscape' : 'portrait',
+    // Hochformat wird nicht mehr unterstützt; alte Einstellungen werden
+    // beim Lesen automatisch auf Querformat normalisiert.
+    orientation: 'landscape',
     defaultLanguage: raw.defaultLanguage === 'en' ? 'en' : 'de',
     trashRetentionDays: [7, 14, 30].includes(retention) ? retention : DEFAULT_SETTINGS.trashRetentionDays,
     idleEndSeconds: numberInRange(raw.idleEndSeconds, DEFAULT_SETTINGS.idleEndSeconds, 15, 180),
@@ -1191,10 +1193,10 @@ function validateSettingsPatch(patch) {
   const has = (key) => Object.prototype.hasOwnProperty.call(patch, key);
 
   if (has('orientation')) {
-    if (patch.orientation !== 'portrait' && patch.orientation !== 'landscape') {
-      throw new Error('Ungültige Ausrichtung.');
+    if (patch.orientation !== 'landscape') {
+      throw new Error('Hochformat wird nicht mehr unterstützt.');
     }
-    next.orientation = patch.orientation;
+    next.orientation = 'landscape';
   }
   if (has('defaultLanguage')) {
     if (patch.defaultLanguage !== 'de' && patch.defaultLanguage !== 'en') {

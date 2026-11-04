@@ -533,7 +533,6 @@ document.querySelectorAll('.lang-switch__label').forEach((label) => {
 // ============================================================
 const SETTINGS_CACHE_KEY = 'snapbox_settings_cache';
 const APP_SETTINGS_DEFAULTS = Object.freeze({
-  orientation: 'portrait',
   defaultLanguage: 'de',
   trashRetentionDays: 7,
   idleEndSeconds: 40,
@@ -573,7 +572,6 @@ function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
   const countdown = Number(merged.defaultCountdownSeconds);
 
   const next = {
-    orientation: merged.orientation === 'landscape' ? 'landscape' : 'portrait',
     defaultLanguage: merged.defaultLanguage === 'en' ? 'en' : 'de',
     trashRetentionDays: [7, 14, 30].includes(retention) ? retention : APP_SETTINGS_DEFAULTS.trashRetentionDays,
     idleEndSeconds: intInRange(merged.idleEndSeconds, APP_SETTINGS_DEFAULTS.idleEndSeconds, 15, 180),
@@ -799,24 +797,13 @@ if ($cvdOptions) {
 }
 
 // ============================================================
-//  ORIENTATION SYNC (Hochformat / Querformat — Admin Panel)
+//  ORIENTATION (fest Querformat)
 // ============================================================
-let currentOrientation = appSettings.orientation;
-try {
-  const saved = localStorage.getItem('snapbox_orientation');
-  if (saved === 'landscape' || saved === 'portrait') currentOrientation = saved;
-} catch (e) {}
-
-function applyOrientation(orientation) {
-  if (orientation !== 'landscape' && orientation !== 'portrait') {
-    orientation = 'portrait';
-  }
-  currentOrientation = orientation;
-  const isLandscape = orientation === 'landscape';
-  document.body.classList.toggle('orientation-landscape', isLandscape);
-  try {
-    localStorage.setItem('snapbox_orientation', orientation);
-  } catch (e) {}
+// Die Kiosk-Oberfläche gibt es nur noch im Querformat. Eine früher im
+// localStorage gespeicherte Hochformat-Einstellung wird ignoriert und entfernt.
+function applyOrientation() {
+  document.body.classList.add('orientation-landscape');
+  try { localStorage.removeItem('snapbox_orientation'); } catch (e) {}
 }
 
 function applyAppSettings(data) {
@@ -825,9 +812,7 @@ function applyAppSettings(data) {
   applyBrandSettings(appSettings.brandName);
   applyFeatureAvailability();
 
-  if (appSettings.orientation !== currentOrientation) {
-    applyOrientation(appSettings.orientation);
-  }
+  applyOrientation();
   if (appSettings.defaultLanguage !== defaultLang) {
     defaultLang = appSettings.defaultLanguage;
     try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
@@ -837,7 +822,7 @@ function applyAppSettings(data) {
 }
 
 // Sofort initial anwenden
-applyOrientation(currentOrientation);
+applyOrientation();
 
 // Synchronisation zwischen Tabs über BroadcastChannel
 if ('BroadcastChannel' in window) {
@@ -847,9 +832,6 @@ if ('BroadcastChannel' in window) {
       if (!event.data) return;
       if (event.data.type === 'settings_change' && event.data.settings) {
         applyAppSettings(event.data.settings);
-      }
-      if (event.data.type === 'orientation_change') {
-        applyOrientation(event.data.orientation);
       }
       if (event.data.type === 'default_language_change') {
         defaultLang = event.data.defaultLanguage === 'en' ? 'en' : 'de';
@@ -862,9 +844,6 @@ if ('BroadcastChannel' in window) {
 
 // Synchronisation bei storage Events
 window.addEventListener('storage', (e) => {
-  if (e.key === 'snapbox_orientation' && (e.newValue === 'landscape' || e.newValue === 'portrait')) {
-    applyOrientation(e.newValue);
-  }
   if (e.key === 'snapbox_default_language' && (e.newValue === 'de' || e.newValue === 'en')) {
     defaultLang = e.newValue;
     applyLanguage(defaultLang);
