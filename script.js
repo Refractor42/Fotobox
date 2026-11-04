@@ -205,7 +205,10 @@ const I18N = {
     qrCloseAria: 'QR-Dialog schließen',
     qrLoading: 'Link wird erstellt…',
     qrHint: 'QR-Code mit der Handy-Kamera scannen — das Foto öffnet sich im Browser.',
-    qrTtl: 'Link ist 24 Stunden gültig.',
+    qrTtlHours: 'Link ist {n} Stunden gültig.',
+    qrTtlHour: 'Link ist 1 Stunde gültig.',
+    qrTtlDays: 'Link ist {n} Tage gültig.',
+    qrTtlDay: 'Link ist 1 Tag gültig.',
     qrRetry: 'Erneut versuchen',
     qrCopy: 'Link kopieren',
     qrCopied: 'Link kopiert.',
@@ -411,7 +414,10 @@ const I18N = {
     qrCloseAria: 'Close QR dialog',
     qrLoading: 'Creating link…',
     qrHint: 'Scan the QR code with your phone camera — the photo opens in your browser.',
-    qrTtl: 'Link is valid for 24 hours.',
+    qrTtlHours: 'Link is valid for {n} hours.',
+    qrTtlHour: 'Link is valid for 1 hour.',
+    qrTtlDays: 'Link is valid for {n} days.',
+    qrTtlDay: 'Link is valid for 1 day.',
     qrRetry: 'Try again',
     qrCopy: 'Copy link',
     qrCopied: 'Link copied.',
@@ -1743,6 +1749,18 @@ function showErrorInQrFrame() {
   $qrFrame.appendChild(wrap);
 }
 
+// Die Gültigkeit kommt vom Server (ttl in Sekunden) und entspricht damit
+// genau der im Admin-Panel gesetzten Stundenzahl. Ab 24 Stunden in Tagen.
+function qrTtlLabel(seconds) {
+  const fallback = (appSettings.qrTtlHours || 24) * 3600;
+  const hours = Math.max(1, Math.round((Number(seconds) || fallback) / 3600));
+  if (hours % 24 === 0) {
+    const days = hours / 24;
+    return days === 1 ? t('qrTtlDay') : t('qrTtlDays').replace('{n}', String(days));
+  }
+  return hours === 1 ? t('qrTtlHour') : t('qrTtlHours').replace('{n}', String(hours));
+}
+
 function renderQrInto(frame, url) {
   frame.innerHTML = '';
   if (typeof qrcode === 'function') {
@@ -1799,7 +1817,7 @@ async function showQrDialog(photoId) {
     const data = await res.json();
     if ($qrModal.hidden || lastQrPhotoId !== photoId) return; // inzwischen geschlossen
     renderQrInto($qrFrame, data.url);
-    $qrTtl.textContent = t('qrTtl');
+    $qrTtl.textContent = qrTtlLabel(data.ttl);
   } catch (err) {
     console.warn('QR link could not be created:', err);
     if (!$qrModal.hidden) showErrorInQrFrame();

@@ -1274,7 +1274,7 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
 .qr-modal__card {
   position: relative;
   width: 100%;
-  max-width: 320px;
+  max-width: 384px;
   background: #161616;
   border: 1px solid rgba(255 255 255 / 0.1);
   border-radius: var(--radius-lg);
@@ -1283,9 +1283,9 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
 }
-.qr-modal__title { font-size: 1.1rem; font-weight: 600; }
+.qr-modal__title { font-size: 1.35rem; font-weight: 600; line-height: 1.3; }
 .qr-modal__close {
   position: absolute;
   top: 8px;
@@ -1296,7 +1296,7 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
   border: 1px solid rgba(255 255 255 / 0.15);
   background: transparent;
   color: var(--c-text-2);
-  font-size: 1.3rem;
+  font-size: 1.5rem;
   line-height: 1;
   cursor: pointer;
 }
@@ -1308,8 +1308,8 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
   width: 100%;
   background: #ffffff;
   border-radius: var(--radius);
-  padding: 12px;
-  min-height: 240px;
+  padding: 14px;
+  min-height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1322,7 +1322,7 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
   align-items: center;
   gap: 0.75rem;
   color: #555;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
 }
 .qr-modal__spinner {
   width: 28px;
@@ -1335,14 +1335,14 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
 @keyframes qrSpin { to { transform: rotate(360deg); } }
 
 .qr-modal__hint {
-  font-size: 0.9rem;
+  font-size: 1.05rem;
   color: var(--c-text-2); /* ≈ 7:1 auf #161616 — WCAG AA/AAA für Text */
   line-height: 1.5;
   text-align: center;
 }
-.qr-modal__ttl { font-size: 0.75rem; color: var(--c-text-3); text-align: center; }
+.qr-modal__ttl { font-size: 0.9rem; color: var(--c-text-3); text-align: center; }
 .qr-modal__fallback {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   color: #333;
   word-break: break-all;
   text-align: center;
@@ -1354,8 +1354,8 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
   background: transparent;
   color: var(--c-text-2);
   border-radius: 9999px;
-  padding: 0.4rem 1.1rem;
-  font-size: 0.85rem;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.95rem;
   cursor: pointer;
 }
 .qr-modal__retry:hover { color: var(--c-text); background: var(--c-surface-2); }
