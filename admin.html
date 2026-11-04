@@ -1997,7 +1997,7 @@
         <div class="setting-row">
           <div class="setting-row__copy">
             <span class="setting-row__title">Filter anzeigen</span>
-            <p class="setting-row__desc">Gesichtsfilter, Farbfilter und die Filter-Werkzeuge für Gäste ausblenden.</p>
+            <p class="setting-row__desc" id="filtersEnabledDesc">Gesichtsfilter, Farbfilter und die Filter-Werkzeuge werden Gästen angezeigt.</p>
           </div>
           <div class="setting-control">
             <button class="switch" id="filtersEnabledToggle" type="button" role="switch" aria-checked="true">
@@ -2010,7 +2010,7 @@
         <div class="setting-row">
           <div class="setting-row__copy">
             <span class="setting-row__title">Sticker anzeigen</span>
-            <p class="setting-row__desc">Sticker-Auswahl und Sticker-Werkzeuge für Gäste ausblenden.</p>
+            <p class="setting-row__desc" id="stickersEnabledDesc">Sticker-Auswahl und Sticker-Werkzeuge werden Gästen angezeigt.</p>
           </div>
           <div class="setting-control">
             <button class="switch" id="stickersEnabledToggle" type="button" role="switch" aria-checked="true">
@@ -2023,7 +2023,7 @@
         <div class="setting-row">
           <div class="setting-row__copy">
             <span class="setting-row__title">Overlays anzeigen</span>
-            <p class="setting-row__desc">Rahmen und Bild-Overlays für Gäste ausblenden. Bereits gewählte Overlays werden entfernt.</p>
+            <p class="setting-row__desc" id="overlaysEnabledDesc">Rahmen und Bild-Overlays werden Gästen angezeigt. Bereits gewählte Overlays bleiben erhalten.</p>
           </div>
           <div class="setting-control">
             <button class="switch" id="overlaysEnabledToggle" type="button" role="switch" aria-checked="true">
@@ -2094,7 +2094,7 @@
         <div class="setting-row setting-row--buttons">
           <div class="setting-row__copy">
             <span class="setting-row__title">Runde Buttons</span>
-            <p class="setting-row__desc">Hintergrundfarbe und Transparenz der runden Buttons auf Start-, Aufnahme- und Review-Screen sowie der Countdown-/Modus-Auswahl und der runden Filterauswahl. Farbfilter-Vorschauen, der gelbe Auslöser und der grüne Bestätigen-Button bleiben unverändert.</p>
+            <p class="setting-row__desc">Hintergrundfarbe und Transparenz der runden Buttons auf Start-, Aufnahme- und Review-Screen sowie der Countdown-/Modus-Auswahl und der runden Filterauswahl. Farbfilter-Vorschauen, der gelbe Auslöser und der grüne Bestätigen-Button bleiben unverändert. Ohne Anpassung bleibt die ursprüngliche Glasoptik der einzelnen Buttons erhalten; beim Ändern gilt die gewählte Farbe und Transparenz für alle diese Buttons.</p>
           </div>
           <div class="setting-control setting-control--stack">
             <div class="color-grid color-grid--single">
@@ -2618,6 +2618,9 @@
       const $stickersEnabledText = document.getElementById('stickersEnabledText');
       const $overlaysEnabledToggle = document.getElementById('overlaysEnabledToggle');
       const $overlaysEnabledText = document.getElementById('overlaysEnabledText');
+      const $filtersEnabledDesc = document.getElementById('filtersEnabledDesc');
+      const $stickersEnabledDesc = document.getElementById('stickersEnabledDesc');
+      const $overlaysEnabledDesc = document.getElementById('overlaysEnabledDesc');
       const $cameraFacingMode = document.getElementById('cameraFacingMode');
       const $brandName = document.getElementById('brandName');
       const $themePreview = document.getElementById('themePreview');
@@ -2846,6 +2849,15 @@
         $stickersEnabledText.textContent = currentSettings.stickersEnabled ? 'Ein' : 'Aus';
         $overlaysEnabledToggle.setAttribute('aria-checked', String(currentSettings.overlaysEnabled));
         $overlaysEnabledText.textContent = currentSettings.overlaysEnabled ? 'Ein' : 'Aus';
+        $filtersEnabledDesc.textContent = currentSettings.filtersEnabled
+          ? 'Gesichtsfilter, Farbfilter und die Filter-Werkzeuge werden Gästen angezeigt.'
+          : 'Gesichtsfilter, Farbfilter und die Filter-Werkzeuge werden Gästen ausgeblendet.';
+        $stickersEnabledDesc.textContent = currentSettings.stickersEnabled
+          ? 'Sticker-Auswahl und Sticker-Werkzeuge werden Gästen angezeigt.'
+          : 'Sticker-Auswahl und Sticker-Werkzeuge werden Gästen ausgeblendet.';
+        $overlaysEnabledDesc.textContent = currentSettings.overlaysEnabled
+          ? 'Rahmen und Bild-Overlays werden Gästen angezeigt. Bereits gewählte Overlays bleiben erhalten.'
+          : 'Rahmen und Bild-Overlays werden Gästen ausgeblendet. Bereits gewählte Overlays werden entfernt.';
         $cameraFacingMode.value = currentSettings.cameraFacingMode;
         $brandName.value = currentSettings.brandName;
         $accentColorPicker.value = currentSettings.accentColor;
@@ -3384,10 +3396,10 @@
       colorField($backgroundColorPicker, $backgroundColorHex, 'backgroundColor');
       colorField($buttonColorPicker, $buttonColorHex, 'buttonColor');
 
-      $buttonTransparencyRange.addEventListener('input', () => {
-        $buttonTransparencyValue.textContent = $buttonTransparencyRange.value + ' %';
-      });
-      $buttonTransparencyRange.addEventListener('change', () => {
+      let buttonTransparencySaveTimer = 0;
+      function saveButtonTransparency() {
+        window.clearTimeout(buttonTransparencySaveTimer);
+        buttonTransparencySaveTimer = 0;
         const value = Number($buttonTransparencyRange.value);
         if (!Number.isInteger(value) || value < 0 || value > 100) {
           showToast('Die Transparenz muss zwischen 0 und 100 % liegen.', true);
@@ -3396,7 +3408,13 @@
         }
         if (value === currentSettings.buttonTransparency) return;
         persistSettings({ buttonTransparency: value }, 'Button-Transparenz gespeichert.');
+      }
+      $buttonTransparencyRange.addEventListener('input', () => {
+        $buttonTransparencyValue.textContent = $buttonTransparencyRange.value + ' %';
+        window.clearTimeout(buttonTransparencySaveTimer);
+        buttonTransparencySaveTimer = window.setTimeout(saveButtonTransparency, 400);
       });
+      $buttonTransparencyRange.addEventListener('change', saveButtonTransparency);
 
       $resetSectionButtons.forEach((button) => {
         button.addEventListener('click', () => {

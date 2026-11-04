@@ -821,11 +821,23 @@ function applyThemeSettings(settings) {
   const buttonTransparency = Number.isInteger(transparencyValue)
     ? Math.min(100, Math.max(0, transparencyValue))
     : APP_SETTINGS_DEFAULTS.buttonTransparency;
-  const buttonRgb = hexToRgb(buttonColor);
-  const buttonAlpha = 1 - buttonTransparency / 100;
-  style.setProperty('--c-control-rgb', `${buttonRgb.r} ${buttonRgb.g} ${buttonRgb.b}`);
-  style.setProperty('--c-control-alpha', buttonAlpha.toFixed(2));
-  style.setProperty('--c-control-hover-alpha', Math.min(1, buttonAlpha + 0.06).toFixed(2));
+  // Ohne eigene Anpassung bleiben die unterschiedlichen Glaswerte der
+  // einzelnen Buttons erhalten. Erst eine bewusste Admin-Änderung legt
+  // die gemeinsame Farbe/Transparenz über alle runden Controls.
+  const customButtonStyle = buttonColor !== APP_SETTINGS_DEFAULTS.buttonColor
+    || buttonTransparency !== APP_SETTINGS_DEFAULTS.buttonTransparency;
+  if (customButtonStyle) {
+    const buttonRgb = hexToRgb(buttonColor);
+    const buttonAlpha = 1 - buttonTransparency / 100;
+    style.setProperty('--c-control-bg', `rgb(${buttonRgb.r} ${buttonRgb.g} ${buttonRgb.b} / ${buttonAlpha.toFixed(2)})`);
+    style.setProperty('--c-control-hover-bg', `rgb(${buttonRgb.r} ${buttonRgb.g} ${buttonRgb.b} / ${Math.min(1, buttonAlpha + 0.06).toFixed(2)})`);
+  } else {
+    style.removeProperty('--c-control-bg');
+    style.removeProperty('--c-control-hover-bg');
+  }
+  style.removeProperty('--c-control-rgb');
+  style.removeProperty('--c-control-alpha');
+  style.removeProperty('--c-control-hover-alpha');
 
   const props = [
     '--c-bg', '--c-accent', '--c-accent-rgb', '--c-accent-2', '--c-accent-2-rgb',

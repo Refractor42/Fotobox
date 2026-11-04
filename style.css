@@ -8,11 +8,9 @@
   --c-bg:        #0d0d0d;
   --c-surface:   rgba(255, 255, 255, 0.045);
   --c-surface-2: rgba(255, 255, 255, 0.075);
-  /* Runde Kiosk-Buttons (Start, Leiste, Review). Die Admin-Einstellung
-     überschreibt diese Fallback-Werte beim Laden der Seite. */
-  --c-control-rgb: 18 22 30;
-  --c-control-alpha: 0.85;
-  --c-control-hover-alpha: 0.91;
+  /* Die Admin-Einstellung setzt bei Bedarf --c-control-bg und
+     --c-control-hover-bg. Ohne Anpassung gelten die ursprünglichen
+     Glaswerte der einzelnen Buttons. */
   --c-accent:    #ffd700;
   --c-accent-2:  #00e0d6;
   /* Farbmodus-Bausteine. Die CVD-Schemata weiter unten überschreiben nur
@@ -165,14 +163,14 @@ body {
   padding: 8px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 50%;
-  background: rgb(var(--c-control-rgb) / var(--c-control-alpha));
+  background: var(--c-control-bg, rgba(255, 255, 255, 0.09));
   color: var(--c-highlight, #fff);
   font: inherit;
   cursor: pointer;
   touch-action: manipulation;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
-.option-cycle:hover:not(:disabled) { background: rgb(var(--c-control-rgb) / var(--c-control-hover-alpha)); }
+.option-cycle:hover:not(:disabled) { background: var(--c-control-hover-bg, rgba(255, 255, 255, 0.17)); }
 .option-cycle:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 4px; }
 .option-cycle:disabled { opacity: 0.4; cursor: default; }
 .option-cycle__value { font-size: calc((clamp(12px, 1vw, 15px)) * var(--a11y-text-scale, 1)); font-weight: 800; line-height: 1; }
@@ -417,7 +415,7 @@ section.active { display: block; opacity: 1; }
   height: var(--splash-tool-size);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 50%;
-  background: rgba(10, 10, 10, 0.5);
+  background: var(--c-control-bg, rgba(10, 10, 10, 0.5));
   color: #fff;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -438,7 +436,7 @@ section.active { display: block; opacity: 1; }
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 2px 12px rgba(0, 0, 0, 0.7);
 }
 .splash__tool:hover .splash__tool-icon {
-  background: rgba(28, 30, 38, 0.86);
+  background: var(--c-control-hover-bg, rgba(28, 30, 38, 0.86));
   color: #fff;
   border-color: rgb(var(--c-accent-rgb) / 0.6);
   transform: translateY(-1px);
@@ -687,7 +685,7 @@ section.active { display: block; opacity: 1; }
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(10 10 10 / 0.5);
+  background: var(--c-control-bg, rgba(10 10 10 / 0.5));
   border: 1px solid rgba(255 255 255 / 0.15);
   color: var(--c-text-2);
   cursor: pointer;
@@ -695,7 +693,7 @@ section.active { display: block; opacity: 1; }
   -webkit-backdrop-filter: blur(8px);
   transition: color var(--transition), background var(--transition), border-color var(--transition);
 }
-.camera__sound:hover { color: var(--c-text); background: rgba(10 10 10 / 0.7); }
+.camera__sound:hover { color: var(--c-text); background: var(--c-control-hover-bg, rgba(10 10 10 / 0.7)); }
 .camera__sound svg { width: calc((1.15rem) * var(--a11y-control-scale, 1)); height: calc((1.15rem) * var(--a11y-control-scale, 1)); }
 .camera__sound:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.5); }
 
@@ -2356,7 +2354,7 @@ body.orientation-landscape .gallery__grid {
   height: calc((clamp(68px, 7.6vw, 90px)) * var(--a11y-control-scale, 1));
   border: 1px solid rgba(255 255 255 / 0.2);
   border-radius: 50%;
-  background: rgba(10 10 10 / 0.52);
+  background: var(--c-control-bg, rgba(10 10 10 / 0.52));
   color: #fff;
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
@@ -2402,7 +2400,7 @@ body.orientation-landscape .gallery__grid {
 .splash__settings:hover .splash__settings-icon,
 .splash__settings:active .splash__settings-icon,
 .splash__settings:focus-visible .splash__settings-icon {
-  background: rgba(28, 30, 38, 0.86);
+  background: var(--c-control-hover-bg, rgba(28, 30, 38, 0.86));
   border-color: var(--c-accent);
   color: var(--c-accent);
   box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.22);
@@ -2441,7 +2439,7 @@ body.orientation-landscape .gallery__grid {
   width: var(--splash-tool-size);
   height: var(--splash-tool-size);
   border-color: rgba(255, 255, 255, 0.16);
-  background: rgba(10, 10, 10, 0.5);
+  background: var(--c-control-bg, rgba(10, 10, 10, 0.5));
 }
 html:is([data-cvd], [data-button-size="large"], [data-text-size="large"]) .splash__settings-icon::after,
 .splash__settings-icon[data-reset-marker]::after {

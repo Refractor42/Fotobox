@@ -17,10 +17,12 @@
   "accentColor": "#ffd700",
   "secondaryColor": "#00e0d6",
   "backgroundColor": "#0d0d0d",
+  "buttonColor": "#12161e",
+  "buttonTransparency": 15,
   "brandName": "SnapBox",
   "qrTtlHours": 24,
   "challengeEnabled": true,
   "challengeLocation": "lcc",
   "challengeAppUrl": "",
-  "updatedAt": "2026-11-04T22:54:03.915Z"
+  "updatedAt": "2026-11-04T23:29:37.738Z"
 }
