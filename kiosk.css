@@ -1985,3 +1985,111 @@ html[data-ui="2"] .bar-slot--options {
 }
 .bar-slot--options .capture-switch { gap: 4px; }
 .bar-slot--options .capture-switch__label { line-height: 1; }
+/* One rounded surface grows from each trigger to enclose its menu content. */
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(#captureOptionsToggle, #sideMenuToggle) {
+  position: relative;
+  z-index: 2;
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu) {
+  bottom: calc(var(--bar-edge-inset) + var(--action-gap) + clamp(11px, 0.85vw, 13px) * 1.2 - 6px);
+  opacity: 1;
+  transform: none;
+  z-index: 1;
+  isolation: isolate;
+  visibility: hidden;
+  transition: visibility 0s linear 320ms;
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu).is-open {
+  visibility: visible;
+  transition-delay: 0s;
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu)::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  width: var(--bar-side-size);
+  height: var(--bar-side-size);
+  font-size: clamp(11px, 0.85vw, 13px);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.12);
+  -webkit-backdrop-filter: blur(20px) saturate(150%);
+  backdrop-filter: blur(20px) saturate(150%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0;
+  --menu-shape-motion: 240ms cubic-bezier(0.4, 0, 0.2, 1) 70ms;
+  transition: width var(--menu-shape-motion), height var(--menu-shape-motion),
+    top var(--menu-shape-motion), left var(--menu-shape-motion),
+    right var(--menu-shape-motion), opacity 90ms linear 220ms;
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) .bar-slot--options {
+  right: calc(100% - var(--bar-edge-inset) - var(--ui2-pill-w) - var(--ui2-slot-air));
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) .bar-slot--menu {
+  right: calc(var(--bar-edge-inset) + var(--ui2-slot-air));
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) .bar-slot--options::before {
+  right: calc(-1 * var(--bar-side-size));
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) .bar-slot--menu::before {
+  left: calc(-1 * var(--bar-side-size));
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu).is-open::before {
+  --menu-shape-motion: 300ms cubic-bezier(0.22, 1, 0.36, 1);
+  top: 0;
+  width: calc(100% + var(--bar-side-size) + 6px);
+  height: 100%;
+  opacity: 1;
+  transition: width var(--menu-shape-motion), height var(--menu-shape-motion),
+    top var(--menu-shape-motion), left var(--menu-shape-motion),
+    right var(--menu-shape-motion), opacity 60ms linear;
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) .bar-slot--options.is-open::before {
+  right: calc(-1 * var(--bar-side-size) - 6px);
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) .bar-slot--menu.is-open::before {
+  left: calc(-1 * var(--bar-side-size) - 6px);
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu) .bar-slot__inner {
+  height: calc(var(--bar-side-size) + 12px);
+  padding-block: 4px;
+  border-color: transparent;
+  background: transparent;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  box-shadow: none;
+  opacity: 0;
+  transition: opacity 70ms ease;
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu).is-open .bar-slot__inner {
+  opacity: 1;
+  transition: opacity 120ms ease 160ms;
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(#captureOptionsToggle, #sideMenuToggle) .bar-btn__icon {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.34);
+  color: #e8eaf0;
+  transform: none;
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(#captureOptionsToggle, #sideMenuToggle) .bar-btn__label {
+  color: #eef1f6;
+}
+html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(#captureOptionsToggle, #sideMenuToggle)[aria-expanded="true"] .bar-btn__icon {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu),
+  html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu).is-open,
+  html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu)::before,
+  html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu).is-open::before,
+  html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu) .bar-slot__inner,
+  html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu).is-open .bar-slot__inner {
+    transition: none;
+  }
+}
