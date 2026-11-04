@@ -7263,7 +7263,6 @@ function resetToStartScreen(options = {}) {
   if ($qrModal && !$qrModal.hidden) closeQrDialog();
   if ($confirmModal && !$confirmModal.hidden) closeConfirm(false);
   if (lightbox) { lightbox.remove(); lightbox = null; }
-  if (trashOpen) toggleTrash(false);
   returnToIdle(options);
   idleStateKey = 'splash';
   idleDeadline = 0;
