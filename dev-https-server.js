@@ -1132,7 +1132,6 @@ const DEFAULT_SETTINGS = Object.freeze({
   challengeEnabled: false,
   challengeLocation: 'lcc',
   challengeAppUrl: '',
-  challengeMonthlyGoal: 42,
   updatedAt: null
 });
 
@@ -1196,12 +1195,6 @@ function sanitizeSettings(data) {
     challengeEnabled: raw.challengeEnabled === true,
     challengeLocation: raw.challengeLocation === 'coburg' ? 'coburg' : 'lcc',
     challengeAppUrl: sanitizeChallengeAppUrl(raw.challengeAppUrl),
-    challengeMonthlyGoal: numberInRange(
-      raw.challengeMonthlyGoal,
-      DEFAULT_SETTINGS.challengeMonthlyGoal,
-      1,
-      9999
-    ),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null
   };
 
@@ -1347,9 +1340,6 @@ function validateSettingsPatch(patch) {
     }
     next.challengeAppUrl = url;
   }
-  if (has('challengeMonthlyGoal')) {
-    next.challengeMonthlyGoal = assertInteger(patch.challengeMonthlyGoal, 'Challenge-Ziel', 1, 9999);
-  }
   if (has('challengeApiKey')) {
     const key = typeof patch.challengeApiKey === 'string' ? patch.challengeApiKey.trim() : '';
     // Leer lassen heißt „bestehenden Schlüssel behalten“ — das Passwortfeld
@@ -1428,7 +1418,6 @@ function readChallengeConfig() {
     enabled: settings.challengeEnabled === true,
     appUrl: settings.challengeAppUrl,
     location: settings.challengeLocation,
-    goal: settings.challengeMonthlyGoal,
     apiKey,
     // Für Einreichungen muss die Challenge aktiv sein; für das Entfernen
     // gelöschter Fotos reicht eine vollständige Verbindung.
@@ -1472,7 +1461,6 @@ async function handleChallengeSummaryApi(req, res) {
     online: false,
     location: cfg.location,
     month,
-    goal: cfg.goal,
     appUrl: cfg.appUrl,
     entries: 0,
     votes: 0,

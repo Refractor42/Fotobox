@@ -347,6 +347,12 @@ body.orientation-landscape .challenge-card {
   line-height: 1.35;
 }
 .challenge-card__count { font-weight: 800; }
+.challenge-card__versus {
+  font-size: calc((clamp(0.8rem, 0.95vw, 1rem)) * var(--a11y-text-scale, 1));
+  font-weight: 700;
+  color: #d7d2d2;
+  margin: -2px 0 8px;
+}
 .challenge-card__unit { color: #d7d2d2; }
 .challenge-card__days { display: block; color: var(--c-alert-soft); font-size: 0.88em; margin-top: 2px; }
 .challenge-card__theme {

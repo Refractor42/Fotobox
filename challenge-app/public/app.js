@@ -326,7 +326,7 @@ function renderTrophies() {
 function render() {
   if (!state.data) return;
   const data = state.data;
-  $theme.textContent = data.theme || THEMES[Number(state.month.slice(5, 7)) - 1] || 'Monatsmotiv';
+  $theme.textContent = 'Motto: ' + (data.theme || THEMES[Number(state.month.slice(5, 7)) - 1] || 'Monatsmotiv');
   $monthLabel.textContent = monthLabel(state.month);
   populateMonths(data.months);
   renderScoreboard();

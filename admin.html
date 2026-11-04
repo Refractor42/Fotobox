@@ -2110,7 +2110,7 @@
             <span class="section-kicker">05</span>
             Monats-Challenge
           </h2>
-          <p class="section-header__desc">Verknüpft diese Fotobox mit der öffentlichen Challenge-Web-App. Standort, Adresse, Monatsziel und API-Schlüssel werden hier hinterlegt. Der Schlüssel bleibt auf dem Server und wird nie an den Kiosk-Browser ausgeliefert.</p>
+          <p class="section-header__desc">Verknüpft diese Fotobox mit der öffentlichen Challenge-Web-App. Standort, Adresse und API-Schlüssel werden hier hinterlegt. Der Schlüssel bleibt auf dem Server und wird nie an den Kiosk-Browser ausgeliefert.</p>
         </div>
       </div>
 
@@ -2136,7 +2136,7 @@
           <div class="setting-control">
             <select class="field-select" id="challengeLocation" style="max-width: 220px">
               <option value="lcc">LCC</option>
-              <option value="coburg">Coburg</option>
+              <option value="coburg">Campus Coburg</option>
             </select>
           </div>
         </div>
@@ -2148,17 +2148,6 @@
           </div>
           <div class="setting-control">
             <input class="field-input" id="challengeAppUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…" style="max-width: 360px" />
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="setting-row__copy">
-            <label class="setting-row__title" for="challengeMonthlyGoal">Fotos pro Monat</label>
-            <p class="setting-row__desc">Zielwert auf der Challenge-Karte, zum Beispiel 42. Er ändert nur die Anzeige, nicht die Wertung.</p>
-          </div>
-          <div class="setting-control">
-            <input class="field-input" id="challengeMonthlyGoal" type="number" min="1" max="9999" step="1" inputmode="numeric" style="max-width: 150px" />
-            <span class="section-note">Fotos</span>
           </div>
         </div>
 
@@ -2502,8 +2491,7 @@
         qrTtlHours: 24,
         challengeEnabled: false,
         challengeLocation: 'lcc',
-        challengeAppUrl: '',
-        challengeMonthlyGoal: 42
+        challengeAppUrl: ''
       };
       const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS);
       const $settingsStatus = document.getElementById('settingsStatus');
@@ -2523,7 +2511,6 @@
       const $challengeEnabledText = document.getElementById('challengeEnabledText');
       const $challengeLocation = document.getElementById('challengeLocation');
       const $challengeAppUrl = document.getElementById('challengeAppUrl');
-      const $challengeMonthlyGoal = document.getElementById('challengeMonthlyGoal');
       const $challengeApiKey = document.getElementById('challengeApiKey');
       const $challengeKeySave = document.getElementById('challengeKeySave');
       const $challengeKeyStatus = document.getElementById('challengeKeyStatus');
@@ -2750,7 +2737,6 @@
         $challengeEnabledText.textContent = currentSettings.challengeEnabled ? 'Ein' : 'Aus';
         $challengeLocation.value = currentSettings.challengeLocation;
         $challengeAppUrl.value = currentSettings.challengeAppUrl;
-        $challengeMonthlyGoal.value = String(currentSettings.challengeMonthlyGoal);
         renderChallengeKeyStatus();
         $captureModeOptions.forEach((btn) => {
           btn.setAttribute('aria-pressed', String(btn.dataset.captureMode === currentSettings.defaultCaptureMode));
@@ -3184,17 +3170,6 @@
           return;
         }
         persistSettings({ challengeAppUrl: url }, 'Web-App-Adresse gespeichert.');
-      });
-
-      $challengeMonthlyGoal.addEventListener('change', () => {
-        const value = Number($challengeMonthlyGoal.value);
-        if (!Number.isInteger(value) || value < 1 || value > 9999) {
-          showToast('Das Monatsziel muss zwischen 1 und 9999 liegen.', true);
-          renderAllSettings();
-          return;
-        }
-        if (value === currentSettings.challengeMonthlyGoal) return;
-        persistSettings({ challengeMonthlyGoal: value }, 'Monatsziel gespeichert.');
       });
 
       $challengeKeySave.addEventListener('click', async () => {

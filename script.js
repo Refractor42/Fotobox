@@ -76,7 +76,8 @@ const I18N = {
     splashCta: 'Fotobox starten',
     splashTap: 'Zum Starten tippen',
     challengeTitle: 'Monthly Challenge',
-    challengePhotos: 'Fotos',
+    challengeVersus: '{home} gegen {away}',
+    challengeEntries: 'Teilnahmen für {location}',
     challengeDaysOne: 'noch 1 Tag',
     challengeDays: 'noch {n} Tage',
     challengeLastDay: 'letzter Tag',
@@ -98,6 +99,9 @@ const I18N = {
     endChallengeKicker: 'MONATS-CHALLENGE',
     endChallengeQuestion: 'Foto für {location} einreichen?',
     endChallengeHint: 'Dein Foto erscheint in der Web-App. Jeder Like bringt dem Team Extrapunkte.',
+    endChallengeQrOnly: 'Web-App per QR öffnen — Einreichen wird im Admin freigeschaltet.',
+    challengeThemeLabel: 'Motto:',
+    challengeThemePrompt: 'Schieße ein Foto zum Thema {theme}',
     endChallengeYes: 'Ja, mitmachen',
     endChallengeNo: 'Nein, danke',
     endChallengeSubmitting: 'Wird eingereicht…',
@@ -326,7 +330,8 @@ const I18N = {
     splashCta: 'Start Photobox',
     splashTap: 'Tap to start',
     challengeTitle: 'Monthly Challenge',
-    challengePhotos: 'photos',
+    challengeVersus: '{home} vs. {away}',
+    challengeEntries: 'Entries for {location}',
     challengeDaysOne: '1 day left',
     challengeDays: '{n} days left',
     challengeLastDay: 'last day',
@@ -348,6 +353,9 @@ const I18N = {
     endChallengeKicker: 'MONTHLY CHALLENGE',
     endChallengeQuestion: 'Submit this photo for {location}?',
     endChallengeHint: 'Your photo appears in the web app. Every like adds extra points for the team.',
+    endChallengeQrOnly: 'Open the web app by QR — submissions are enabled in the admin panel.',
+    challengeThemeLabel: 'Theme:',
+    challengeThemePrompt: 'Take a photo on the theme of {theme}',
     endChallengeYes: 'Yes, join in',
     endChallengeNo: 'No, thanks',
     endChallengeSubmitting: 'Submitting…',
@@ -673,7 +681,6 @@ const APP_SETTINGS_DEFAULTS = Object.freeze({
   challengeEnabled: false,
   challengeLocation: 'lcc',
   challengeAppUrl: '',
-  challengeMonthlyGoal: 42,
   // Nur ein Status-Flag, nie der Schlüssel selbst. Damit kann der Endscreen
   // auch dann einen QR zeigen, wenn die Zusammenfassung gerade nicht lädt.
   challengeApiKeySet: false
@@ -688,7 +695,6 @@ let challengeStatus = {
   online: false,
   entries: 0,
   votes: 0,
-  goal: APP_SETTINGS_DEFAULTS.challengeMonthlyGoal,
   location: APP_SETTINGS_DEFAULTS.challengeLocation,
   appUrl: '',
   month: ''
@@ -748,12 +754,6 @@ function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
     challengeEnabled: merged.challengeEnabled === true,
     challengeLocation: merged.challengeLocation === 'coburg' ? 'coburg' : 'lcc',
     challengeAppUrl: normalizeChallengeUrl(merged.challengeAppUrl),
-    challengeMonthlyGoal: intInRange(
-      merged.challengeMonthlyGoal,
-      APP_SETTINGS_DEFAULTS.challengeMonthlyGoal,
-      1,
-      9999
-    ),
     challengeApiKeySet: merged.challengeApiKeySet === true
   };
   next.idleWarnSeconds = Math.max(5, Math.min(
@@ -1215,7 +1215,6 @@ function applyAppSettings(data) {
     appSettings.challengeEnabled,
     appSettings.challengeLocation,
     appSettings.challengeAppUrl,
-    appSettings.challengeMonthlyGoal,
     appSettings.challengeApiKeySet
   ].join('|');
   if (signature !== challengeSettingsSignature) {
@@ -5922,7 +5921,6 @@ async function refreshChallengeSummary() {
       online: data.online === true,
       entries: Math.max(0, Number(data.entries) || 0),
       votes: Math.max(0, Number(data.votes) || 0),
-      goal: Number(data.goal) || appSettings.challengeMonthlyGoal,
       location: data.location === 'coburg' ? 'coburg' : 'lcc',
       appUrl: normalizeChallengeUrl(data.appUrl),
       month: typeof data.month === 'string' ? data.month : ''
@@ -5937,19 +5935,26 @@ async function refreshChallengeSummary() {
 function updateChallengeCard() {
   const countEl = document.getElementById('challengeCount');
   if (!countEl) return;
-  const configured = challengeStatus.configured
-    || (appSettings.challengeAppUrl && appSettings.challengeApiKeySet);
-  const active = appSettings.challengeEnabled && configured;
+  // Die App-Karte hängt an Challenge und App-Adresse. Fehlt der Schlüssel,
+  // bleibt sie sichtbar und zeigt Striche statt Zahlen.
+  const active = appSettings.challengeEnabled && !!appSettings.challengeAppUrl;
   document.body.classList.toggle('challenge-active', active);
   if (!active) return;
 
   const now = new Date();
   const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+  const location = challengeStatus.location || appSettings.challengeLocation;
+  const locationLabel = challengeLocationLabel(location);
   countEl.textContent = challengeStatus.online ? String(challengeStatus.entries) : '—';
-  const goal = document.getElementById('challengeGoal');
-  if (goal) goal.textContent = String(challengeStatus.goal || appSettings.challengeMonthlyGoal || 42);
-  const unit = document.getElementById('challengePhotos');
-  if (unit) unit.textContent = t('challengePhotos');
+  const unit = document.getElementById('challengeEntries');
+  if (unit) unit.textContent = t('challengeEntries', { location: locationLabel });
+  const versus = document.getElementById('challengeVersus');
+  if (versus) {
+    versus.textContent = t('challengeVersus', {
+      home: locationLabel,
+      away: challengeLocationLabel(location === 'coburg' ? 'lcc' : 'coburg')
+    });
+  }
   const days = document.getElementById('challengeDays');
   if (days) {
     days.textContent = daysLeft === 0
@@ -5957,7 +5962,7 @@ function updateChallengeCard() {
       : (daysLeft === 1 ? t('challengeDaysOne') : t('challengeDays', { n: daysLeft }));
   }
   const theme = document.getElementById('challengeTheme');
-  if (theme) theme.textContent = t(themeKeyForNow());
+  if (theme) theme.textContent = t('challengeThemePrompt', { theme: t(themeKeyForNow()) });
 }
 
 function renderSplashChain() {
@@ -6453,9 +6458,8 @@ function closeStampMode(options = {}) {
   syncBarToggleLabel();
 }
 
-function challengeLocationLabel() {
-  const location = challengeStatus.location || appSettings.challengeLocation;
-  return location === 'coburg' ? 'Coburg' : 'LCC';
+function challengeLocationLabel(location = challengeStatus.location || appSettings.challengeLocation) {
+  return location === 'coburg' ? 'Campus Coburg' : 'LCC';
 }
 
 // Baut die Challenge-Karte am Endscreen für das gerade bestätigte Foto auf.
@@ -6466,7 +6470,7 @@ function setupChallengeEnd() {
   const photoId = lastPhoto && lastPhoto.id ? lastPhoto.id : null;
   const configured = challengeStatus.configured
     || (appSettings.challengeAppUrl && appSettings.challengeApiKeySet);
-  const active = appSettings.challengeEnabled && configured && !!photoId;
+  const active = appSettings.challengeEnabled && !!appSettings.challengeAppUrl && !!photoId;
   challengeEndPhotoId = photoId;
   challengeEndChoice = null;
   challengeEndBusy = false;
@@ -6475,13 +6479,18 @@ function setupChallengeEnd() {
   document.body.classList.toggle('challenge-end-active', active);
   if (!active) return;
 
-  if ($challengeEndChoices) $challengeEndChoices.hidden = false;
+  // Ohne API-Schlüssel lässt sich nichts einreichen: dann nur der QR zur App,
+  // keine Ja/Nein-Entscheidung.
+  const canSubmit = configured;
+  if ($challengeEndChoices) $challengeEndChoices.hidden = !canSubmit;
   panel.querySelectorAll('[data-challenge-choice]').forEach((btn) => { btn.disabled = false; });
-  if ($challengeEndTheme) $challengeEndTheme.textContent = t(themeKeyForNow());
+  if ($challengeEndTheme) $challengeEndTheme.textContent = t('challengeThemeLabel') + ' ' + t(themeKeyForNow());
   if ($challengeEndQuestion) {
+    // Ohne Schlüssel gibt es keine Einreichung, also auch keine Ja/Nein-Frage.
+    $challengeEndQuestion.hidden = !canSubmit;
     $challengeEndQuestion.textContent = t('endChallengeQuestion', { location: challengeLocationLabel() });
   }
-  if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeHint');
+  if ($challengeEndStatus) $challengeEndStatus.textContent = t(canSubmit ? 'endChallengeHint' : 'endChallengeQrOnly');
 
   const qrUrl = challengeStatus.appUrl || appSettings.challengeAppUrl;
   if ($challengeEndQrWrap && $challengeEndQr) {
