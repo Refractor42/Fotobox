@@ -29,6 +29,20 @@ exit /b 0
 echo Fotobox Kiosk
 echo -------------
 
+rem --- Automatische Abhaengigkeitspruefung (npm install) -----------
+if not exist "node_modules\" (
+    echo Abhaengigkeiten fehlen. Fuehre 'npm install' aus...
+    call npm install
+    if errorlevel 1 (
+        echo.
+        echo FEHLER: 'npm install' ist fehlgeschlagen.
+        pause
+        exit /b 1
+    )
+    echo Abhaengigkeiten erfolgreich installiert.
+    echo.
+)
+
 rem --- Server pruefen, sonst starten ---------------------------------
 powershell -NoProfile -ExecutionPolicy Bypass -Command "$c=New-Object Net.Sockets.TcpClient; try { $c.Connect('127.0.0.1',%PORT%); $c.Close(); exit 0 } catch { exit 1 }"
 if errorlevel 1 (
@@ -60,7 +74,7 @@ if not defined BROWSER (
 )
 
 if /i "%~1"=="--dry-run" (
-  echo URL:     %URL%
+  echo URL:      %URL%
   echo Browser: %BROWSER%
   echo Profil:  %KIOSK_PROFILE%
   exit /b 0
