@@ -287,6 +287,7 @@ const I18N = {
     sessionCompleted: 'Aufnahme abgeschlossen',
     sessionCompletionError: 'Die Sitzung konnte nicht abgeschlossen werden. Bitte erneut versuchen.',
     cvdHint: 'Farbmodus für Sehschwächen',
+    a11yResetHint: 'Wird am Startbildschirm automatisch nach {seconds} Sekunden zurückgesetzt.',
     cvdGroupLabel: 'Farbmodus',
     cvdStandard: 'Standard',
     cvdStandardNote: 'Volles Farbspektrum (Normales Sehen)',
@@ -536,6 +537,7 @@ const I18N = {
     sessionCompleted: 'Capture complete',
     sessionCompletionError: 'The session could not be completed. Please try again.',
     cvdHint: 'Colour mode for vision deficiencies',
+    a11yResetHint: 'Resets automatically on the start screen after {seconds} seconds.',
     cvdGroupLabel: 'Colour mode',
     cvdStandard: 'Default',
     cvdStandardNote: 'Full colour spectrum (normal vision)',
@@ -591,6 +593,7 @@ function applyLanguage(lang) {
     el.setAttribute('aria-label', t(el.dataset.i18nAria));
   });
   document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
+  updateA11yResetHint();
   document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
     const active = btn.dataset.lang === currentLang;
     btn.classList.toggle('is-selected', active);
@@ -653,6 +656,7 @@ const APP_SETTINGS_DEFAULTS = Object.freeze({
   idleEndSeconds: 40,
   idleProcessSeconds: 75,
   idleWarnSeconds: 15,
+  a11yResetSeconds: 12,
   defaultCountdownSeconds: 5,
   defaultCaptureMode: 'single',
   defaultSound: true,
@@ -727,6 +731,7 @@ function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
     idleEndSeconds: intInRange(merged.idleEndSeconds, APP_SETTINGS_DEFAULTS.idleEndSeconds, 15, 180),
     idleProcessSeconds: intInRange(merged.idleProcessSeconds, APP_SETTINGS_DEFAULTS.idleProcessSeconds, 20, 300),
     idleWarnSeconds: intInRange(merged.idleWarnSeconds, APP_SETTINGS_DEFAULTS.idleWarnSeconds, 5, 60),
+    a11yResetSeconds: intInRange(merged.a11yResetSeconds, APP_SETTINGS_DEFAULTS.a11yResetSeconds, 5, 60),
     defaultCountdownSeconds: [3, 5, 10].includes(countdown) ? countdown : APP_SETTINGS_DEFAULTS.defaultCountdownSeconds,
     defaultCaptureMode: merged.defaultCaptureMode === 'strip' ? 'strip' : 'single',
     defaultSound: merged.defaultSound !== false,
@@ -921,6 +926,13 @@ function resetAccessibilitySettings() {
   try { localStorage.removeItem('soundEnabled'); } catch (e) {}
 }
 
+// Der Hinweis im Einstellungs-Dialog nennt die im Admin gesetzte Frist.
+function updateA11yResetHint() {
+  const hint = document.getElementById('a11yResetHint');
+  if (!hint) return;
+  hint.textContent = t('a11yResetHint').replace('{seconds}', String(appSettings.a11yResetSeconds));
+}
+
 function cancelAccessibilityResetAnimation(complete = false) {
   const animation = accessibilityResetAnimation;
   accessibilityResetAnimation = null;
@@ -1050,7 +1062,7 @@ function syncAccessibilityIdle() {
 function checkAccessibilityIdle() {
   syncAccessibilityIdle();
   if (!accessibilityOnStart || currentState !== 'splash' || !accessibilityLastActivity) return;
-  if (Date.now() - accessibilityLastActivity < 12000) return;
+  if (Date.now() - accessibilityLastActivity < appSettings.a11yResetSeconds * 1000) return;
   if (isCapturing || isSavingPhoto || isDiscardingPhoto || capturePrint) return;
   if (accessibilityResetAnimation) return;
   const changed = Object.entries(ACCESSIBILITY_DEFAULTS)
@@ -1217,6 +1229,7 @@ function applyAppSettings(data) {
     try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
     if (currentState === 'splash') applyLanguage(defaultLang);
   }
+  updateA11yResetHint();
   cacheAppSettings(appSettings);
 }
 
@@ -1878,6 +1891,8 @@ function syncCancelHome() {
     : document.querySelector('.side-rail__home');
   if (homeHost && $cancelHome.parentElement !== homeHost) homeHost.appendChild($cancelHome);
   $splash.classList.toggle('is-eye-idle', onSplash);
+  // Nur das Home-Symbol: die Beschriftung gehört zu Kamera- und Endscreen.
+  $cancelHome.classList.toggle('is-gallery', currentState === 'gallery');
   $cancelHome.hidden = onSplash || $camera.classList.contains('is-capture-cancellable');
   if ($sideRail) $sideRail.hidden = onSplash;
   if ($sideMenuToggle) {
@@ -4000,6 +4015,9 @@ function goTo(sectionName) {
   gsap.to(target, { opacity: 1, duration: 0.3, ease: 'power2.out' });
 
   currentState = sectionName;
+  // In der Galerie gibt es keinen „Fertig“-Rückweg: dort zeigt der Button
+  // wieder das Home-Symbol statt der grünen „Zurück zum Start“-Pille.
+  if (sectionName === 'gallery') setHomeMode('default');
   syncCancelHome();
 
   if (sectionName === 'gallery') {
@@ -4085,6 +4103,7 @@ function closeGallery() {
         $camera.style.display = 'block';
         gsap.set($camera, { opacity: 1 });
         currentState = 'camera';
+        setHomeMode('done');
         syncCancelHome();
         const entry = document.querySelector('.endscreen__action[data-end="gallery"]');
         if (entry) entry.focus({ preventScroll: true });

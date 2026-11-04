@@ -769,6 +769,13 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
   outline: 3px solid var(--c-highlight);
   outline-offset: 4px;
 }
+/* Galerie: nur der runde Home-Button, keine Rückkehr-Pille mit Text. */
+.cancel-home.is-gallery {
+  gap: 0;
+}
+.cancel-home.is-gallery .cancel-home__label {
+  display: none;
+}
 .cancel-home__label {
   font-size: var(--action-label-size);
   line-height: var(--action-label-line);

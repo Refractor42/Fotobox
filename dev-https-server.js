@@ -1115,6 +1115,7 @@ const DEFAULT_SETTINGS = Object.freeze({
   idleEndSeconds: 40,
   idleProcessSeconds: 75,
   idleWarnSeconds: 15,
+  a11yResetSeconds: 12,
   defaultCountdownSeconds: 5,
   defaultCaptureMode: 'single',
   defaultSound: true,
@@ -1176,6 +1177,7 @@ function sanitizeSettings(data) {
     idleEndSeconds: numberInRange(raw.idleEndSeconds, DEFAULT_SETTINGS.idleEndSeconds, 15, 180),
     idleProcessSeconds: numberInRange(raw.idleProcessSeconds, DEFAULT_SETTINGS.idleProcessSeconds, 20, 300),
     idleWarnSeconds: numberInRange(raw.idleWarnSeconds, DEFAULT_SETTINGS.idleWarnSeconds, 5, 60),
+    a11yResetSeconds: numberInRange(raw.a11yResetSeconds, DEFAULT_SETTINGS.a11yResetSeconds, 5, 60),
     defaultCountdownSeconds: [3, 5, 10].includes(countdown) ? countdown : DEFAULT_SETTINGS.defaultCountdownSeconds,
     defaultCaptureMode: raw.defaultCaptureMode === 'strip' ? 'strip' : 'single',
     defaultSound: raw.defaultSound !== false,
@@ -1273,6 +1275,7 @@ function validateSettingsPatch(patch) {
   }
   if (has('idleEndSeconds')) next.idleEndSeconds = assertInteger(patch.idleEndSeconds, 'Endscreen-Zeit', 15, 180);
   if (has('idleProcessSeconds')) next.idleProcessSeconds = assertInteger(patch.idleProcessSeconds, 'Ablauf-Zeit', 20, 300);
+  if (has('a11yResetSeconds')) next.a11yResetSeconds = assertInteger(patch.a11yResetSeconds, 'Barrierefreiheits-Reset', 5, 60);
   if (has('idleWarnSeconds')) next.idleWarnSeconds = assertInteger(patch.idleWarnSeconds, 'Warnzeit', 5, 60);
   if (next.idleWarnSeconds >= next.idleEndSeconds || next.idleWarnSeconds >= next.idleProcessSeconds) {
     throw new Error('Die Warnzeit muss kürzer als beide Inaktivitätszeiten sein.');

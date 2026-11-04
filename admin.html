@@ -1859,6 +1859,19 @@
 
         <div class="setting-row">
           <div class="setting-row__copy">
+            <label class="setting-row__title" for="a11yResetRange">Barrierefreiheit zurücksetzen</label>
+            <p class="setting-row__desc">Am Startbildschirm: So lange ohne Berührung, bis Schriftgröße, Farbmodus und Ton auf Standard springen. Jede Berührung setzt die Frist neu.</p>
+          </div>
+          <div class="setting-control">
+            <div class="range-wrap">
+              <input type="range" id="a11yResetRange" min="5" max="60" step="1" value="12" />
+              <output class="range-value" id="a11yResetValue" for="a11yResetRange">12 s</output>
+            </div>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
             <label class="setting-row__title" for="qrTtlHours">QR-Link gültig</label>
             <p class="setting-row__desc">So lange bleibt der Download-Link auf dem Handy erreichbar, nachdem der QR-Code erzeugt wurde.</p>
           </div>
@@ -1869,7 +1882,7 @@
         </div>
       </div>
 
-      <p class="section-note" id="idleSummary">Nach dem Foto: 40 s · mitten im Ablauf: 75 s · Warnung: 15 s.</p>
+      <p class="section-note" id="idleSummary">Nach dem Foto: 40 s · mitten im Ablauf: 75 s · Warnung: 15 s · Barrierefreiheit: 12 s.</p>
     </section>
 
     <!-- Section: Capture Defaults -->
@@ -2473,6 +2486,7 @@
         idleEndSeconds: 40,
         idleProcessSeconds: 75,
         idleWarnSeconds: 15,
+        a11yResetSeconds: 12,
         defaultCountdownSeconds: 5,
         defaultCaptureMode: 'single',
         defaultSound: true,
@@ -2501,6 +2515,8 @@
       const $idleProcessValue = document.getElementById('idleProcessValue');
       const $idleWarnRange = document.getElementById('idleWarnRange');
       const $idleWarnValue = document.getElementById('idleWarnValue');
+      const $a11yResetRange = document.getElementById('a11yResetRange');
+      const $a11yResetValue = document.getElementById('a11yResetValue');
       const $idleSummary = document.getElementById('idleSummary');
       const $qrTtlHours = document.getElementById('qrTtlHours');
       const $challengeEnabledToggle = document.getElementById('challengeEnabledToggle');
@@ -2688,7 +2704,7 @@
       }
 
       function updateIdleSummary(settings = currentSettings) {
-        $idleSummary.textContent = `Nach dem Foto: ${settings.idleEndSeconds} s · mitten im Ablauf: ${settings.idleProcessSeconds} s · Warnung: ${settings.idleWarnSeconds} s.`;
+        $idleSummary.textContent = `Nach dem Foto: ${settings.idleEndSeconds} s · mitten im Ablauf: ${settings.idleProcessSeconds} s · Warnung: ${settings.idleWarnSeconds} s · Barrierefreiheit: ${settings.a11yResetSeconds} s.`;
       }
 
       function renderThemePreview(settings = currentSettings) {
@@ -2728,6 +2744,7 @@
         syncRange($idleEndRange, $idleEndValue, currentSettings.idleEndSeconds);
         syncRange($idleProcessRange, $idleProcessValue, currentSettings.idleProcessSeconds);
         syncRange($idleWarnRange, $idleWarnValue, currentSettings.idleWarnSeconds);
+        syncRange($a11yResetRange, $a11yResetValue, currentSettings.a11yResetSeconds);
         $qrTtlHours.value = String(currentSettings.qrTtlHours);
         $challengeEnabledToggle.setAttribute('aria-checked', String(currentSettings.challengeEnabled));
         $challengeEnabledText.textContent = currentSettings.challengeEnabled ? 'Ein' : 'Aus';
@@ -3114,6 +3131,7 @@
       bindIdleRange($idleEndRange, $idleEndValue, 'idleEndSeconds');
       bindIdleRange($idleProcessRange, $idleProcessValue, 'idleProcessSeconds');
       bindIdleRange($idleWarnRange, $idleWarnValue, 'idleWarnSeconds');
+      bindIdleRange($a11yResetRange, $a11yResetValue, 'a11yResetSeconds');
 
       $qrTtlHours.addEventListener('change', () => {
         const value = Number($qrTtlHours.value);
