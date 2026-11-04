@@ -1758,7 +1758,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   border-color: var(--c-highlight);
   box-shadow: 0 0 0 2px rgb(var(--c-highlight-rgb) / 0.35);
 }
-.bar-tile--frame { padding: 6%; background: rgba(0, 0, 0, 0.34); }
+.bar-tile--frame { padding: 2px; background: rgba(0, 0, 0, 0.34); }
 .bar-tile--frame img {
   width: 100%;
   height: 100%;
