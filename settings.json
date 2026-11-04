@@ -3,16 +3,16 @@
   "defaultLanguage": "de",
   "trashRetentionDays": 7,
   "idleEndSeconds": 40,
-  "idleProcessSeconds": 75,
-  "idleWarnSeconds": 15,
-  "a11yResetSeconds": 12,
+  "idleProcessSeconds": 55,
+  "idleWarnSeconds": 5,
+  "a11yResetSeconds": 11,
   "defaultCountdownSeconds": 5,
   "defaultCaptureMode": "single",
   "defaultSound": true,
   "filtersEnabled": true,
   "stickersEnabled": true,
   "overlaysEnabled": true,
-  "cameraFacingMode": "user",
+  "cameraFacingMode": "environment",
   "galleryPageSize": 12,
   "accentColor": "#ffd700",
   "secondaryColor": "#00e0d6",
@@ -22,5 +22,5 @@
   "challengeEnabled": true,
   "challengeLocation": "lcc",
   "challengeAppUrl": "https://site-6e612acb7a47490692d7da5a7b9d9292.freebuff.page",
-  "updatedAt": "2026-11-04T19:43:30.181Z"
+  "updatedAt": "2026-11-04T22:38:31.032Z"
 }

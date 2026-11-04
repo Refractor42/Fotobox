@@ -1127,6 +1127,8 @@ const DEFAULT_SETTINGS = Object.freeze({
   accentColor: '#ffd700',
   secondaryColor: '#00e0d6',
   backgroundColor: '#0d0d0d',
+  buttonColor: '#12161e',
+  buttonTransparency: 15,
   brandName: 'SnapBox',
   qrTtlHours: 24,
   challengeEnabled: false,
@@ -1190,6 +1192,9 @@ function sanitizeSettings(data) {
     secondaryColor: typeof raw.secondaryColor === 'string' && COLOR_RE.test(raw.secondaryColor)
       ? raw.secondaryColor.toLowerCase() : DEFAULT_SETTINGS.secondaryColor,
     backgroundColor: safeBackground,
+    buttonColor: typeof raw.buttonColor === 'string' && COLOR_RE.test(raw.buttonColor)
+      ? raw.buttonColor.toLowerCase() : DEFAULT_SETTINGS.buttonColor,
+    buttonTransparency: numberInRange(raw.buttonTransparency, DEFAULT_SETTINGS.buttonTransparency, 0, 100),
     brandName: brand || DEFAULT_SETTINGS.brandName,
     qrTtlHours: numberInRange(raw.qrTtlHours, DEFAULT_SETTINGS.qrTtlHours, 1, 168),
     challengeEnabled: raw.challengeEnabled === true,
@@ -1304,7 +1309,7 @@ function validateSettingsPatch(patch) {
     if (![6, 12, 24].includes(size)) throw new Error('Ungültige Galerie-Seitengröße.');
     next.galleryPageSize = size;
   }
-  ['accentColor', 'secondaryColor', 'backgroundColor'].forEach((key) => {
+  ['accentColor', 'secondaryColor', 'backgroundColor', 'buttonColor'].forEach((key) => {
     if (!has(key)) return;
     if (typeof patch[key] !== 'string' || !COLOR_RE.test(patch[key])) {
       throw new Error('Farben müssen als Hex-Wert (#rrggbb) angegeben werden.');
@@ -1313,6 +1318,9 @@ function validateSettingsPatch(patch) {
   });
   if (has('backgroundColor') && hexLuminance(next.backgroundColor) > MAX_BACKGROUND_LUMINANCE) {
     throw new Error('Der Hintergrund muss dunkel bleiben, damit die weiße Schrift lesbar ist.');
+  }
+  if (has('buttonTransparency')) {
+    next.buttonTransparency = assertInteger(patch.buttonTransparency, 'Button-Transparenz', 0, 100);
   }
   if (has('brandName')) {
     const brand = typeof patch.brandName === 'string' ? patch.brandName.trim() : '';

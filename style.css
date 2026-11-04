@@ -8,6 +8,11 @@
   --c-bg:        #0d0d0d;
   --c-surface:   rgba(255, 255, 255, 0.045);
   --c-surface-2: rgba(255, 255, 255, 0.075);
+  /* Runde Kiosk-Buttons (Start, Leiste, Review). Die Admin-Einstellung
+     überschreibt diese Fallback-Werte beim Laden der Seite. */
+  --c-control-rgb: 18 22 30;
+  --c-control-alpha: 0.85;
+  --c-control-hover-alpha: 0.91;
   --c-accent:    #ffd700;
   --c-accent-2:  #00e0d6;
   /* Farbmodus-Bausteine. Die CVD-Schemata weiter unten überschreiben nur
@@ -160,14 +165,14 @@ body {
   padding: 8px;
   border: 1px solid rgba(255, 255, 255, 0.35);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.09);
+  background: rgb(var(--c-control-rgb) / var(--c-control-alpha));
   color: var(--c-highlight, #fff);
   font: inherit;
   cursor: pointer;
   touch-action: manipulation;
   transition: background 0.2s ease, border-color 0.2s ease;
 }
-.option-cycle:hover:not(:disabled) { background: rgba(255, 255, 255, 0.17); }
+.option-cycle:hover:not(:disabled) { background: rgb(var(--c-control-rgb) / var(--c-control-hover-alpha)); }
 .option-cycle:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 4px; }
 .option-cycle:disabled { opacity: 0.4; cursor: default; }
 .option-cycle__value { font-size: calc((clamp(12px, 1vw, 15px)) * var(--a11y-text-scale, 1)); font-weight: 800; line-height: 1; }

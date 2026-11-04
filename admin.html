@@ -929,11 +929,13 @@
     }
     .switch:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 3px; }
 
-    .setting-row--colors {
+    .setting-row--colors,
+    .setting-row--buttons {
       grid-template-columns: 1fr;
     }
 
-    .setting-row--colors .setting-control {
+    .setting-row--colors .setting-control,
+    .setting-row--buttons .setting-control {
       justify-content: stretch;
     }
 
@@ -943,6 +945,8 @@
       gap: 0.8rem;
       width: 100%;
     }
+
+    .color-grid--single { grid-template-columns: minmax(0, 220px); }
 
     .color-field {
       display: flex;
@@ -1092,6 +1096,39 @@
       display: flex;
       flex-wrap: wrap;
       gap: 0.65rem;
+    }
+
+    .section-reset {
+      flex: 0 0 auto;
+      padding: 0.5rem 0.85rem;
+      font-size: 0.8rem;
+    }
+
+    .reset-all-box {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.1rem;
+      border: 1px solid rgba(239, 68, 68, 0.28);
+      border-radius: var(--radius-md);
+      background: rgba(239, 68, 68, 0.06);
+    }
+
+    .reset-all-box__copy {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+      min-width: 0;
+    }
+
+    .reset-all-box__title { font-weight: 700; }
+
+    .reset-all-box__desc {
+      color: var(--c-text-muted);
+      font-size: 0.83rem;
+      line-height: 1.45;
     }
 
     .btn--danger-ghost {
@@ -1727,6 +1764,7 @@
       <a href="#challenge">Challenge</a>
       <a href="#usageStats">Nutzung</a>
       <a href="#system">System</a>
+      <a href="#resetAll">Zurücksetzen</a>
     </nav>
 
         <!-- Section: Default Language -->
@@ -1739,10 +1777,11 @@
               <line x1="2" y1="12" x2="22" y2="12"></line>
               <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
             </svg>
-            Standard-Sprache (Default Language)
+            Standard-Sprache
           </h2>
           <p class="section-header__desc">Wähle die Sprache, mit der die Fotobox startet und zu der sie nach jedem gespeicherten Foto automatisch zurückkehrt.</p>
         </div>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="language" aria-label="Standardwerte für die Standard-Sprache wiederherstellen">Standardwerte</button>
       </div>
 
       <div class="orientation-grid" role="radiogroup" aria-label="Standard-Sprache">
@@ -1792,8 +1831,9 @@
             </svg>
             Papierkorb-Aufbewahrung
           </h2>
-          <p class="section-header__desc">Wie lange Fotos im Admin-Papierkorb bleiben, bevor sie endgültig entfernt werden. Gilt für Löschungen im Admin-Panel; bereits gelöschte Fotos behalten ihren bisherigen Ablauf.</p>
+          <p class="section-header__desc">Wie lange Fotos im Admin-Papierkorb bleiben, bevor sie endgültig entfernt werden. Gilt für Löschungen im Admin-Panel.</p>
         </div>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="retention" aria-label="Standardwerte für die Papierkorb-Aufbewahrung wiederherstellen">Standardwerte</button>
       </div>
 
       <div class="retention-grid" role="radiogroup" aria-label="Aufbewahrungsdauer">
@@ -1815,6 +1855,7 @@
           </h2>
           <p class="section-header__desc">Wie lange Gäste auf einem Screen bleiben dürfen, bevor die Fotobox zurückspringt. Die Warnung erscheint vor dem Reset und lässt sich per Tipp abbrechen.</p>
         </div>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="times" aria-label="Standardwerte für Zeiten und Inaktivität wiederherstellen">Standardwerte</button>
       </div>
 
       <div class="settings-stack">
@@ -1895,6 +1936,7 @@
           </h2>
           <p class="section-header__desc">Diese Werte gelten für jeden neuen Gast. Gäste können sie während ihrer Sitzung weiterhin selbst ändern; beim Zurückspringen werden sie wieder auf den Standard gesetzt. Filter, Sticker und Overlays lassen sich zusätzlich für alle Gäste ausblenden — diese Schalter wirken sofort.</p>
         </div>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="capture" aria-label="Standardwerte für die Aufnahme wiederherstellen">Standardwerte</button>
       </div>
 
       <div class="settings-stack">
@@ -2002,6 +2044,7 @@
           </h2>
           <p class="section-header__desc">Marke und Farben der Fotobox. Die Vorschau zeigt sofort, wie Startbutton, Auslöser und Verlauf auf den Gäste-Bildschirmen aussehen.</p>
         </div>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="appearance" aria-label="Standardwerte für die Darstellung wiederherstellen">Standardwerte</button>
       </div>
 
       <div class="settings-stack">
@@ -2046,6 +2089,30 @@
             </div>
           </div>
         </div>
+
+        <div class="setting-row setting-row--buttons">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Runde Buttons</span>
+            <p class="setting-row__desc">Hintergrundfarbe und Transparenz der runden Buttons auf Start-, Aufnahme- und Review-Screen sowie der Countdown-/Modus-Auswahl und der runden Filterauswahl. Farbfilter-Vorschauen, der gelbe Auslöser und der grüne Bestätigen-Button bleiben unverändert.</p>
+          </div>
+          <div class="setting-control setting-control--stack">
+            <div class="color-grid color-grid--single">
+              <label class="color-field">
+                <span class="field-label">Buttonfarbe</span>
+                <span class="color-field__control">
+                  <input type="color" id="buttonColorPicker" value="#12161e" aria-label="Buttonfarbe wählen" />
+                  <input class="color-field__hex" id="buttonColorHex" type="text" maxlength="7" spellcheck="false" aria-label="Buttonfarbe als Hex-Wert" />
+                </span>
+              </label>
+            </div>
+            <label class="field-label" for="buttonTransparencyRange">Transparenz</label>
+            <div class="range-wrap">
+              <input type="range" id="buttonTransparencyRange" min="0" max="100" step="1" value="15" />
+              <output class="range-value" id="buttonTransparencyValue" for="buttonTransparencyRange">15 %</output>
+            </div>
+            <p class="setting-row__desc">0 % = deckend, 100 % = vollständig transparent.</p>
+          </div>
+        </div>
       </div>
 
       <div class="theme-preview" id="themePreview" style="--preview-bg: #0d0d0d; --preview-accent: #ffd700; --preview-secondary: #00e0d6; --preview-contrast: #0b0c10;">
@@ -2061,10 +2128,6 @@
       </div>
 
       <p class="contrast-note" id="contrastNote" role="status" aria-live="polite">Kontrast wird geprüft…</p>
-
-      <div class="button-row">
-        <button class="btn btn--ghost" id="resetColorsBtn" type="button">Standardfarben wiederherstellen</button>
-      </div>
     </section>
 
     <!-- Section: Gallery -->
@@ -2077,6 +2140,7 @@
           </h2>
           <p class="section-header__desc">Galerie und Papierkorb laden Fotos seitenweise. Eine kleinere Seite startet schneller; „Mehr laden“ bleibt für alle weiteren Fotos sichtbar.</p>
         </div>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="gallery" aria-label="Standardwerte für Galerie und Leistung wiederherstellen">Standardwerte</button>
       </div>
 
       <div class="settings-stack">
@@ -2112,6 +2176,7 @@
           </h2>
           <p class="section-header__desc">Verknüpft diese Fotobox mit der öffentlichen Challenge-Web-App. Standort, Adresse und API-Schlüssel werden hier hinterlegt. Der Schlüssel bleibt auf dem Server und wird nie an den Kiosk-Browser ausgeliefert.</p>
         </div>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="challenge" aria-label="Standardwerte für die Challenge wiederherstellen">Standardwerte</button>
       </div>
 
       <div class="settings-stack">
@@ -2288,23 +2353,6 @@
         </div>
       </div>
 
-      <div class="usage-source" aria-label="Woher die Statistikdaten kommen">
-        <div class="usage-source__item">
-          <span class="usage-source__badge">Alle Boxen</span>
-          <div>
-            <h3 class="usage-source__title">Fotos &amp; Aufnahmezeiten</h3>
-            <p class="usage-source__text">Werden aus dem gemeinsamen Supabase-Storage gelesen, nicht aus einer lokalen Datenbank. Jede Fotobox am selben Bucket ist enthalten — auch rückwirkend.</p>
-          </div>
-        </div>
-        <div class="usage-source__item">
-          <span class="usage-source__badge usage-source__badge--local">Nur dieser Server</span>
-          <div>
-            <h3 class="usage-source__title">Aktionen am Ende</h3>
-            <p class="usage-source__text">Werden lokal auf diesem Server gezählt. Andere Boxen mit einem eigenen Server sind hier nicht enthalten.</p>
-          </div>
-        </div>
-      </div>
-
       <div class="usage-panel">
         <div class="usage-panel__head">
           <h3 class="usage-panel__title">Fotos pro Tag</h3>
@@ -2338,7 +2386,7 @@
             <h3 class="usage-panel__title">Aktionen am Ende</h3>
             <span class="usage-panel__meta" id="usageActionsMeta">—</span>
           </div>
-          <p class="usage-panel__desc">Zählt Klicks auf QR-Code, Drucken, Teilen und Download auf dem letzten Bildschirm. Nicht gezählt werden Fotos, Gäste oder abgebrochene Aufnahmen; Mehrfachklicks zählen mehrfach.</p>
+          <p class="usage-panel__desc">Zählt Klicks auf QR-Code, Drucken und Teilen auf dem letzten Bildschirm. Nicht gezählt werden Fotos, Gäste oder abgebrochene Aufnahmen; Mehrfachklicks zählen mehrfach.</p>
           <div id="usageActions"></div>
         </div>
       </div>
@@ -2405,6 +2453,30 @@
           </svg>
           Zur Fotobox wechseln
         </a>
+      </div>
+    </section>
+
+    <!-- Section: Reset all settings -->
+    <section class="section-card" id="resetAll">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path>
+              <path d="M3 3v5h5"></path>
+            </svg>
+            Fotobox zurücksetzen
+          </h2>
+          <p class="section-header__desc">Setzt alle gespeicherten Einstellungen dieser Fotobox auf die Standardwerte zurück.</p>
+        </div>
+      </div>
+
+      <div class="reset-all-box">
+        <div class="reset-all-box__copy">
+          <strong class="reset-all-box__title">Alle Einstellungen zurücksetzen</strong>
+          <span class="reset-all-box__desc">Sprache, Zeiten, Aufnahme-Standards, Darstellung, Galerie und Challenge-Konfiguration werden zurückgesetzt. Fotos, Papierkorb und Zugangsdaten wie der Challenge-API-Schlüssel oder die Admin-PIN bleiben erhalten. Diese Aktion kann nicht rückgängig gemacht werden.</span>
+        </div>
+        <button class="btn btn--danger-ghost" id="resetAllSettingsBtn" type="button">Alle Einstellungen zurücksetzen</button>
       </div>
     </section>
   </main>
@@ -2487,6 +2559,8 @@
         accentColor: '#ffd700',
         secondaryColor: '#00e0d6',
         backgroundColor: '#0d0d0d',
+        buttonColor: '#12161e',
+        buttonTransparency: 15,
         brandName: 'SnapBox',
         qrTtlHours: 24,
         challengeEnabled: false,
@@ -2494,6 +2568,24 @@
         challengeAppUrl: ''
       };
       const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS);
+      const SECTION_RESET_FIELDS = Object.freeze({
+        language: ['defaultLanguage'],
+        retention: ['trashRetentionDays'],
+        times: ['idleEndSeconds', 'idleProcessSeconds', 'idleWarnSeconds', 'a11yResetSeconds', 'qrTtlHours'],
+        capture: ['defaultCaptureMode', 'defaultCountdownSeconds', 'defaultSound', 'cameraFacingMode', 'filtersEnabled', 'stickersEnabled', 'overlaysEnabled'],
+        appearance: ['brandName', 'accentColor', 'secondaryColor', 'backgroundColor', 'buttonColor', 'buttonTransparency'],
+        gallery: ['galleryPageSize'],
+        challenge: ['challengeEnabled', 'challengeLocation', 'challengeAppUrl']
+      });
+      const SECTION_RESET_LABELS = Object.freeze({
+        language: 'Standard-Sprache',
+        retention: 'Papierkorb-Aufbewahrung',
+        times: 'Zeiten',
+        capture: 'Aufnahme-Standards',
+        appearance: 'Darstellung',
+        gallery: 'Galerie',
+        challenge: 'Challenge'
+      });
       const $settingsStatus = document.getElementById('settingsStatus');
       const $settingsStatusText = document.getElementById('settingsStatusText');
       const $adminBrand = document.getElementById('adminBrand');
@@ -2537,8 +2629,13 @@
       const $secondaryColorHex = document.getElementById('secondaryColorHex');
       const $backgroundColorPicker = document.getElementById('backgroundColorPicker');
       const $backgroundColorHex = document.getElementById('backgroundColorHex');
+      const $buttonColorPicker = document.getElementById('buttonColorPicker');
+      const $buttonColorHex = document.getElementById('buttonColorHex');
+      const $buttonTransparencyRange = document.getElementById('buttonTransparencyRange');
+      const $buttonTransparencyValue = document.getElementById('buttonTransparencyValue');
       const $pageSizeOptions = Array.from(document.querySelectorAll('[data-page-size]'));
-      const $resetColorsBtn = document.getElementById('resetColorsBtn');
+      const $resetSectionButtons = Array.from(document.querySelectorAll('[data-reset-section]'));
+      const $resetAllSettingsBtn = document.getElementById('resetAllSettingsBtn');
       const $adminGalleryGrid = document.getElementById('adminGalleryGrid');
       const $adminGallerySummary = document.getElementById('adminGallerySummary');
       const $adminGalleryEmpty = document.getElementById('adminGalleryEmpty');
@@ -2707,10 +2804,11 @@
 
         const ratio = contrastRatio(accent, background);
         const enough = ratio >= 3;
+        const ratioText = ratio.toFixed(1).replace('.', ',');
         $contrastNote.classList.toggle('is-warning', !enough);
         $contrastNote.textContent = enough
-          ? `Akzent auf Hintergrund: ${ratio.toFixed(1)}:1 — gut lesbar. Die Schrift im Button wird automatisch passend gewählt.`
-          : `Nur ${ratio.toFixed(1)}:1 Kontrast zwischen Akzent und Hintergrund. Bitte eine deutlichere Akzentfarbe wählen.`;
+          ? `Akzent auf Hintergrund: ${ratioText}:1 — gut lesbar. Die Schrift im Button wird automatisch passend gewählt.`
+          : `Nur ${ratioText}:1 Kontrast zwischen Akzent und Hintergrund. Bitte eine deutlichere Akzentfarbe wählen.`;
       }
 
       function renderChallengeKeyStatus() {
@@ -2760,6 +2858,10 @@
         $secondaryColorHex.value = currentSettings.secondaryColor;
         $backgroundColorPicker.value = currentSettings.backgroundColor;
         $backgroundColorHex.value = currentSettings.backgroundColor;
+        $buttonColorPicker.value = currentSettings.buttonColor;
+        $buttonColorHex.value = currentSettings.buttonColor;
+        $buttonTransparencyRange.value = String(currentSettings.buttonTransparency);
+        $buttonTransparencyValue.textContent = currentSettings.buttonTransparency + ' %';
         $pageSizeOptions.forEach((btn) => {
           btn.setAttribute('aria-pressed', String(Number(btn.dataset.pageSize) === currentSettings.galleryPageSize));
         });
@@ -3286,13 +3388,48 @@
       colorField($accentColorPicker, $accentColorHex, 'accentColor');
       colorField($secondaryColorPicker, $secondaryColorHex, 'secondaryColor');
       colorField($backgroundColorPicker, $backgroundColorHex, 'backgroundColor');
+      colorField($buttonColorPicker, $buttonColorHex, 'buttonColor');
 
-      $resetColorsBtn.addEventListener('click', () => {
-        persistSettings({
-          accentColor: DEFAULT_SETTINGS.accentColor,
-          secondaryColor: DEFAULT_SETTINGS.secondaryColor,
-          backgroundColor: DEFAULT_SETTINGS.backgroundColor
-        }, 'Standardfarben wiederhergestellt.');
+      $buttonTransparencyRange.addEventListener('input', () => {
+        $buttonTransparencyValue.textContent = $buttonTransparencyRange.value + ' %';
+      });
+      $buttonTransparencyRange.addEventListener('change', () => {
+        const value = Number($buttonTransparencyRange.value);
+        if (!Number.isInteger(value) || value < 0 || value > 100) {
+          showToast('Die Transparenz muss zwischen 0 und 100 % liegen.', true);
+          renderAllSettings();
+          return;
+        }
+        if (value === currentSettings.buttonTransparency) return;
+        persistSettings({ buttonTransparency: value }, 'Button-Transparenz gespeichert.');
+      });
+
+      $resetSectionButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const section = button.dataset.resetSection;
+          const fields = SECTION_RESET_FIELDS[section];
+          if (!fields) return;
+          const patch = {};
+          fields.forEach((key) => { patch[key] = DEFAULT_SETTINGS[key]; });
+          const suffix = section === 'challenge'
+            ? ' Der API-Schlüssel bleibt gespeichert.'
+            : '';
+          persistSettings(
+            patch,
+            `${SECTION_RESET_LABELS[section] || 'Einstellungen'} auf Standardwerte zurückgesetzt.${suffix}`
+          );
+        });
+      });
+
+      $resetAllSettingsBtn.addEventListener('click', () => {
+        const confirmed = window.confirm(
+          'Alle Einstellungen der Fotobox auf Standardwerte zurücksetzen?\n\n' +
+          'Fotos, Papierkorb und Zugangsdaten wie der Challenge-API-Schlüssel oder die Admin-PIN bleiben erhalten. Diese Aktion kann nicht rückgängig gemacht werden.'
+        );
+        if (!confirmed) return;
+        const patch = {};
+        SETTING_KEYS.forEach((key) => { patch[key] = DEFAULT_SETTINGS[key]; });
+        persistSettings(patch, 'Alle Einstellungen wurden auf Standardwerte zurückgesetzt.');
       });
 
       // ---- Galerie ----
@@ -4131,14 +4268,13 @@
         const definitions = [
           ['qr', 'QR-Code'],
           ['print', 'Drucken'],
-          ['share', 'Teilen'],
-          ['download', 'Download']
+          ['share', 'Teilen']
         ];
         const values = definitions.map(([key]) => Math.max(0, Number(actions[key]) || 0));
         const total = values.reduce((sum, value) => sum + value, 0);
         $usageActionsMeta.textContent = total > 0 ? 'Dieser Server · ' + usageCount(total) + ' Aktionen' : 'Dieser Server · keine Aktionen';
         if (total === 0) {
-          $usageActions.innerHTML = '<p class="usage-empty">Noch keine Klicks auf QR-Code, Drucken, Teilen oder Download seit diesem Update.</p>';
+          $usageActions.innerHTML = '<p class="usage-empty">Noch keine Klicks auf QR-Code, Drucken oder Teilen seit diesem Update.</p>';
           return;
         }
         const max = Math.max(...values);

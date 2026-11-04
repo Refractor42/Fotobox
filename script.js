@@ -269,6 +269,7 @@ const I18N = {
     toastDeleteSessionOnly: 'Fotos lassen sich nur während einer laufenden Sitzung löschen.',
     toastDeleted: 'Foto gelöscht.',
     toastEditAction: 'Wiederherstellen und zurück zum Bearbeiten',
+    toastRestoreAction: 'Wiederherstellen',
     toastLoadError: 'Gespeicherte Fotos konnten nicht geladen werden.',
     capturedPhotoAlt: 'Aufgenommenes Foto',
     photoPreviewAlt: 'Foto-Vorschau',
@@ -523,6 +524,7 @@ const I18N = {
     toastDeleteSessionOnly: 'Photos can only be deleted during an active session.',
     toastDeleted: 'Photo deleted.',
     toastEditAction: 'Restore and return to editing',
+    toastRestoreAction: 'Restore',
     toastLoadError: 'Saved photos could not be loaded.',
     capturedPhotoAlt: 'Captured photo',
     photoPreviewAlt: 'Photo preview',
@@ -676,6 +678,8 @@ const APP_SETTINGS_DEFAULTS = Object.freeze({
   accentColor: '#ffd700',
   secondaryColor: '#00e0d6',
   backgroundColor: '#0d0d0d',
+  buttonColor: '#12161e',
+  buttonTransparency: 15,
   brandName: 'SnapBox',
   qrTtlHours: 24,
   challengeEnabled: false,
@@ -749,6 +753,8 @@ function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
     accentColor: color(merged.accentColor, APP_SETTINGS_DEFAULTS.accentColor),
     secondaryColor: color(merged.secondaryColor, APP_SETTINGS_DEFAULTS.secondaryColor),
     backgroundColor: color(merged.backgroundColor, APP_SETTINGS_DEFAULTS.backgroundColor),
+    buttonColor: color(merged.buttonColor, APP_SETTINGS_DEFAULTS.buttonColor),
+    buttonTransparency: intInRange(merged.buttonTransparency, APP_SETTINGS_DEFAULTS.buttonTransparency, 0, 100),
     brandName: brand || APP_SETTINGS_DEFAULTS.brandName,
     qrTtlHours: intInRange(merged.qrTtlHours, APP_SETTINGS_DEFAULTS.qrTtlHours, 1, 168),
     challengeEnabled: merged.challengeEnabled === true,
@@ -807,6 +813,20 @@ function applyThemeSettings(settings) {
   const root = document.documentElement;
   const style = root.style;
   const scheme = root.getAttribute('data-cvd');
+
+  const buttonColor = typeof settings.buttonColor === 'string' && /^#[0-9a-f]{6}$/i.test(settings.buttonColor)
+    ? settings.buttonColor
+    : APP_SETTINGS_DEFAULTS.buttonColor;
+  const transparencyValue = Number(settings.buttonTransparency);
+  const buttonTransparency = Number.isInteger(transparencyValue)
+    ? Math.min(100, Math.max(0, transparencyValue))
+    : APP_SETTINGS_DEFAULTS.buttonTransparency;
+  const buttonRgb = hexToRgb(buttonColor);
+  const buttonAlpha = 1 - buttonTransparency / 100;
+  style.setProperty('--c-control-rgb', `${buttonRgb.r} ${buttonRgb.g} ${buttonRgb.b}`);
+  style.setProperty('--c-control-alpha', buttonAlpha.toFixed(2));
+  style.setProperty('--c-control-hover-alpha', Math.min(1, buttonAlpha + 0.06).toFixed(2));
+
   const props = [
     '--c-bg', '--c-accent', '--c-accent-rgb', '--c-accent-2', '--c-accent-2-rgb',
     '--c-accent-dark', '--c-accent-hover', '--c-accent-contrast',
@@ -1078,10 +1098,8 @@ function checkAccessibilityIdle() {
 document.querySelectorAll('[data-accessibility]').forEach(input => {
   input.addEventListener('change', () => {
     if (!input.checked) return;
-    const enlarged = input.value === 'large' && accessibilitySettings[input.dataset.accessibility] !== 'large';
+    // Größenwechsel bleiben bewusst stumm.
     applyAccessibilitySize(input.dataset.accessibility, input.value);
-    if (enlarged) playUiSound('enlargement.mp3');
-    else if (input.value === 'normal') stopEnlargementSound();
   });
 });
 
@@ -1096,7 +1114,6 @@ function openSettings() {
   settingsReturnFocus = document.activeElement;
   $settingsModal.hidden = false;
   syncAccessibilityIdle();
-  playUiSound('enlargement.mp3', true);
   // Fokus in den Dialog: die aktuelle Auswahl, sonst der Schließen-Knopf.
   const current = $settingsModal.querySelector('[data-accessibility="buttonSize"]:checked')
     || ($cvdOptions && $cvdOptions.querySelector('[data-cvd][aria-checked="true"]'));
@@ -2104,7 +2121,7 @@ function discardCurrentPhoto() {
       .forEach(button => { button.disabled = false; });
   };
   if (lastPhoto) {
-    deletePhoto(lastPhoto.card, lastPhoto.id);
+    deletePhoto(lastPhoto.card, lastPhoto.id, { undoMode: 'edit' });
     lastPhoto = null;
   }
   if (!capturedImg) { finish(); return; }
@@ -3598,10 +3615,11 @@ function endPhotoSession() {
   }
 }
 
-// Gäste löschen endgültig — es gibt für sie keinen Papierkorb. Die Toast-
-// Aktion öffnet das Foto stattdessen wieder im Sticker-/Overlay-Editor.
+// Gäste löschen endgültig — es gibt für sie keinen Papierkorb. Beim
+// „Neu aufnehmen“ führt die Toast-Aktion zurück in den Editor, beim Löschen
+// in der Galerie nur zurück in die Galerie.
 // Without a server id the photo was never saved, so only the card is removed.
-async function deletePhoto(card, photoId) {
+async function deletePhoto(card, photoId, { undoMode = null } = {}) {
   if (!photoSessionToken) {
     showToast(t('toastDeleteSessionOnly'), { error: true });
     return;
@@ -3625,13 +3643,18 @@ async function deletePhoto(card, photoId) {
     // 404 = bereits gelöscht (Doppelklick-Race) — gilt als Erfolg
     if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
     removeCard(card);
-    if (image) {
-      showToast(t('toastDeleted'), {
-        actionLabel: t('toastEditAction'),
-        onAction: () => openPhotoInReview(image)
-      });
-    } else {
-      showToast(t('toastDeleted'));
+    if (undoMode) {
+      if (image) {
+        const restoreInGallery = undoMode === 'gallery';
+        showToast(t('toastDeleted'), {
+          actionLabel: t(restoreInGallery ? 'toastRestoreAction' : 'toastEditAction'),
+          onAction: restoreInGallery
+            ? () => restorePhotoToGallery(image)
+            : () => openPhotoInReview(image)
+        });
+      } else {
+        showToast(t('toastDeleted'));
+      }
     }
   } catch (err) {
     console.warn('Photo could not be deleted:', err);
@@ -3639,6 +3662,16 @@ async function deletePhoto(card, photoId) {
   } finally {
     pendingOps.delete(key);
   }
+}
+
+// Stellt ein in der Galerie gelöschtes Foto wieder her, ohne den Editor zu
+// öffnen. Da der Server endgültig löscht, wird das Bild neu hochgeladen und
+// als neue Karte angelegt.
+function restorePhotoToGallery(imageUrl) {
+  if (!imageUrl || !photoSessionToken) return;
+  const card = addToGallery(imageUrl);
+  // Kein Review-Zustand für ein reines Wiederherstellen anlegen.
+  if (lastPhoto && lastPhoto.card === card) lastPhoto = null;
 }
 
 // Öffnet ein gelöschtes Foto erneut im Sticker-/Overlay-Screen. Es wird als
@@ -3746,7 +3779,7 @@ function attachDelete(card, photoId) {
   btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
-    deletePhoto(card, photoId);
+    deletePhoto(card, photoId, { undoMode: 'gallery' });
   });
   card.appendChild(btn);
   positionGalleryDelete(card);

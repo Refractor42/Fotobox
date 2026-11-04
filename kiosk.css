@@ -548,7 +548,7 @@ body.orientation-landscape .capture-bar > .bar-options {
   aspect-ratio: 1;
   border: 2px solid rgba(255, 255, 255, 0.24);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgb(var(--c-control-rgb) / var(--c-control-alpha));
   transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
 }
 .bar-btn__icon svg { width: 48%; height: 48%; }
@@ -566,7 +566,7 @@ body.orientation-landscape .capture-bar > .bar-options {
 .side-menu-toggle.is-frames-mode .bar-btn__icon > svg { display: none; }
 .bar-btn:hover .bar-btn__icon {
   transform: scale(1.05);
-  background: rgba(255, 255, 255, 0.13);
+  background: rgb(var(--c-control-rgb) / var(--c-control-hover-alpha));
   border-color: rgba(255, 255, 255, 0.45);
 }
 .bar-btn:active .bar-btn__icon { transform: scale(0.95); }
@@ -722,7 +722,7 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
   place-items: center;
   border: 3px solid #e8eaf0;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.28);
+  background: rgb(var(--c-control-rgb) / var(--c-control-alpha));
   transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 .cancel-home__icon {
@@ -790,7 +790,7 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
   white-space: nowrap;
 }
 .cancel-home:hover .cancel-home__disc {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgb(var(--c-control-rgb) / var(--c-control-hover-alpha));
   transform: scale(1.06);
 }
 .cancel-home:active .cancel-home__disc { transform: scale(0.95); }
@@ -834,7 +834,7 @@ body.orientation-landscape .review-actions {
   display: grid;
   place-items: center;
   color: #e8eaf0;
-  background: rgba(0, 0, 0, 0.28);
+  background: rgb(var(--c-control-rgb) / var(--c-control-alpha));
   transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
 }
 .round-action__icon svg { width: 44%; height: 44%; }
@@ -845,7 +845,7 @@ body.orientation-landscape .review-actions {
   color: #e8eaf0;
   white-space: nowrap;
 }
-.round-action:hover .round-action__icon { transform: scale(1.06); background: rgba(255, 255, 255, 0.08); }
+.round-action:hover .round-action__icon { transform: scale(1.06); background: rgb(var(--c-control-rgb) / var(--c-control-hover-alpha)); }
 .round-action:active .round-action__icon { transform: scale(0.95); }
 .round-action:focus-visible { outline: none; }
 .round-action:focus-visible .round-action__icon { box-shadow: 0 0 0 4px rgb(var(--c-highlight-rgb) / 0.55); }
@@ -1544,7 +1544,7 @@ body.orientation-landscape .bar-btn__icon {
   width: var(--bar-side-size);
   border-width: 1.5px;
   border-color: rgba(255, 255, 255, 0.34);
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--c-control-rgb) / var(--c-control-alpha));
   -webkit-backdrop-filter: blur(14px) saturate(140%);
   backdrop-filter: blur(14px) saturate(140%);
   box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
@@ -1895,7 +1895,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   padding: 9% 12%;
   border: 2px solid rgba(255, 255, 255, 0.22);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgb(var(--c-control-rgb) / var(--c-control-alpha));
   /* Verlauf/Emoji enden exakt an der Kreisform statt unter dem Rand
      hervorzuschimmern. */
   background-clip: padding-box;
@@ -2023,7 +2023,7 @@ body.orientation-landscape #camera.is-reviewing .review-actions .round-action {
 body.orientation-landscape #camera.is-reviewing .review-actions .round-action__icon {
   width: var(--bar-shutter-size);
   border: 3px solid rgba(232, 234, 240, 0.6);
-  background: rgba(18, 22, 30, 0.82);
+  background: rgb(var(--c-control-rgb) / var(--c-control-alpha));
   color: #fff;
   box-shadow: 0 0 0 4px rgba(232, 234, 240, 0.06), 0 8px 22px rgba(0, 0, 0, 0.28);
   transition: transform 160ms ease, background-color 160ms ease, box-shadow 160ms ease;
@@ -2440,14 +2440,10 @@ html[data-ui="2"] .bar-slot--options {
   padding: 2px;
   color: #fff;
   border-color: rgba(255, 255, 255, 0.45);
-  background: var(--cycle-bg, #162c39);
+  background: rgb(var(--c-control-rgb) / var(--c-control-alpha));
 }
 .bar-slot--options [data-cycle="timer"] { transition: background-color 280ms ease-in-out, border-color 0.2s ease; }
-.bar-slot--options [data-cycle="timer"][data-value="3"] { --cycle-bg: #2c5869; }
-.bar-slot--options [data-cycle="timer"][data-value="5"] { --cycle-bg: #204353; }
-.bar-slot--options [data-cycle="timer"][data-value="10"] { --cycle-bg: #162c39; }
-.bar-slot--options [data-cycle="mode"] { --cycle-bg: #2a2538; }
-.bar-slot--options .option-cycle:hover:not(:disabled) { background: var(--cycle-bg); border-color: rgba(255, 255, 255, 0.75); }
+.bar-slot--options .option-cycle:hover:not(:disabled) { background: rgb(var(--c-control-rgb) / var(--c-control-hover-alpha)); border-color: rgba(255, 255, 255, 0.75); }
 .bar-slot--options .option-cycle__value {
   margin-top: -7px;
   font-size: calc((clamp(22px, 1.8vw, 26px)) * var(--a11y-text-scale, 1));
@@ -2734,7 +2730,7 @@ html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--op
   transition: opacity 120ms ease 160ms;
 }
 html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(#captureOptionsToggle, #sideMenuToggle) .bar-btn__icon {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgb(var(--c-control-rgb) / var(--c-control-alpha));
   border-color: rgba(255, 255, 255, 0.34);
   color: #e8eaf0;
   transform: none;
