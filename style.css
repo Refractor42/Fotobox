@@ -170,6 +170,53 @@ body {
 .btn--capture:active { transform: scale(0.96); }
 .btn--capture:disabled { opacity: 0.5; cursor: wait; transform: none; }
 
+/* Reuse the shutter's exact footprint for cancellation. */
+#camera.is-capture-cancellable #captureBtn,
+#camera.is-capture-cancellable .kiosk-shutter__disc {
+  position: relative;
+  background: #dc2626;
+  border-color: #dc2626;
+  color: #fff;
+  transform: none;
+  animation: capture-cancel-ring 1.8s ease-in-out infinite;
+}
+#camera.is-capture-cancellable #captureBtn > *,
+#camera.is-capture-cancellable .kiosk-shutter__disc > *,
+#camera.is-capture-cancellable .kiosk-shutter__label { visibility: hidden; }
+#camera.is-capture-cancellable .kiosk-shutter__label,
+#camera.is-capture-cancellable .btn__capture-text { position: relative; }
+#camera.is-capture-cancellable .kiosk-shutter__label::after,
+#camera.is-capture-cancellable .btn__capture-text::after {
+  content: attr(data-cancel-label);
+  position: absolute;
+  inset: 0;
+  visibility: visible;
+  color: #dc2626;
+  white-space: nowrap;
+  text-align: center;
+}
+#camera.is-capture-cancellable #captureBtn::before { display: none; }
+#camera.is-capture-cancellable #captureBtn::after,
+#camera.is-capture-cancellable .kiosk-shutter__disc::after {
+  content: '';
+  position: absolute;
+  inset: 29%;
+  background: linear-gradient(45deg, transparent 44%, #fff 44% 56%, transparent 56%),
+              linear-gradient(-45deg, transparent 44%, #fff 44% 56%, transparent 56%);
+  pointer-events: none;
+}
+@keyframes capture-cancel-ring {
+  0%, 100% { box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.18); }
+  50% { box-shadow: 0 0 0 9px rgba(220, 38, 38, 0.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  #camera.is-capture-cancellable #captureBtn,
+  #camera.is-capture-cancellable .kiosk-shutter__disc {
+    animation: none;
+    box-shadow: 0 0 0 5px rgba(220, 38, 38, 0.2);
+  }
+}
+
 /* ============================================================
    app sections
    ============================================================ */
@@ -905,6 +952,48 @@ body.orientation-landscape .lang-switch--splash .lang-switch__unit.is-selected .
   transform: scale(0.92);
 }
 .sticker__ctrl button:hover { background: rgb(var(--c-accent-rgb) / 0.25); }
+
+/* Temporary paper facets; the photo data and review geometry stay intact. */
+.paper-crumple {
+  --crease: 0;
+  position: absolute;
+  inset: 0;
+  z-index: 25;
+  perspective: 650px;
+  pointer-events: none;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.22));
+}
+.paper-crumple__backing,
+.paper-crumple__facet {
+  position: absolute;
+  inset: 0;
+  transform-origin: 49% 48%;
+  backface-visibility: hidden;
+  will-change: transform;
+}
+.paper-crumple__facet::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 24;
+  pointer-events: none;
+  opacity: var(--crease);
+  background: linear-gradient(var(--fold-angle, 135deg),
+    transparent 25%, rgba(0, 0, 0, 0.16) 47%,
+    rgba(255, 255, 255, 0.22) 50%, rgba(0, 0, 0, 0.2) 53%, transparent 76%);
+}
+#camera.is-crumpling .viewfinder > .stage-photo,
+#camera.is-crumpling .viewfinder > .photo-overlay,
+#camera.is-crumpling .viewfinder > .photo-overlay-strip,
+#camera.is-crumpling .viewfinder > .sticker,
+#camera.is-crumpling .capture-bar,
+#camera.is-crumpling .review {
+  visibility: hidden;
+  pointer-events: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .paper-crumple__facet::after { display: none; }
+}
 
 /* Indeterminate capture status; no invented progress percentages. */
 .processing {
@@ -2107,6 +2196,27 @@ body.orientation-landscape .gallery__grid {
     background var(--transition), transform 0.2s ease;
 }
 .splash__settings-icon svg { width: 54%; height: 54%; }
+/* A 220 ms blink after 33 seconds; removing the class resets the cycle. */
+@media (prefers-reduced-motion: no-preference) {
+  .is-eye-idle #splashSettings svg path {
+    animation: splash-eye-lid 33.22s ease-in-out infinite;
+  }
+  .is-eye-idle #splashSettings svg circle {
+    animation: splash-eye-pupil 33.22s ease-in-out infinite;
+  }
+}
+@keyframes splash-eye-lid {
+  0%, 99.3377%, 100% {
+    d: path('M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z');
+  }
+  99.6388% {
+    d: path('M2 12s3.6 0 10 0 10 0 10 0-3.6 0-10 0S2 12 2 12z');
+  }
+}
+@keyframes splash-eye-pupil {
+  0%, 99.3377%, 100% { clip-path: inset(0); }
+  99.6388% { clip-path: inset(50% 0); }
+}
 .splash__settings-label {
   font-size: 0.9rem;
   font-weight: 800;

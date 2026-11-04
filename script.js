@@ -1218,6 +1218,7 @@ function captureFromVideo() {
 //  ANIMATIONS: Splash reveal
 // ============================================================
 function animateSplashIn() {
+  $splash.classList.add('is-eye-idle');
   const tl = timeline();
   tl.to($splash, { display: 'flex', opacity: 1, duration: 0.01 })
     .from('.splash__title', { y: 40, opacity: 0, duration: 1.1, ease: 'elastic.out(1, 0.6)' }, 0.3)
@@ -1230,8 +1231,10 @@ function animateSplashIn() {
 function startSession() {
   if (currentState === 'camera') return;
   unlockAudio(); // create the AudioContext inside the user gesture
+  playUiSound('cancel.mp3', true);
   currentState = 'camera';
   initCamera(); // request camera immediately to preserve user-gesture context
+  $splash.classList.remove('is-eye-idle');
 
   // Menü-Inhalt vorbereiten, aber geschlossen lassen: Die Vorschau startet
   // in voller Größe, das Menü öffnet der Gast über die untere Leiste.
@@ -1538,7 +1541,8 @@ function isKioskLayout() {
 function syncCancelHome() {
   if (!$cancelHome) return;
   const onSplash = currentState === 'splash';
-  $cancelHome.hidden = onSplash;
+  $splash.classList.toggle('is-eye-idle', onSplash);
+  $cancelHome.hidden = onSplash || $camera.classList.contains('is-capture-cancellable');
   if ($sideRail) $sideRail.hidden = onSplash;
   if ($sideMenuToggle) {
     const showToggle = !onSplash && currentState === 'camera'
@@ -1574,7 +1578,16 @@ function setHomeMode(mode = 'default') {
 }
 
 function setHomeCancelMode(active) {
-  setHomeMode(active ? 'cancel' : 'default');
+  $camera.classList.toggle('is-capture-cancellable', active);
+  [$captureBtn, document.getElementById('landscapeCaptureBtn')].filter(Boolean).forEach(button => {
+    button.disabled = false;
+    button.dataset.i18nAria = active ? 'captureCancelAria' : 'captureAria';
+    button.setAttribute('aria-label', t(button.dataset.i18nAria));
+    const label = button.querySelector('.kiosk-shutter__label, .btn__capture-text');
+    if (label) label.dataset.cancelLabel = t('captureCancel');
+  });
+  setHomeMode('default');
+  syncCancelHome();
 }
 
 function cancelCapture() {
@@ -1598,6 +1611,7 @@ function cancelCapture() {
 }
 
 function showReview() {
+  playUiSound('paper_crush.mp3', true);
   // Ein Countdown darf nie über dem fertigen Foto stehen bleiben.
   stopCountdown();
   $camera.classList.add('is-reviewing');
@@ -1690,19 +1704,96 @@ $filterToggle.addEventListener('click', () => setReviewTool('filters'));
 // und setzt die Kameraansicht zurück — vom Review-„Neu aufnehmen" genutzt.
 function discardCurrentPhoto() {
   if (!hasPhoto) return;
+  const viewfinder = $camera.querySelector('.viewfinder');
+  const capturedImg = viewfinder.querySelector('img.stage-photo');
+  const reduced = reducedCaptureMotion();
+  const sheet = document.createElement('div');
+  sheet.className = 'paper-crumple';
+  sheet.setAttribute('aria-hidden', 'true');
+  const layers = [capturedImg, ...viewfinder.querySelectorAll('.photo-overlay, .photo-overlay-strip, .sticker')].filter(Boolean);
+  const points = [[0, 0], [60, 0], [100, 0], [100, 100], [40, 100], [0, 100]];
+  const facets = [];
+  for (let i = 0; i < (reduced ? 1 : points.length); i++) {
+    const facet = document.createElement('div');
+    facet.className = 'paper-crumple__facet';
+    if (!reduced) {
+      const a = points[i], b = points[(i + 1) % points.length];
+      facet.style.clipPath = 'polygon(49% 48%, ' + a[0] + '% ' + a[1] + '%, ' + b[0] + '% ' + b[1] + '%)';
+      facet.style.setProperty('--fold-angle', (35 + i * 60) + 'deg');
+    }
+    layers.forEach(layer => {
+      const clone = layer.cloneNode(true);
+      clone.removeAttribute('id');
+      clone.classList.remove('is-selected');
+      clone.querySelectorAll('[id], .sticker__ctrl').forEach(el => {
+        if (el.classList.contains('sticker__ctrl')) el.remove();
+        else el.removeAttribute('id');
+      });
+      facet.appendChild(clone);
+    });
+    sheet.appendChild(facet);
+    facets.push(facet);
+  }
+  viewfinder.appendChild(sheet);
+  // Keep a continuous paper surface beneath the folding sections.
+  const backing = facets[0].cloneNode(true);
+  backing.className = 'paper-crumple__backing';
+  backing.style.clipPath = '';
+  sheet.prepend(backing);
+  $camera.classList.add('is-crumpling');
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    sheet.remove();
+    $camera.classList.remove('is-crumpling');
+    hideReview();
+    resetCameraView();
+    isDiscardingPhoto = false;
+    setControlsLocked(false);
+    [$reviewKeep, $landscapeKeep, $reviewRetake, $landscapeRetake].filter(Boolean)
+      .forEach(button => { button.disabled = false; });
+  };
   if (lastPhoto) {
     deletePhoto(lastPhoto.card, lastPhoto.id);
     lastPhoto = null;
   }
-  const capturedImg = $camera.querySelector('.viewfinder img.stage-photo');
-  if (capturedImg) {
-    gsap.to(capturedImg, {
-      scale: 0.7, opacity: 0, duration: 0.35, ease: 'power2.in', rotation: -6,
-      onComplete: resetCameraView
-    });
-  } else {
-    resetCameraView();
+  if (!capturedImg) { finish(); return; }
+  const animation = gsap.timeline({
+    onStart: () => playUiSound('paper_crush.mp3'),
+    onComplete: finish, onInterrupt: finish
+  });
+  if (reduced) {
+    animation.to(sheet, { opacity: 0, duration: 0.25, ease: 'power1.out' });
+    return;
   }
+  animation
+    .to(backing, { scaleX: 0.6, scaleY: 0.63, rotation: -2, duration: 0.78, ease: 'power1.inOut',
+      clipPath: 'polygon(9% 5%, 57% 0%, 96% 12%, 100% 87%, 43% 100%, 0% 90%)' }, 0)
+    .to(backing, { scaleX: 0.2, scaleY: 0.23, rotation: 3, duration: 0.32, ease: 'power1.inOut',
+      clipPath: 'polygon(17% 8%, 62% 0%, 95% 24%, 88% 88%, 38% 100%, 0% 72%)' }, 0.78)
+    .to(sheet, { '--crease': 1, duration: 0.35 }, 0)
+    .to(facets, {
+      rotation: i => i % 2 ? 1 : -1, rotationX: i => i % 2 ? 3 : -3,
+      scaleX: 0.99, scaleY: 0.99, duration: 0.18, ease: 'power1.in'
+    }, 0)
+    .to(facets, {
+      x: i => [12, -6, -14, -10, 8, 15][i],
+      y: i => [8, 13, 4, -9, -12, -5][i],
+      scaleX: i => [0.58, 0.67, 0.53, 0.72, 0.61, 0.56][i],
+      scaleY: i => [0.75, 0.55, 0.68, 0.59, 0.63, 0.71][i],
+      rotationX: i => i % 2 ? 24 : -20, rotationY: i => i % 2 ? -22 : 26,
+      rotation: i => [3, -4, 6, -5, 4, -3][i],
+      duration: 0.6, ease: 'power1.inOut'
+    }, 0.18)
+    .to(facets, {
+      scaleX: i => [0.16, 0.22, 0.19, 0.27, 0.17, 0.24][i],
+      scaleY: i => [0.24, 0.18, 0.29, 0.21, 0.25, 0.17][i],
+      rotationX: i => i % 2 ? 38 : -33, rotationY: i => i % 2 ? -32 : 35,
+      rotation: i => [5, -7, 8, -6, 7, -5][i],
+      duration: 0.32, ease: 'power1.inOut'
+    }, 0.78)
+    .to(sheet, { y: 16, rotation: 3, scale: 0.75, opacity: 0, duration: 0.2, ease: 'power1.in' }, 1.1);
 }
 
 // Home-Abbruch vor „Annehmen“: Die Aufnahme wurde nie bestätigt und wird
@@ -1717,6 +1808,7 @@ function discardUnacceptedPhoto() {
 
 async function keepPhoto() {
   if (isSavingPhoto || !hasPhoto) return;
+  playUiSound('Button_push.mp3');
   isSavingPhoto = true;
   const actions = [$reviewKeep, $landscapeKeep, $reviewRetake, $landscapeRetake].filter(Boolean);
   actions.forEach((button) => { button.disabled = true; });
@@ -1752,9 +1844,11 @@ async function keepPhoto() {
 }
 
 function retakePhoto() {
-  hideReview();
-  setControlsLocked(false);
-  clearStickers();
+  if (isDiscardingPhoto || !hasPhoto || isSavingPhoto) return;
+  isDiscardingPhoto = true;
+  setControlsLocked(true);
+  [$reviewKeep, $landscapeKeep, $reviewRetake, $landscapeRetake].filter(Boolean)
+    .forEach((button) => { button.disabled = true; });
   discardCurrentPhoto();
 }
 
@@ -2581,7 +2675,8 @@ async function runCaptureSequence() {
   $captureBtn.disabled = true;
   setControlsLocked(true);
   setHomeCancelMode(true);
-  if ($cancelHome) $cancelHome.focus({ preventScroll: true });
+  const shutter = isKioskLayout() ? document.getElementById('landscapeCaptureBtn') : $captureBtn;
+  if (shutter) shutter.focus({ preventScroll: true });
 
   // unlock / resume audio while we still have the user gesture
   unlockAudio();
@@ -3613,6 +3708,42 @@ async function purgeTrashedPhoto(item) {
 // suspended, which is why the original shutter stayed silent.
 let audioCtx = null;
 let noiseBuffer = null;
+let isDiscardingPhoto = false;
+const uiSoundBuffers = new Map();
+const UI_SOUND_SRCS = {
+  'cancel.mp3': 'assets/audio/cancel.mp3',
+  'start.mp3': 'assets/audio/start.mp3',
+  'Button_push.mp3': 'assets/audio/Button_push.mp3',
+  'paper_crush.mp3': 'assets/audio/paper_crush.mp3'
+};
+
+function playUiSound(name, preload = false) {
+  if (!soundEnabled) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  const play = (buffer) => {
+    if (!buffer || !soundEnabled || ctx.state !== 'running') return;
+    try {
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.start();
+    } catch (err) {
+      // Optional UI sounds must never interrupt the camera flow.
+    }
+  };
+  if (uiSoundBuffers.has(name)) {
+    if (!preload) play(uiSoundBuffers.get(name));
+    return;
+  }
+  const src = UI_SOUND_SRCS[name];
+  if (!src) return;
+  fetch(src)
+    .then((res) => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.arrayBuffer(); })
+    .then((bytes) => ctx.decodeAudioData(bytes))
+    .then((buffer) => { uiSoundBuffers.set(name, buffer); if (!preload) play(buffer); })
+    .catch((err) => console.warn('UI sound could not be loaded:', name, err));
+}
 
 // Real shutter recording (camera-shutter.mp3). It is fetched right away and
 // decoded into the shared AudioContext on the first user gesture, so the
@@ -4003,14 +4134,19 @@ function playDeleteWarning() {
 //  EVENT LISTENERS
 // ============================================================
 document.querySelectorAll('[data-action]').forEach((el) => {
-  el.addEventListener('click', () => {
+  el.addEventListener('click', (event) => {
     const action = el.dataset.action;
     switch (action) {
       case 'start':
         startSession();
         break;
       case 'capture':
-        runCaptureSequence();
+        if (event.detail > 1) break;
+        if (isCapturing) {
+          if (!captureCommitted && countdownState) playUiSound('cancel.mp3');
+          cancelCapture();
+        }
+        else runCaptureSequence();
         break;
       case 'open-gallery':
         openGallery(el.dataset.gallerySource || null);
@@ -5408,11 +5544,16 @@ document.querySelectorAll('.endscreen__action').forEach((btn) => {
 });
 if ($cancelHome) {
   $cancelHome.addEventListener('click', async () => {
+    if (isDiscardingPhoto) return;
     if (isCapturing) {
       cancelCapture();
       return;
     }
     if (!$confirmModal.hidden) return;
+
+    if ($cancelHome.classList.contains('is-done') && currentState === 'camera') {
+      playUiSound('Button_push.mp3');
+    }
 
     // Vor „Annehmen“ gibt es noch kein bestätigtes Foto. Der Weg zum Start
     // verwirft es deshalb nicht still, sondern fragt vorher nach.
@@ -5430,6 +5571,9 @@ if ($cancelHome) {
         return;
       }
       discardUnacceptedPhoto();
+    }
+    if (currentState !== 'splash' && !$cancelHome.classList.contains('is-done')) {
+      playUiSound('start.mp3');
     }
     resetToStartScreen();
   });
