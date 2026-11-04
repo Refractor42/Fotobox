@@ -3,9 +3,9 @@
   "defaultLanguage": "de",
   "trashRetentionDays": 7,
   "idleEndSeconds": 40,
-  "idleProcessSeconds": 55,
-  "idleWarnSeconds": 5,
-  "a11yResetSeconds": 11,
+  "idleProcessSeconds": 75,
+  "idleWarnSeconds": 15,
+  "a11yResetSeconds": 12,
   "defaultCountdownSeconds": 5,
   "defaultCaptureMode": "single",
   "defaultSound": true,
@@ -18,9 +18,9 @@
   "secondaryColor": "#00e0d6",
   "backgroundColor": "#0d0d0d",
   "brandName": "SnapBox",
-  "qrTtlHours": 47,
+  "qrTtlHours": 24,
   "challengeEnabled": true,
   "challengeLocation": "lcc",
-  "challengeAppUrl": "https://site-6e612acb7a47490692d7da5a7b9d9292.freebuff.page",
-  "updatedAt": "2026-11-04T22:38:31.032Z"
+  "challengeAppUrl": "",
+  "updatedAt": "2026-11-04T22:54:03.915Z"
 }

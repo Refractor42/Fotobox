@@ -1100,8 +1100,10 @@
 
     .section-reset {
       flex: 0 0 auto;
+      max-width: 100%;
       padding: 0.5rem 0.85rem;
       font-size: 0.8rem;
+      text-align: center;
     }
 
     .reset-all-box {
@@ -1781,7 +1783,7 @@
           </h2>
           <p class="section-header__desc">Wähle die Sprache, mit der die Fotobox startet und zu der sie nach jedem gespeicherten Foto automatisch zurückkehrt.</p>
         </div>
-        <button class="btn btn--ghost section-reset" type="button" data-reset-section="language" aria-label="Standardwerte für die Standard-Sprache wiederherstellen">Standardwerte</button>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="language" aria-label="Standardwerte für die Standard-Sprache wiederherstellen">Standardwerte wiederherstellen</button>
       </div>
 
       <div class="orientation-grid" role="radiogroup" aria-label="Standard-Sprache">
@@ -1833,7 +1835,7 @@
           </h2>
           <p class="section-header__desc">Wie lange Fotos im Admin-Papierkorb bleiben, bevor sie endgültig entfernt werden. Gilt für Löschungen im Admin-Panel.</p>
         </div>
-        <button class="btn btn--ghost section-reset" type="button" data-reset-section="retention" aria-label="Standardwerte für die Papierkorb-Aufbewahrung wiederherstellen">Standardwerte</button>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="retention" aria-label="Standardwerte für die Papierkorb-Aufbewahrung wiederherstellen">Standardwerte wiederherstellen</button>
       </div>
 
       <div class="retention-grid" role="radiogroup" aria-label="Aufbewahrungsdauer">
@@ -1855,7 +1857,7 @@
           </h2>
           <p class="section-header__desc">Wie lange Gäste auf einem Screen bleiben dürfen, bevor die Fotobox zurückspringt. Die Warnung erscheint vor dem Reset und lässt sich per Tipp abbrechen.</p>
         </div>
-        <button class="btn btn--ghost section-reset" type="button" data-reset-section="times" aria-label="Standardwerte für Zeiten und Inaktivität wiederherstellen">Standardwerte</button>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="times" aria-label="Standardwerte für Zeiten und Inaktivität wiederherstellen">Standardwerte wiederherstellen</button>
       </div>
 
       <div class="settings-stack">
@@ -1923,7 +1925,6 @@
         </div>
       </div>
 
-      <p class="section-note" id="idleSummary">Nach dem Foto: 40 s · mitten im Ablauf: 75 s · Warnung: 15 s · Barrierefreiheit: 12 s.</p>
     </section>
 
     <!-- Section: Capture Defaults -->
@@ -1936,7 +1937,7 @@
           </h2>
           <p class="section-header__desc">Diese Werte gelten für jeden neuen Gast. Gäste können sie während ihrer Sitzung weiterhin selbst ändern; beim Zurückspringen werden sie wieder auf den Standard gesetzt. Filter, Sticker und Overlays lassen sich zusätzlich für alle Gäste ausblenden — diese Schalter wirken sofort.</p>
         </div>
-        <button class="btn btn--ghost section-reset" type="button" data-reset-section="capture" aria-label="Standardwerte für die Aufnahme wiederherstellen">Standardwerte</button>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="capture" aria-label="Standardwerte für die Aufnahme wiederherstellen">Standardwerte wiederherstellen</button>
       </div>
 
       <div class="settings-stack">
@@ -2044,7 +2045,7 @@
           </h2>
           <p class="section-header__desc">Marke und Farben der Fotobox. Die Vorschau zeigt sofort, wie Startbutton, Auslöser und Verlauf auf den Gäste-Bildschirmen aussehen.</p>
         </div>
-        <button class="btn btn--ghost section-reset" type="button" data-reset-section="appearance" aria-label="Standardwerte für die Darstellung wiederherstellen">Standardwerte</button>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="appearance" aria-label="Standardwerte für die Darstellung wiederherstellen">Standardwerte wiederherstellen</button>
       </div>
 
       <div class="settings-stack">
@@ -2140,7 +2141,7 @@
           </h2>
           <p class="section-header__desc">Galerie und Papierkorb laden Fotos seitenweise. Eine kleinere Seite startet schneller; „Mehr laden“ bleibt für alle weiteren Fotos sichtbar.</p>
         </div>
-        <button class="btn btn--ghost section-reset" type="button" data-reset-section="gallery" aria-label="Standardwerte für Galerie und Leistung wiederherstellen">Standardwerte</button>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="gallery" aria-label="Standardwerte für Galerie und Leistung wiederherstellen">Standardwerte wiederherstellen</button>
       </div>
 
       <div class="settings-stack">
@@ -2176,7 +2177,7 @@
           </h2>
           <p class="section-header__desc">Verknüpft diese Fotobox mit der öffentlichen Challenge-Web-App. Standort, Adresse und API-Schlüssel werden hier hinterlegt. Der Schlüssel bleibt auf dem Server und wird nie an den Kiosk-Browser ausgeliefert.</p>
         </div>
-        <button class="btn btn--ghost section-reset" type="button" data-reset-section="challenge" aria-label="Standardwerte für die Challenge wiederherstellen">Standardwerte</button>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="challenge" aria-label="Standardwerte für die Challenge wiederherstellen">Standardwerte wiederherstellen</button>
       </div>
 
       <div class="settings-stack">
@@ -2597,7 +2598,6 @@
       const $idleWarnValue = document.getElementById('idleWarnValue');
       const $a11yResetRange = document.getElementById('a11yResetRange');
       const $a11yResetValue = document.getElementById('a11yResetValue');
-      const $idleSummary = document.getElementById('idleSummary');
       const $qrTtlHours = document.getElementById('qrTtlHours');
       const $challengeEnabledToggle = document.getElementById('challengeEnabledToggle');
       const $challengeEnabledText = document.getElementById('challengeEnabledText');
@@ -2787,10 +2787,6 @@
           && settings.idleWarnSeconds < settings.idleProcessSeconds;
       }
 
-      function updateIdleSummary(settings = currentSettings) {
-        $idleSummary.textContent = `Nach dem Foto: ${settings.idleEndSeconds} s · mitten im Ablauf: ${settings.idleProcessSeconds} s · Warnung: ${settings.idleWarnSeconds} s · Barrierefreiheit: ${settings.a11yResetSeconds} s.`;
-      }
-
       function renderThemePreview(settings = currentSettings) {
         const accent = settings.accentColor;
         const secondary = settings.secondaryColor;
@@ -2865,7 +2861,6 @@
         $pageSizeOptions.forEach((btn) => {
           btn.setAttribute('aria-pressed', String(Number(btn.dataset.pageSize) === currentSettings.galleryPageSize));
         });
-        updateIdleSummary();
         renderThemePreview();
         $adminBrand.textContent = currentSettings.brandName;
         document.title = currentSettings.brandName + ' — Admin Panel';
@@ -3202,7 +3197,6 @@
       function bindIdleRange(input, output, key) {
         input.addEventListener('input', () => {
           output.textContent = input.value + ' s';
-          updateIdleSummary({ ...currentSettings, [key]: Number(input.value) });
         });
         input.addEventListener('change', () => {
           const value = Number(input.value);
@@ -3414,6 +3408,12 @@
           const suffix = section === 'challenge'
             ? ' Der API-Schlüssel bleibt gespeichert.'
             : '';
+          const confirmed = window.confirm(
+            `„${SECTION_RESET_LABELS[section] || 'Diese Einstellungen'}“ auf die Standardwerte zurücksetzen?\n\n` +
+            (section === 'challenge' ? 'Der API-Schlüssel bleibt gespeichert.\n\n' : '') +
+            'Fortfahren?'
+          );
+          if (!confirmed) return;
           persistSettings(
             patch,
             `${SECTION_RESET_LABELS[section] || 'Einstellungen'} auf Standardwerte zurückgesetzt.${suffix}`
@@ -3715,6 +3715,14 @@
         return count === 1 ? '1 Foto' : count + ' Fotos';
       }
 
+      function confirmPermanentTrashDelete(count, itemLabel = '') {
+        const subject = itemLabel ? `„${itemLabel}“` : photoCountLabel(count);
+        return window.confirm(
+          `${subject} endgültig löschen?\n\n` +
+          'Das kann nicht rückgängig gemacht werden.'
+        );
+      }
+
       async function runBulkMediaAction(kind, ids, options) {
         const state = mediaSelection[kind];
         if (state.busy || !ids.length) return { done: 0, failed: 0, total: ids.length };
@@ -3795,7 +3803,7 @@
       async function bulkPurgeAdminTrash() {
         const ids = [...mediaSelection.trash.ids];
         if (!ids.length || mediaSelection.trash.busy) return;
-        if (!window.confirm(photoCountLabel(ids.length) + ' endgültig löschen? Das kann nicht rückgängig gemacht werden.')) return;
+        if (!confirmPermanentTrashDelete(ids.length)) return;
         const result = await runBulkMediaAction('trash', ids, {
           method: 'DELETE',
           url: (id) => '/api/trash?id=' + encodeURIComponent(id),
@@ -4052,7 +4060,7 @@
 
       async function adminPurgePhoto(item, card, button) {
         if (button.disabled) return;
-        if (!window.confirm('Dieses Foto wird endgültig gelöscht und kann nicht wiederhergestellt werden. Fortfahren?')) return;
+        if (!confirmPermanentTrashDelete(1, mediaItemLabel(item, 'trash'))) return;
         button.disabled = true;
         try {
           const res = await fetch('/api/trash?id=' + encodeURIComponent(item.id), { method: 'DELETE' });
