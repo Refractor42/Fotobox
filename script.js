@@ -120,7 +120,7 @@ const I18N = {
     scrollHint: 'scrollen',
     sideMenuShowAria: 'Menü öffnen: Filter, Overlay und Sticker',
     sideMenuHideAria: 'Menü schließen',
-    barOptions: 'Optionen',
+    barOptions: 'Einstellungen',
     barFilters: 'Filter',
     barFiltersShowAria: 'Filter anzeigen',
     barFiltersHideAria: 'Filter schließen',
@@ -336,7 +336,7 @@ const I18N = {
     scrollHint: 'scroll',
     sideMenuShowAria: 'Open menu: filters, overlays and stickers',
     sideMenuHideAria: 'Close menu',
-    barOptions: 'Options',
+    barOptions: 'Settings',
     barFilters: 'Filters',
     barFiltersShowAria: 'Show filters',
     barFiltersHideAria: 'Close filters',
@@ -534,6 +534,8 @@ function applyLanguage(lang) {
     unit.classList.toggle('is-selected', btn.dataset.lang === currentLang);
   });
   applySoundState(); // Beschriftung des Ton-Buttons in der aktiven Sprache
+  applyTimerSelection();
+  applyModeSelection();
   // Ein laufender Kamera-Versuch behält seine Beschriftung beim Sprachwechsel.
   const permissionBtn = $permission && $permission.querySelector('[data-action="retry-camera"]');
   if (permissionBtn) permissionBtn.textContent = t(permissionBtn.disabled ? 'permissionOpening' : 'permissionBtn');
@@ -1232,6 +1234,7 @@ function startSession() {
   if (currentState === 'camera') return;
   unlockAudio(); // create the AudioContext inside the user gesture
   playUiSound('cancel.mp3', true);
+  playUiSound('switch.mp3', true);
   currentState = 'camera';
   initCamera(); // request camera immediately to preserve user-gesture context
   $splash.classList.remove('is-eye-idle');
@@ -1324,18 +1327,23 @@ if (![3, 5, 10].includes(countdownSeconds)) countdownSeconds = appSettings.defau
 
 function applyTimerSelection() {
   // Hochformat-Dock und Kiosk-Leiste teilen sich denselben Zustand.
-  document.querySelectorAll('[data-seconds]').forEach((chip) => {
-    const active = Number(chip.dataset.seconds) === countdownSeconds;
-    chip.classList.toggle('is-selected', active);
-    chip.setAttribute('aria-pressed', String(active));
+  document.querySelectorAll('[data-cycle="timer"]').forEach((button) => {
+    button.dataset.value = String(countdownSeconds);
+    button.querySelector('.option-cycle__value').textContent = countdownSeconds + 's';
+    button.setAttribute('aria-label', t('timerGroupAria') + ': ' + countdownSeconds + 's');
+    button.querySelectorAll('.option-cycle__segments path').forEach((segment, i) => {
+      segment.classList.toggle('is-active', [3, 5, 10][i] === countdownSeconds);
+    });
   });
 }
 applyTimerSelection();
 
 document.addEventListener('click', (e) => {
-  const chip = e.target.closest('[data-seconds]');
-  if (!chip) return;
-  countdownSeconds = Number(chip.dataset.seconds);
+  const chip = e.target.closest('[data-cycle="timer"]');
+  if (!chip || chip.disabled) return;
+  playUiSound('switch.mp3');
+  countdownSeconds = [3, 5, 10][([3, 5, 10].indexOf(countdownSeconds) + 1) % 3];
+  document.querySelectorAll('[data-cycle="timer"]').forEach(button => button.classList.add('is-used'));
   localStorage.setItem('countdownSeconds', String(countdownSeconds));
   applyTimerSelection();
 });
@@ -1347,18 +1355,23 @@ let captureMode = storedCaptureMode === 'strip' || storedCaptureMode === 'single
   : appSettings.defaultCaptureMode;
 
 function applyModeSelection() {
-  document.querySelectorAll('[data-mode]').forEach((btn) => {
-    const active = btn.dataset.mode === captureMode;
-    btn.classList.toggle('is-selected', active);
-    btn.setAttribute('aria-pressed', String(active));
+  document.querySelectorAll('[data-cycle="mode"]').forEach((button) => {
+    const label = t(captureMode === 'strip' ? 'modeStrip' : 'modeSingle');
+    button.dataset.value = captureMode;
+    button.setAttribute('aria-label', t('modeGroupAria') + ': ' + label);
+    button.querySelectorAll('.option-cycle__segments path').forEach((segment, i) => {
+      segment.classList.toggle('is-active', i === (captureMode === 'strip' ? 1 : 0));
+    });
   });
 }
 applyModeSelection();
 
 document.addEventListener('click', (e) => {
-  const btn = e.target.closest('[data-mode]');
-  if (!btn) return;
-  captureMode = btn.dataset.mode === 'strip' ? 'strip' : 'single';
+  const btn = e.target.closest('[data-cycle="mode"]');
+  if (!btn || btn.disabled) return;
+  playUiSound('switch.mp3');
+  captureMode = captureMode === 'single' ? 'strip' : 'single';
+  btn.classList.add('is-used');
   try { localStorage.setItem('snapbox_capture_mode', captureMode); } catch (err) {}
   applyModeSelection();
 });
@@ -1377,6 +1390,7 @@ function syncFaceFilterSelection() {
 // Betreiber-Einstellungen (Ausrichtung, Standardsprache, Aufbewahrung) bleiben
 // davon unberührt, weil sie nicht in dieser Funktion liegen.
 function resetGuestCaptureSettings() {
+  document.querySelectorAll('.option-cycle.is-used').forEach(button => button.classList.remove('is-used'));
   captureMode = appSettings.defaultCaptureMode;
   countdownSeconds = appSettings.defaultCountdownSeconds;
   currentFilter = 'standard';
@@ -3712,6 +3726,7 @@ let isDiscardingPhoto = false;
 const uiSoundBuffers = new Map();
 const UI_SOUND_SRCS = {
   'cancel.mp3': 'assets/audio/cancel.mp3',
+  'switch.mp3': 'assets/audio/switch.mp3',
   'start.mp3': 'assets/audio/start.mp3',
   'Button_push.mp3': 'assets/audio/Button_push.mp3',
   'paper_crush.mp3': 'assets/audio/paper_crush.mp3'

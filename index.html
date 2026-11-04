@@ -257,17 +257,36 @@
               <div class="bar-slot__inner">
                 <div class="capture-switch">
                   <p class="capture-switch__label" data-i18n="captionTimer">COUNTDOWN</p>
-                  <div class="seg" id="kioskTimer" role="group" aria-label="Countdown-Dauer" data-i18n-aria="timerGroupAria">
-                    <button class="seg__btn" data-seconds="3" type="button">3s</button>
-                    <button class="seg__btn" data-seconds="5" type="button">5s</button>
-                    <button class="seg__btn" data-seconds="10" type="button">10s</button>
+                  <div class="option-cycle-group" id="kioskTimer">
+                    <button class="option-cycle" data-cycle="timer" type="button" aria-label="Countdown">
+                      <span class="option-cycle__value">5s</span>
+                      <svg class="option-cycle__segments" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+                        <path d="M26.6 79.9A38 38 0 0 0 37 85.7L38.4 81.95A34 34 0 0 1 29.1 76.8Z"/>
+                        <path d="M43.4 87.4A38 38 0 0 0 56.6 87.4L55.9 83.5A34 34 0 0 1 44.1 83.5Z"/>
+                        <path d="M63 85.7A38 38 0 0 0 73.4 79.9L70.9 76.8A34 34 0 0 1 61.6 81.95Z"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
                 <div class="capture-switch">
                   <p class="capture-switch__label" data-i18n="captionMode">MODUS</p>
-                  <div class="seg" id="modeChips" role="group" aria-label="Aufnahmemodus" data-i18n-aria="modeGroupAria">
-                    <button class="seg__btn" data-mode="single" type="button" data-i18n="modeSingle">Einzelfoto</button>
-                    <button class="seg__btn" data-mode="strip" type="button" data-i18n="modeStrip">Fotocollage</button>
+                  <div class="option-cycle-group" id="modeChips">
+                    <button class="option-cycle" data-cycle="mode" type="button" aria-label="Aufnahmemodus">
+                      <span class="option-cycle__value" aria-hidden="true">
+                        <svg class="option-cycle__icon option-cycle__icon--single" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                          <rect x="3" y="6" width="26" height="20" rx="2"/>
+                          <circle cx="11" cy="12" r="2"/><path d="m5 23 7-7 5 5 4-4 6 6"/>
+                        </svg>
+                        <svg class="option-cycle__icon option-cycle__icon--strip" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                          <rect x="8" y="2" width="16" height="28" rx="2"/>
+                          <path d="M11 5h10v5H11zM11 13.5h10v5H11zM11 22h10v5H11z"/>
+                        </svg>
+                      </span>
+                      <svg class="option-cycle__segments" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+                        <path d="M26.6 79.9A38 38 0 0 0 47 87.9L47.3 83.9A34 34 0 0 1 29.1 76.8Z"/>
+                        <path d="M53 87.9A38 38 0 0 0 73.4 79.9L70.9 76.8A34 34 0 0 1 52.7 83.9Z"/>
+                      </svg>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -275,9 +294,8 @@
             <button class="bar-btn" id="captureOptionsToggle" type="button" aria-controls="captureOptions" aria-expanded="false" aria-label="Countdown und Modus einstellen" data-i18n-aria="barOptionsAria">
               <span class="bar-btn__icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
-                  <circle cx="12" cy="13.4" r="7.6"></circle>
-                  <path d="M12 9.6v4.2l2.9 1.7"></path>
-                  <path d="M9.2 2.6h5.6"></path>
+                  <path d="M10.26 2.15L13.74 2.15L13.97 4.66L15.80 5.42L17.74 3.81L20.19 6.26L18.58 8.20L19.34 10.03L21.85 10.26L21.85 13.74L19.34 13.97L18.58 15.80L20.19 17.74L17.74 20.19L15.80 18.58L13.97 19.34L13.74 21.85L10.26 21.85L10.03 19.34L8.20 18.58L6.26 20.19L3.81 17.74L5.42 15.80L4.66 13.97L2.15 13.74L2.15 10.26L4.66 10.03L5.42 8.20L3.81 6.26L6.26 3.81L8.20 5.42L10.03 4.66Z"></path>
+                  <circle cx="12" cy="12" r="3.3"></circle>
                 </svg>
               </span>
               <span class="bar-btn__label" data-i18n="barOptions">Optionen</span>
@@ -361,9 +379,14 @@
       <div class="dock-group dock-group--timer">
         <p class="dock-caption" aria-hidden="true" data-i18n="captionTimer">COUNTDOWN</p>
         <div class="timer" id="timerChips" role="group" aria-label="Countdown-Dauer" data-i18n-aria="timerGroupAria">
-          <button class="timer__chip" data-seconds="3" type="button" aria-pressed="false">3s</button>
-          <button class="timer__chip" data-seconds="5" type="button" aria-pressed="false">5s</button>
-          <button class="timer__chip" data-seconds="10" type="button" aria-pressed="false">10s</button>
+          <button class="option-cycle" data-cycle="timer" type="button" aria-label="Countdown">
+            <span class="option-cycle__value">5s</span>
+            <svg class="option-cycle__segments" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+              <path d="M26.6 79.9A38 38 0 0 0 37 85.7L38.4 81.95A34 34 0 0 1 29.1 76.8Z"/>
+              <path d="M43.4 87.4A38 38 0 0 0 56.6 87.4L55.9 83.5A34 34 0 0 1 44.1 83.5Z"/>
+              <path d="M63 85.7A38 38 0 0 0 73.4 79.9L70.9 76.8A34 34 0 0 1 61.6 81.95Z"/>
+            </svg>
+          </button>
         </div>
       </div>
 

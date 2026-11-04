@@ -1894,11 +1894,9 @@ html[data-ui="2"] .bar-slot__inner {
   height: calc(var(--bar-side-size) + var(--action-gap) + var(--bar-label-h));
   padding-block: clamp(8px, 0.7vw, 12px);
 }
-/* Die Optionspille wächst mit den größeren Segmenten nach oben. */
+/* Optionen verwenden dieselbe Höhe und denselben Innenabstand wie Filter. */
 html[data-ui="2"] .bar-slot--options .bar-slot__inner {
-  height: auto;
   justify-content: center;
-  padding-block: clamp(10px, 0.9vw, 15px);
 }
 /* Die Filterkreise werden mitverkleinert, damit sie in der flacheren Pille
    weder oben/unten herausragen noch den runden Rand schneiden. */
@@ -1951,3 +1949,39 @@ body.orientation-landscape #camera.is-reviewing .stage-photo {
 #camera[aria-busy="true"] .review {
   pointer-events: none;
 }
+
+/* Compact cycling controls retain the existing options panel and labels. */
+.bar-slot--options { --slot-max: 260px; }
+html[data-ui="2"] .bar-slot--options {
+  width: min(260px, var(--ui2-pill-w-home));
+  left: auto;
+  /* Mirror the filter panel's left edge to retain the identical button gap. */
+  right: calc(100% - var(--bar-edge-inset) - var(--ui2-pill-w));
+}
+.bar-slot--options .bar-slot__inner { gap: clamp(16px, 2vw, 28px); }
+.bar-slot--options .capture-switch { flex: 0 0 auto; align-items: center; }
+.bar-slot--options .option-cycle-group { order: 1; }
+.bar-slot--options .option-cycle {
+  --cycle-size: calc(var(--bar-side-size) + var(--action-gap) + var(--bar-label-h) - 2 * clamp(8px, 0.7vw, 12px) - clamp(9px, 0.7vw, 11px) - 4px);
+  padding: 2px;
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.45);
+  background: var(--cycle-bg, #162c39);
+}
+.bar-slot--options [data-cycle="timer"] { transition: background-color 280ms ease-in-out, border-color 0.2s ease; }
+.bar-slot--options [data-cycle="timer"][data-value="3"] { --cycle-bg: #2c5869; }
+.bar-slot--options [data-cycle="timer"][data-value="5"] { --cycle-bg: #204353; }
+.bar-slot--options [data-cycle="timer"][data-value="10"] { --cycle-bg: #162c39; }
+.bar-slot--options [data-cycle="mode"] { --cycle-bg: #2a2538; }
+.bar-slot--options .option-cycle:hover:not(:disabled) { background: var(--cycle-bg); border-color: rgba(255, 255, 255, 0.75); }
+.bar-slot--options .option-cycle__value {
+  margin-top: -7px;
+  font-size: clamp(22px, 1.8vw, 26px);
+  font-weight: 900;
+}
+.bar-slot--options [data-cycle="mode"] .option-cycle__value {
+  font-size: clamp(14px, 1.3vw, 18px);
+  letter-spacing: -0.04em;
+}
+.bar-slot--options .capture-switch { gap: 4px; }
+.bar-slot--options .capture-switch__label { line-height: 1; }
