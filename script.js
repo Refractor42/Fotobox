@@ -56,6 +56,7 @@ let capturePrint = null;
 let processingTimer = 0;
 let processingRevision = 0;
 let countdownState = null;
+let sessionCompletion = null;
 
 // ============================================================
 //  I18N — Sprachumschaltung DE/EN (HCI: Accessibility/i18n)
@@ -91,8 +92,8 @@ const I18N = {
     endHomeAria: 'Zurück zum Start',
     captureCancel: 'Abbrechen',
     captureCancelAria: 'Aufnahme abbrechen',
-    acceptAria: 'Foto annehmen',
-    btnAccept: 'Annehmen',
+    acceptAria: 'Bearbeitung fertigstellen',
+    btnAccept: 'Fertig',
     btnDone: 'Zurück zum Start',
     endQr: 'QR-Code',
     endInsta: 'Instagram',
@@ -165,6 +166,7 @@ const I18N = {
     permissionFailedHint: 'Die Kamera konnte nicht geöffnet werden. Prüfe die Browser-Einstellungen und versuche es erneut.',
     captionFace: 'GESICHTSFILTER',
     captionTimer: 'COUNTDOWN',
+    captionTimerMenu: 'COUNT\u00adDOWN',
     shutterLabel: 'AUSLÖSER',
     captureAria: 'Foto aufnehmen',
     timerGroupAria: 'Countdown-Dauer',
@@ -252,10 +254,18 @@ const I18N = {
     soundOff: 'Ton einschalten',
     soundLabel: 'Audio',
     galleryLabel: 'Galerie',
-    settingsOpenLabel: 'Sehschwächen',
-    settingsTitle: 'Einstellungen',
-    settingsOpenAria: 'Sehschwächen-Einstellungen öffnen',
-    settingsCloseAria: 'Einstellungen schließen',
+    settingsOpenLabel: 'Barrierefreiheit',
+    settingsTitle: 'Barrierefreiheit',
+    settingsOpenAria: 'Barrierefreiheit öffnen',
+    accessibilityButtons: 'Buttongröße',
+    accessibilityButtonsNormal: 'Normal',
+    accessibilityButtonsLarge: 'Groß',
+    accessibilityText: 'Schriftgröße',
+    accessibilityTextNormal: 'Normal',
+    accessibilityTextLarge: 'Groß',
+    settingsCloseAria: 'Zurück',
+    sessionCompleted: 'Aufnahme abgeschlossen',
+    sessionCompletionError: 'Die Sitzung konnte nicht abgeschlossen werden. Bitte erneut versuchen.',
     cvdHint: 'Farbmodus für Sehschwächen',
     cvdGroupLabel: 'Farbmodus',
     cvdStandard: 'Standard',
@@ -311,8 +321,8 @@ const I18N = {
     endHomeAria: 'Back to start',
     captureCancel: 'Cancel',
     captureCancelAria: 'Cancel capture',
-    acceptAria: 'Accept photo',
-    btnAccept: 'Accept',
+    acceptAria: 'Finish editing',
+    btnAccept: 'Done',
     btnDone: 'Back to start',
     endQr: 'QR Code',
     endInsta: 'Instagram',
@@ -385,6 +395,7 @@ const I18N = {
     permissionFailedHint: 'The camera could not be opened. Check the browser settings and try again.',
     captionFace: 'FACE FILTERS',
     captionTimer: 'COUNTDOWN',
+    captionTimerMenu: 'COUNT\u00adDOWN',
     shutterLabel: 'CAPTURE',
     captureAria: 'Take photo',
     timerGroupAria: 'Countdown duration',
@@ -472,10 +483,18 @@ const I18N = {
     soundOff: 'Turn sound on',
     soundLabel: 'Audio',
     galleryLabel: 'Gallery',
-    settingsOpenLabel: 'Vision',
-    settingsTitle: 'Settings',
-    settingsOpenAria: 'Open vision settings',
-    settingsCloseAria: 'Close settings',
+    settingsOpenLabel: 'Accessibility',
+    settingsTitle: 'Accessibility',
+    settingsOpenAria: 'Open accessibility settings',
+    accessibilityButtons: 'Button size',
+    accessibilityButtonsNormal: 'Normal',
+    accessibilityButtonsLarge: 'Large',
+    accessibilityText: 'Text size',
+    accessibilityTextNormal: 'Normal',
+    accessibilityTextLarge: 'Large',
+    settingsCloseAria: 'Back',
+    sessionCompleted: 'Capture complete',
+    sessionCompletionError: 'The session could not be completed. Please try again.',
     cvdHint: 'Colour mode for vision deficiencies',
     cvdGroupLabel: 'Colour mode',
     cvdStandard: 'Default',
@@ -531,6 +550,7 @@ function applyLanguage(lang) {
   document.querySelectorAll('[data-i18n-aria]').forEach((el) => {
     el.setAttribute('aria-label', t(el.dataset.i18nAria));
   });
+  document.querySelectorAll('[data-i18n-title]').forEach(el => { el.title = t(el.dataset.i18nTitle); });
   document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
     const active = btn.dataset.lang === currentLang;
     btn.classList.toggle('is-selected', active);
@@ -768,18 +788,21 @@ applyThemeSettings(appSettings);
 applyBrandSettings(appSettings.brandName);
 
 // ============================================================
-//  FARBMODUS FÜR FARBSEHSCHWÄCHEN (CVD)
-//  Barrierefreiheit: Das Zahnrad im Startbildschirm öffnet die
+//  BARRIEREFREIHEIT: FARBMODUS UND UNABHÄNGIGE BEDIEN-/SCHRIFTGRÖSSEN
+//  Das Barrierefreiheitssymbol im Startbildschirm öffnet die
 //  Einstellungen. Die Wahl setzt data-cvd auf <html> — die Schemata in
 //  style.css überschreiben damit die Farb-Tokens des ganzen UI. Die
-//  Wahl gilt nur für die aktuelle Sitzung und wird beim Zurückkehren
-//  zum Startbildschirm wie die übrigen Gäste-Einstellungen zurückgesetzt.
+//  Größen und Farben bleiben bis zum stillen Inaktivitäts-Reset auf dem Startbildschirm erhalten.
 // ============================================================
 const CVD_SCHEMES = ['standard', 'protan', 'deuter', 'tritan', 'mono'];
-let colorScheme = 'standard';
+const ACCESSIBILITY_DEFAULTS = Object.freeze({ colorScheme: 'standard', buttonSize: 'normal', textSize: 'normal' });
+const accessibilitySettings = { ...ACCESSIBILITY_DEFAULTS };
+let accessibilityOnStart = false;
+let accessibilityLastActivity = 0;
 
 function applyColorScheme(scheme) {
-  colorScheme = CVD_SCHEMES.includes(scheme) ? scheme : 'standard';
+  const colorScheme = CVD_SCHEMES.includes(scheme) ? scheme : 'standard';
+  accessibilitySettings.colorScheme = colorScheme;
   if (colorScheme === 'standard') document.documentElement.removeAttribute('data-cvd');
   else document.documentElement.setAttribute('data-cvd', colorScheme);
 
@@ -794,7 +817,50 @@ function applyColorScheme(scheme) {
 
   return colorScheme;
 }
-applyColorScheme(colorScheme);
+applyColorScheme(accessibilitySettings.colorScheme);
+
+function applyAccessibilitySize(key, value) {
+  if (!['buttonSize', 'textSize'].includes(key)) return;
+  const size = value === 'large' ? 'large' : 'normal';
+  accessibilitySettings[key] = size;
+  const root = document.documentElement;
+  root.dataset[key] = size;
+  root.style.setProperty(key === 'buttonSize' ? '--a11y-control-scale' : '--a11y-text-scale', size === 'large' ? '1.25' : '1');
+  document.querySelectorAll('[data-accessibility="' + key + '"]').forEach(input => { input.checked = input.value === size; });
+}
+
+function resetAccessibilitySettings() {
+  Object.assign(accessibilitySettings, ACCESSIBILITY_DEFAULTS);
+  Object.entries(ACCESSIBILITY_DEFAULTS).forEach(([key, value]) => {
+    if (key === 'colorScheme') applyColorScheme(value);
+    else applyAccessibilitySize(key, value);
+  });
+}
+
+function syncAccessibilityIdle() {
+  const onStart = currentState === 'splash';
+  if (onStart === accessibilityOnStart) return;
+  accessibilityOnStart = onStart;
+  accessibilityLastActivity = onStart ? Date.now() : 0;
+}
+
+function checkAccessibilityIdle() {
+  if (!accessibilityOnStart || currentState !== 'splash' || !accessibilityLastActivity) return;
+  if (Date.now() - accessibilityLastActivity < 180000) return;
+  if (isCapturing || isSavingPhoto || isDiscardingPhoto || capturePrint) return;
+  resetAccessibilitySettings();
+  accessibilityLastActivity = 0;
+}
+
+document.querySelectorAll('[data-accessibility]').forEach(input => {
+  input.addEventListener('change', () => {
+    if (!input.checked) return;
+    const enlarged = input.value === 'large' && accessibilitySettings[input.dataset.accessibility] !== 'large';
+    applyAccessibilitySize(input.dataset.accessibility, input.value);
+    if (enlarged) playUiSound('enlargement.mp3');
+    else if (input.value === 'normal') stopEnlargementSound();
+  });
+});
 
 const $settingsModal = document.getElementById('settingsModal');
 const $settingsClose = document.getElementById('settingsClose');
@@ -806,9 +872,12 @@ function openSettings() {
   if (!$settingsModal || !$settingsModal.hidden) return;
   settingsReturnFocus = document.activeElement;
   $settingsModal.hidden = false;
+  playUiSound('enlargement.mp3', true);
   // Fokus in den Dialog: die aktuelle Auswahl, sonst der Schließen-Knopf.
-  const current = $cvdOptions && $cvdOptions.querySelector('[data-cvd][aria-checked="true"]');
-  if (current) current.focus();
+  const current = $settingsModal.querySelector('[data-accessibility="buttonSize"]:checked')
+    || ($cvdOptions && $cvdOptions.querySelector('[data-cvd][aria-checked="true"]'));
+  $settingsModal.querySelector('.settings-modal__body').scrollTop = 0;
+  if (current) current.focus({ preventScroll: true });
   else if ($settingsClose) $settingsClose.focus();
   gsap.from($settingsModal.querySelector('.settings-modal__card'), {
     y: 24, opacity: 0, scale: 0.96, duration: 0.3, ease: 'power2.out', clearProps: 'all'
@@ -818,7 +887,7 @@ function openSettings() {
 function closeSettings() {
   if (!$settingsModal || $settingsModal.hidden) return;
   $settingsModal.hidden = true;
-  // Fokus zurück aufs Zahnrad, damit Tastatur und Screenreader den Ort behalten.
+  // Fokus zurück zum Barrierefreiheitsbutton.
   if (settingsReturnFocus && settingsReturnFocus.isConnected) settingsReturnFocus.focus();
   settingsReturnFocus = null;
 }
@@ -1399,7 +1468,7 @@ function syncFaceFilterSelection() {
 // Setzt alle gastbezogenen Aufnahme-Einstellungen auf den neutralen Zustand.
 // Betreiber-Einstellungen (Ausrichtung, Standardsprache, Aufbewahrung) bleiben
 // davon unberührt, weil sie nicht in dieser Funktion liegen.
-function resetGuestCaptureSettings() {
+function resetGuestCaptureSettings(options = {}) {
   hideFilterRemoveHint();
   filterRemoveHintShown = false;
   // Scroll-Demonstrationen gelten je Gast-Sitzung und Menü genau einmal.
@@ -1411,14 +1480,14 @@ function resetGuestCaptureSettings() {
   countdownSeconds = appSettings.defaultCountdownSeconds;
   currentFilter = 'standard';
   currentOverlay = null;
-  soundEnabled = appSettings.defaultSound;
+  if (!options.preserveSound) soundEnabled = appSettings.defaultSound;
 
   // Keine Gästeauswahl im Gerät behalten: Beim nächsten Laden gilt der
   // Standard, nicht die letzte Wahl eines fremden Gastes.
   try {
     localStorage.removeItem('snapbox_capture_mode');
     localStorage.removeItem('countdownSeconds');
-    localStorage.removeItem('soundEnabled');
+    if (!options.preserveSound) localStorage.removeItem('soundEnabled');
     localStorage.removeItem('snapbox_color_scheme'); // Altbestand früherer Versionen
   } catch (err) {}
 
@@ -1428,7 +1497,6 @@ function resetGuestCaptureSettings() {
   applyFilterSelection();
   syncFaceFilterSelection();
   applySoundState();
-  applyColorScheme('standard');
   applyFeatureAvailability();
 }
 
@@ -1570,6 +1638,7 @@ function isKioskLayout() {
 // Seitenmenü; in der Galerie bleibt darüber nur die Trennlinie stehen.
 function syncCancelHome() {
   if (!$cancelHome) return;
+  syncAccessibilityIdle();
   const onSplash = currentState === 'splash';
   // Reuse the same button and handler in the final layout; keep it available in the gallery.
   const homeHost = currentState === 'camera' && $camera.classList.contains('is-ended')
@@ -2682,15 +2751,13 @@ function animatePrintedPhoto(targets, runId) {
   const duration = reduced ? 0.18 : 2;
   const distance = $camera.querySelector('.viewfinder').getBoundingClientRect().height;
   if (capturePrint) capturePrint.finish(false);
-  // Start sits outside captureBar; both share one offset and timeline track.
+  // Keep controls stationary and reveal them after the photo has finished printing.
   const controls = (isKioskLayout()
     ? [document.getElementById('captureBar'), $cancelHome]
     : [$review]).filter(Boolean);
   const controlStates = controls.map(el => ({ el, inert: el.inert }));
   const homeWasHidden = $cancelHome && $cancelHome.hidden;
   if (isKioskLayout() && $cancelHome) $cancelHome.hidden = false;
-  const controlsTop = Math.min(...controls.map(el => el.getBoundingClientRect().top));
-  const controlsDistance = Math.max(0, window.innerHeight - controlsTop) + 1;
   controls.forEach(el => { el.inert = true; });
   return new Promise(resolve => {
     let finished = false;
@@ -2712,7 +2779,7 @@ function animatePrintedPhoto(targets, runId) {
     capturePrint = effect;
     window.addEventListener('resize', completeOnResize);
     gsap.set(targets, { y: reduced ? 0 : -distance, opacity: reduced ? 0 : 1, visibility: 'visible' });
-    gsap.set(controls, { y: reduced ? 0 : controlsDistance, opacity: reduced ? 0 : 1, visibility: 'visible' });
+    gsap.set(controls, { opacity: 0, visibility: 'visible', clearProps: 'transform' });
     effect.tween = gsap.timeline({
       defaults: { duration, ease: reduced ? 'power1.out' : 'none' },
       onStart: () => { if (!reduced) playPrinterSound(duration); },
@@ -2720,7 +2787,8 @@ function animatePrintedPhoto(targets, runId) {
       onInterrupt: () => effect.finish(false)
     })
       .to(targets, { y: 0, opacity: 1 }, 0)
-      .to(controls, { y: 0, opacity: 1 }, 0);
+      .call(stopPrinterSound, [], duration)
+      .to(controls, { opacity: 1, duration: reduced ? 0 : 0.4, ease: 'power1.inOut' }, duration);
   });
 }
 
@@ -2851,12 +2919,13 @@ async function runCaptureSequence() {
 function showStripProgress(current, total) {
   let el = document.getElementById('stripProgress');
   if (!el) {
-    el = document.createElement('div');
+    el = document.createElement('span');
     el.id = 'stripProgress';
     el.className = 'strip-progress';
     el.setAttribute('aria-live', 'polite');
-    $camera.querySelector('.viewfinder').appendChild(el);
   }
+  const shutter = isKioskLayout() ? document.getElementById('landscapeCaptureBtn') : $captureBtn;
+  if (el.parentElement !== shutter) shutter.appendChild(el);
   el.textContent = current + ' / ' + total;
   el.classList.add('is-visible');
 }
@@ -2915,6 +2984,7 @@ function stopCountdown() {
     const state = countdownState;
     countdownState = null;
     state.timers.forEach((id) => clearTimeout(id));
+    cancelAnimationFrame(state.ringFrame);
     state.resolve(false);
   }
   hideCountdown();
@@ -2928,6 +2998,7 @@ function finishCountdown(completed) {
   const state = countdownState;
   countdownState = null;
   state.timers.forEach((id) => clearTimeout(id));
+  cancelAnimationFrame(state.ringFrame);
   hideCountdown();
   state.resolve(completed);
 }
@@ -2937,8 +3008,22 @@ function runCountdown(runId) {
   return new Promise((resolve) => {
     let count = countdownSeconds;
     const STEP_MS = 900;
-    const state = { resolve, timers: [] };
+    const total = count;
+    const digit = document.getElementById('countdownValue');
+    const ring = document.getElementById('countdownRing');
+    const textMetrics = document.createElement('canvas').getContext('2d');
+    const digitStyle = getComputedStyle(digit);
+    textMetrics.font = digitStyle.fontWeight + ' ' + digitStyle.fontSize + ' ' + digitStyle.fontFamily;
+    const reduced = reducedCaptureMotion();
+    const state = { resolve, timers: [], ringFrame: 0, stepStarted: 0 };
     countdownState = state;
+    // Render only: interpolate within the existing step; its timer still drives capture.
+    const paintRing = () => {
+      if (countdownState !== state) return;
+      const elapsed = reduced ? 0 : Math.min(1, (performance.now() - state.stepStarted) / STEP_MS);
+      ring.style.strokeDashoffset = String(-Math.min(1, (total - count + elapsed) / total));
+      if (!reduced) state.ringFrame = requestAnimationFrame(paintRing);
+    };
 
     const schedule = (fn, ms) => {
       const id = setTimeout(fn, ms);
@@ -2955,38 +3040,28 @@ function runCountdown(runId) {
         finishCountdown(false);
         return;
       }
-      $countdown.textContent = String(count);
+      digit.textContent = String(count);
+      // Center the visible glyphs, rather than the font's ascender/descender box.
+      const ink = textMetrics.measureText(String(count));
+      digit.setAttribute('x', String(50 + (ink.width + ink.actualBoundingBoxLeft - ink.actualBoundingBoxRight) / 2));
+      digit.setAttribute('y', String(50 + (ink.actualBoundingBoxAscent - ink.actualBoundingBoxDescent) / 2));
+      state.stepStarted = performance.now();
+      ring.style.strokeDashoffset = String(-(total - count) / total);
       playCountdownTick(count === 1);
-
-      gsap.fromTo(
-        $countdown,
-        { scale: 0.35, opacity: 0, y: 0 },
-        { scale: 1, opacity: 1, duration: 0.35, ease: 'back.out(2.2)' }
-      );
-
-      // Fade the digit out near the end of the step, but keep the timing
-      // logic independent of GSAP so a throttled tab can't stall the capture.
-      schedule(() => {
-        gsap.to($countdown, {
-          scale: 0.8,
-          opacity: 0,
-          duration: 0.22,
-          ease: 'power2.in'
-        });
-      }, STEP_MS - 220);
 
       schedule(() => {
         count--;
         if (count >= 1) {
           showTick();
         } else {
-          gsap.set($countdown, { opacity: 0 });
+          ring.style.strokeDashoffset = '-1';
           finishCountdown(true);
         }
       }, STEP_MS);
     };
 
     showTick();
+    if (!reduced) state.ringFrame = requestAnimationFrame(paintRing);
   });
 }
 
@@ -3856,10 +3931,31 @@ const UI_SOUND_SRCS = {
   'start.mp3': 'assets/audio/start.mp3',
   'Button_push.mp3': 'assets/audio/Button_push.mp3',
   'paper_crush.mp3': 'assets/audio/paper_crush.mp3',
-  'afk_timer.mp3': 'assets/audio/afk_timer.MP3'
+  'afk_timer.mp3': 'assets/audio/afk_timer.MP3',
+  'enlargement.mp3': 'assets/audio/enlargement.mp3',
+  'success.mp3': 'assets/audio/success.mp3'
 };
+let enlargementSoundStop = null;
+let enlargementSoundGeneration = 0;
+let enlargementSoundLoad = null;
+
+function stopEnlargementSound() {
+  enlargementSoundGeneration++;
+  if (enlargementSoundStop) enlargementSoundStop();
+}
 const afkTimerSources = new Set();
 let afkTimerSoundGeneration = 0;
+const successSoundSources = new Set();
+let successSoundGeneration = 0;
+
+function stopSuccessSounds() {
+  successSoundGeneration++;
+  successSoundSources.forEach(source => {
+    try { source.stop(); } catch (e) {}
+    source.disconnect();
+  });
+  successSoundSources.clear();
+}
 
 function stopAfkTimerSounds() {
   afkTimerSoundGeneration++;
@@ -3874,20 +3970,49 @@ function playUiSound(name, preload = false) {
   if (!soundEnabled) return;
   const ctx = getAudioContext();
   if (!ctx) return;
+  const enlargement = name === 'enlargement.mp3';
+  if (enlargement && !preload) stopEnlargementSound();
+  const enlargementGeneration = enlargementSoundGeneration;
+  const success = name === 'success.mp3';
+  if (success && !preload) stopSuccessSounds();
+  const successGeneration = successSoundGeneration;
   const afkGeneration = name === 'afk_timer.mp3' ? afkTimerSoundGeneration : null;
   const play = (buffer) => {
     if (!buffer || !soundEnabled || ctx.state !== 'running') return;
     if (name === 'afk_timer.mp3' && (!idleWarnVisible || afkGeneration !== afkTimerSoundGeneration)) return;
+    if (enlargement && enlargementGeneration !== enlargementSoundGeneration) return;
+    if (enlargement && accessibilitySettings.buttonSize !== 'large' && accessibilitySettings.textSize !== 'large') return;
+    if (success && successGeneration !== successSoundGeneration) return;
     try {
       const source = ctx.createBufferSource();
       source.buffer = buffer;
-      source.connect(ctx.destination);
+      if (enlargement) {
+        const gain = ctx.createGain();
+        gain.gain.value = 0.3;
+        source.connect(gain);
+        gain.connect(ctx.destination);
+        let stopped = false;
+        const stop = () => {
+          if (stopped) return;
+          stopped = true;
+          try { source.stop(); } catch (e) {}
+          source.disconnect();
+          gain.disconnect();
+          if (enlargementSoundStop === stop) enlargementSoundStop = null;
+        };
+        enlargementSoundStop = stop;
+        source.onended = stop;
+      } else source.connect(ctx.destination);
       if (name === 'afk_timer.mp3') {
         afkTimerSources.add(source);
         source.onended = () => afkTimerSources.delete(source);
+      } else if (success) {
+        successSoundSources.add(source);
+        source.onended = () => { successSoundSources.delete(source); source.disconnect(); };
       }
       source.start();
     } catch (err) {
+      if (enlargement) stopEnlargementSound();
       // Optional UI sounds must never interrupt the camera flow.
     }
   };
@@ -3897,11 +4022,16 @@ function playUiSound(name, preload = false) {
   }
   const src = UI_SOUND_SRCS[name];
   if (!src) return;
-  fetch(src, name === 'afk_timer.mp3' ? { cache: 'no-store' } : undefined)
+  const load = enlargement && enlargementSoundLoad ? enlargementSoundLoad : fetch(src, name === 'afk_timer.mp3' ? { cache: 'no-store' } : undefined)
     .then((res) => { if (!res.ok) throw new Error('HTTP ' + res.status); return res.arrayBuffer(); })
-    .then((bytes) => ctx.decodeAudioData(bytes))
+    .then((bytes) => ctx.decodeAudioData(bytes));
+  if (enlargement) enlargementSoundLoad = load;
+  load
     .then((buffer) => { uiSoundBuffers.set(name, buffer); if (!preload) play(buffer); })
-    .catch((err) => console.warn('UI sound could not be loaded:', name, err));
+    .catch((err) => {
+      if (enlargement && enlargementSoundLoad === load) enlargementSoundLoad = null;
+      console.warn('UI sound could not be loaded:', name, err);
+    });
 }
 
 // Real shutter recording (camera-shutter.mp3). It is fetched right away and
@@ -4199,6 +4329,8 @@ applySoundState();
 function toggleSound() {
   soundEnabled = !soundEnabled;
   if (!soundEnabled) {
+    stopEnlargementSound();
+    stopSuccessSounds();
     stopPrinterSound();
     stopAfkTimerSounds();
   }
@@ -4433,6 +4565,7 @@ function renderStampPanel() {
   const list = stampListEl();
   if (!list) return;
   list.innerHTML = '';
+  list.parentElement.querySelector('[data-action="clear-stickers"]')?.remove();
   const clear = document.createElement('button');
   clear.type = 'button';
   clear.className = 'bar-tile bar-tile--reset dot-chip';
@@ -4442,7 +4575,7 @@ function renderStampPanel() {
   clear.title = t('stickerClearAll');
   clear.appendChild(menuResetDisc('stickers'));
   clear.addEventListener('click', clearStickers);
-  list.appendChild(clear);
+  list.after(clear);
   STICKER_CATEGORIES.filter(category => category.items.length).forEach((category, index) => {
     if (index) {
       const divider = document.createElement('span');
@@ -4541,14 +4674,25 @@ function startElementTrash() {
   stopElementTrash();
   const trash = elementTrashEl();
   if (!trash) return;
-  const home = $cancelHome && $cancelHome.getBoundingClientRect();
-  // Mirror the complete Home touch area; animate only the inner drawing.
-  ['right', 'bottom', 'width', 'height'].forEach(name => trash.style.removeProperty(name));
-  if (home && home.width && home.height) {
-    trash.style.right = home.left + 'px';
-    trash.style.bottom = (window.innerHeight - home.bottom) + 'px';
-    trash.style.width = home.width + 'px';
-    trash.style.height = home.height + 'px';
+  if (menuDrag && menuDrag.payload.kind === 'overlay') {
+    // Preserve the existing frame drag behavior; the fixed menu slot is for stickers.
+    const home = $cancelHome.getBoundingClientRect();
+    Object.assign(trash.style, { left: 'auto', top: 'auto', right: home.left + 'px',
+      bottom: (window.innerHeight - home.bottom) + 'px', width: home.width + 'px', height: home.height + 'px' });
+  } else {
+    if (!stampMenuIsOpen()) setStampMenuOpen(true);
+    window.clearTimeout(stampScrollHintTimer);
+    stampScrollHintTimer = 0;
+    hideListScrollHint(document.getElementById('stampSwipeHint'));
+    const panel = stampPanelEl();
+    const clear = panel.querySelector('[data-action="clear-stickers"]');
+    if (!clear) return;
+    // The reset slot stays outside the scrolling viewport; only its drawing changes.
+    const slot = clear.getBoundingClientRect();
+    Object.assign(trash.style, { left: slot.left + 'px', top: slot.top + 'px',
+      right: 'auto', bottom: 'auto', width: slot.width + 'px', height: slot.height + 'px' });
+    panel.classList.add('has-drag-trash');
+    clear.disabled = true;
   }
   trash.classList.add('is-visible');
   $camera.classList.add('is-dragging-element');
@@ -4564,10 +4708,20 @@ function startElementTrash() {
 function elementTrashContains(x, y) {
   const trash = elementTrashEl();
   if (!trash || !trash.classList.contains('is-visible')) return false;
+  if (menuDrag && menuDrag.payload.kind === 'overlay') {
+    const rect = trash.getBoundingClientRect();
+    return pointerInside({ left: rect.left - 12, right: rect.right + 12,
+      top: rect.top - 12, bottom: rect.bottom + 12 }, x, y);
+  }
+  const photo = photoStageRect();
+  if (pointerInside(photo, x, y)) return false;
   const rect = trash.getBoundingClientRect();
-  const padding = 12;
-  return pointerInside({ left: rect.left - padding, right: rect.right + padding,
-    top: rect.top - padding, bottom: rect.bottom + padding }, x, y);
+  const menu = stampPanelEl().querySelector('.bar-slot__inner').getBoundingClientRect();
+  const padding = 6;
+  return pointerInside({ left: Math.max(0, menu.left, rect.left - padding),
+    right: Math.min(window.innerWidth, menu.right, rect.right + padding),
+    top: Math.max(0, menu.top, photo.bottom, rect.top - padding),
+    bottom: Math.min(window.innerHeight, menu.bottom, rect.bottom + padding) }, x, y);
 }
 
 function updateElementTrash(x, y) {
@@ -4595,6 +4749,12 @@ function stopElementTrash() {
     trash.style.removeProperty('--trash-wiggle');
   }
   $camera.classList.remove('is-dragging-element');
+  const panel = stampPanelEl();
+  if (panel) {
+    panel.classList.remove('has-drag-trash');
+    const clear = panel.querySelector('[data-action="clear-stickers"]');
+    if (clear) clear.disabled = false;
+  }
 }
 
 function pointerInside(rect, x, y) {
@@ -4707,6 +4867,7 @@ function enableMenuDrag(btn, payload) {
       window.removeEventListener('pointerup', up);
       window.removeEventListener('pointercancel', up);
       window.removeEventListener('blur', cancelMenuDrag);
+      window.removeEventListener('resize', cancelMenuDrag);
       window.removeEventListener('keydown', keydown, true);
       menuDragCleanup = null;
     };
@@ -4728,6 +4889,7 @@ function enableMenuDrag(btn, payload) {
     window.addEventListener('pointerup', up);
     window.addEventListener('pointercancel', up);
     window.addEventListener('blur', cancelMenuDrag);
+    window.addEventListener('resize', cancelMenuDrag);
     window.addEventListener('keydown', keydown, true);
   });
 }
@@ -4850,7 +5012,7 @@ function renderBarOverlays(list) {
     }
     btn.addEventListener('click', () => {
       if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
-      setOverlay(overlay.id);
+      setOverlay(currentOverlay && currentOverlay.id === overlay.id ? NO_OVERLAY_ID : overlay.id);
     });
     if (overlay.id !== NO_OVERLAY_ID) {
       enableMenuDrag(btn, { kind: 'overlay', id: overlay.id, src: overlay.src });
@@ -4929,6 +5091,10 @@ function updateBarMenuSelection() {
   });
   const summary = document.getElementById('barActiveFilterNames');
   if (summary) {
+    if (barMenuShowsOverlays()) {
+      summary.textContent = overlayLabel(currentOverlay || NO_OVERLAY_OPTION);
+      return;
+    }
     const names = [];
     if (currentFilter !== 'standard' && BAR_COLOR_FILTERS[currentFilter]) names.push(t(BAR_COLOR_FILTERS[currentFilter]));
     const faceFilter = ((window.SnapBoxFilters && window.SnapBoxFilters.FILTERS) || []).find(filter => filter.id === face);
@@ -5731,7 +5897,9 @@ window.addEventListener('resize', () => {
 });
 
 function overlayLabel(overlay) {
-  return overlay.labelKey ? t(overlay.labelKey) : overlay.label;
+  return overlay.labelKey ? t(overlay.labelKey) : overlay.label
+    || overlay.src.split('/').pop().replace(/\.[^.]+$/, '')
+      .replace(/^(?:frame|overlay)[-_ ]+/i, '').replace(/[_-]+/g, ' ').trim();
 }
 
 function findOverlay(id) {
@@ -5918,8 +6086,8 @@ function showEndScreen(url) {
   if ($cancelHome) $cancelHome.focus({ preventScroll: true });
 }
 
-function returnToIdle() {
-  resetGuestCaptureSettings();
+function returnToIdle(options = {}) {
+  resetGuestCaptureSettings(options);
   galleryReturnState = 'camera';
   if ($endScreen) $endScreen.hidden = true;
   $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping', 'is-finishing');
@@ -5935,8 +6103,10 @@ function returnToIdle() {
   // Beim Start wurden Brand, Challenge-Karte und Ton-Button ausgeblendet;
   // für den nächsten Gast müssen sie wieder sichtbar sein.
   gsap.set(['.splash__brand', '.challenge-card', '.splash__sound', '.splash__content--kiosk', '.splash__gallery'], { clearProps: 'all' });
-  gsap.fromTo($splash, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
-  gsap.fromTo('.splash__content--kiosk', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out', delay: 0.1, clearProps: 'all' });
+  if (options.animate !== false) {
+    gsap.fromTo($splash, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
+    gsap.fromTo('.splash__content--kiosk', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out', delay: 0.1, clearProps: 'all' });
+  } else gsap.set($splash, { opacity: 1 });
   currentState = 'splash';
   syncCancelHome();
   if ($splashLang) $splashLang.hidden = false;
@@ -5981,6 +6151,121 @@ function printEndPhoto() {
   win.document.close();
 }
 
+async function completePhotoSession() {
+  if (sessionCompletion || isSavingPhoto || isCapturing || !$camera.classList.contains('is-ended')) return;
+  const completion = { overlay: null, tween: null };
+  sessionCompletion = completion;
+  const screens = [$camera, $splash, $gallery, $sideRail, $splashLang].filter(Boolean)
+    .map(el => ({ el, inert: el.inert }));
+  let committed = false;
+  let watchdog = 0;
+  try {
+    hideIdleWarning();
+    screens.forEach(({ el }) => { el.inert = true; });
+    const overlay = document.createElement('div');
+    completion.overlay = overlay;
+    overlay.className = 'session-completion';
+    overlay.tabIndex = -1;
+    const theme = getComputedStyle(document.documentElement);
+    overlay.style.setProperty('--completion-accent', theme.getPropertyValue('--c-highlight'));
+    overlay.style.setProperty('--a11y-text-scale', theme.getPropertyValue('--a11y-text-scale'));
+    overlay.innerHTML = '<svg class="session-completion__dial" viewBox="0 0 100 100" aria-hidden="true" focusable="false">'
+      + '<circle class="session-completion__track" cx="50" cy="50" r="46"/>'
+      + '<circle class="session-completion__ring" cx="50" cy="50" r="46" pathLength="100" transform="rotate(-90 50 50)"/>'
+      + '<text class="session-completion__percent" x="50" y="50" text-anchor="middle">0 %</text></svg>';
+    const caption = document.createElement('p');
+    caption.className = 'session-completion__caption';
+    caption.setAttribute('role', 'status');
+    caption.textContent = t('sessionCompleted');
+    overlay.appendChild(caption);
+    document.body.appendChild(overlay);
+    overlay.focus({ preventScroll: true });
+    playUiSound('success.mp3', true);
+
+    // Await the existing upload; retry only a failed save, using the final image unchanged.
+    const photo = lastPhoto;
+    if (!photo || !endPhotoUrl) throw new Error('No completed photo available');
+    let saveTimeout;
+    try {
+      await Promise.race([
+        (async () => {
+          if (photo.savePromise) await photo.savePromise.catch(() => {});
+          if (!photo.id) {
+            photo.savePromise = savePhotoToServer(endPhotoUrl).then(id => {
+              if (!id) throw new Error('Photo save failed');
+              photo.id = id;
+              if (photo.card) {
+                photo.card.dataset.id = id;
+                if (photo.card.isConnected) attachDelete(photo.card, id);
+                if (photo.card._photoRecord) photo.card._photoRecord.id = id;
+              }
+              addPhotoIndexId(id);
+            });
+            await photo.savePromise;
+          }
+        })(),
+        new Promise((_, reject) => { saveTimeout = setTimeout(() => reject(new Error('Photo save timed out')), 20000); })
+      ]);
+    } finally { clearTimeout(saveTimeout); }
+    if (lastPhoto !== photo || currentState !== 'camera' || !$camera.classList.contains('is-ended')) {
+      throw new Error('Photo session changed');
+    }
+
+    const progress = { value: 0 };
+    const ring = overlay.querySelector('.session-completion__ring');
+    const percent = overlay.querySelector('.session-completion__percent');
+    const metrics = document.createElement('canvas').getContext('2d');
+    const font = getComputedStyle(percent);
+    metrics.font = font.fontWeight + ' ' + font.fontSize + ' ' + font.fontFamily;
+    const paint = () => {
+      percent.textContent = Math.floor(progress.value) + ' %';
+      ring.style.strokeDashoffset = String(100 - progress.value);
+      const ink = metrics.measureText(percent.textContent);
+      percent.setAttribute('x', String(50 + (ink.width + ink.actualBoundingBoxLeft - ink.actualBoundingBoxRight) / 2));
+      percent.setAttribute('y', String(50 + (ink.actualBoundingBoxAscent - ink.actualBoundingBoxDescent) / 2));
+    };
+    paint();
+    const reduced = reducedCaptureMotion();
+    const duration = reduced ? 0.15 : 2.5;
+    const fade = reduced ? 0.1 : 0.5;
+    await new Promise((resolve, reject) => {
+      // Failure recovery only: this timer never drives progress or the normal transition.
+      watchdog = setTimeout(() => reject(new Error('Completion animation timed out')), (duration + fade + 2) * 1000);
+      completion.tween = gsap.timeline({ onComplete: resolve, onInterrupt: () => reject(new Error('Completion animation interrupted')) })
+        .to(progress, { value: 100, duration, ease: 'none', onUpdate: paint })
+        .call(() => {
+          try {
+            progress.value = 100;
+            paint();
+            // Hide the settings change completely; reveal only the prepared, neutral splash.
+            overlay.style.backgroundColor = '#08090c';
+            resetToStartScreen({ preserveSound: true, animate: false });
+            resetAccessibilitySettings();
+            committed = true;
+            playUiSound('success.mp3');
+          } catch (err) { reject(err); }
+        })
+        .to(overlay, { opacity: 0, duration: fade, ease: 'power1.inOut' });
+    });
+  } catch (err) {
+    console.warn('Session completion failed:', err);
+    if (!committed) showToast(t('sessionCompletionError'), { error: true });
+  } finally {
+    clearTimeout(watchdog);
+    if (completion.tween) completion.tween.kill();
+    if (completion.overlay) completion.overlay.remove();
+    screens.forEach(({ el, inert }) => { el.inert = inert; });
+    if (sessionCompletion === completion) sessionCompletion = null;
+    if (currentState === 'splash') {
+      const start = isKioskLayout() ? document.getElementById('splashStart') : document.querySelector('.splash__cta');
+      if (start) start.focus({ preventScroll: true });
+    } else {
+      resetIdleDeadline();
+      $cancelHome.focus({ preventScroll: true });
+    }
+  }
+}
+
 document.querySelectorAll('.endscreen__action').forEach((btn) => {
   btn.addEventListener('click', () => {
     if (btn.dataset.end === 'qr') {
@@ -5997,15 +6282,18 @@ document.querySelectorAll('.endscreen__action').forEach((btn) => {
 });
 if ($cancelHome) {
   $cancelHome.addEventListener('click', async () => {
-    if (isDiscardingPhoto) return;
+    if (isDiscardingPhoto || sessionCompletion) return;
     if (isCapturing) {
       cancelCapture();
       return;
     }
     if (!$confirmModal.hidden) return;
 
-    if ($cancelHome.classList.contains('is-done') && currentState === 'camera') {
+    if ($cancelHome.classList.contains('is-done') && currentState === 'camera'
+      && $camera.classList.contains('is-ended') && !$endScreen.hidden) {
       playUiSound('Button_push.mp3');
+      await completePhotoSession();
+      return;
     }
 
     // Vor „Annehmen“ gibt es noch kein bestätigtes Foto. Der Weg zum Start
@@ -6111,6 +6399,7 @@ window.addEventListener('load', async () => {
 
   // keyboard shortcuts
   document.addEventListener('keydown', (e) => {
+    if (sessionCompletion) { e.preventDefault(); return; }
     const target = e.target;
     // Der Punkt auf Kiosk-Fernbedienungen ist Abbrechen/Home.
     const dotKey = e.key === '.' || e.key === 'Decimal'
@@ -6367,20 +6656,25 @@ function showIdleWarning() {
   );
 }
 
-function resetToStartScreen() {
+function resetToStartScreen(options = {}) {
   hideIdleWarning();
   if ($qrModal && !$qrModal.hidden) closeQrDialog();
   if ($confirmModal && !$confirmModal.hidden) closeConfirm(false);
   if (lightbox) { lightbox.remove(); lightbox = null; }
   if (trashOpen) toggleTrash(false);
-  returnToIdle();
+  returnToIdle(options);
   idleStateKey = 'splash';
   idleDeadline = 0;
 }
 
 // Jede echte Eingabe zählt als Aktivität. Während der Warnung wird die
 // Eingabe geschluckt, damit sie nicht zusätzlich eine App-Aktion auslöst.
+function noteAccessibilityActivity(e) {
+  if (e.isTrusted && currentState === 'splash') accessibilityLastActivity = Date.now();
+}
+
 function noteIdleActivity(e) {
+  noteAccessibilityActivity(e);
   if (idleWarnVisible) return;
   resetIdleDeadline();
 }
@@ -6388,6 +6682,7 @@ function noteIdleActivity(e) {
 window.addEventListener('pointerdown', noteIdleActivity, true);
 window.addEventListener('keydown', noteIdleActivity, true);
 window.addEventListener('wheel', noteIdleActivity, { capture: true, passive: true });
+window.addEventListener('pointermove', noteAccessibilityActivity, { passive: true });
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) resetIdleDeadline();
 });
@@ -6395,7 +6690,9 @@ document.addEventListener('visibilitychange', () => {
 resetIdleDeadline();
 
 setInterval(() => {
+  checkAccessibilityIdle();
   if (document.hidden) return;
+  if (sessionCompletion) return;
 
   const key = currentIdleStateKey();
   if (key !== idleStateKey) {

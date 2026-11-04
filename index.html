@@ -14,6 +14,7 @@
       <div class="splash__gradient"></div>
     </div>
     <div class="splash__chain" id="splashChain" aria-hidden="true"></div>
+    <button class="splash__credits" type="button" aria-label="Credits">Credits</button>
 
     <div class="splash__content splash__content--portrait">
       <h1 class="splash__title">SnapBox</h1>
@@ -70,15 +71,15 @@
       <span class="splash__tool-label" data-i18n="soundLabel">Audio</span>
     </button>
 
-    <!-- Sehschwächen-Einstellungen: Auge statt Zahnrad, mit sichtbarem Label -->
-    <button class="splash__settings" id="splashSettings" type="button" aria-haspopup="dialog" aria-label="Sehschwächen-Einstellungen öffnen" data-i18n-aria="settingsOpenAria">
+    <!-- Barrierefreiheit: Farbmodus und unabhängige Größenoptionen. -->
+    <button class="splash__settings" id="splashSettings" type="button" aria-haspopup="dialog" aria-label="Barrierefreiheit öffnen" title="Barrierefreiheit öffnen" data-i18n-aria="settingsOpenAria" data-i18n-title="settingsOpenAria">
       <span class="splash__settings-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"></path>
           <circle cx="12" cy="12" r="3.2"></circle>
         </svg>
       </span>
-      <span class="splash__settings-label" data-i18n="settingsOpenLabel">Sehschwächen</span>
+      <span class="splash__settings-label" data-i18n="settingsOpenLabel">Barrierefreiheit</span>
     </button>
   </section>
 
@@ -118,7 +119,13 @@
           <span class="streak__fire" aria-hidden="true">🔥</span>
           <span class="streak__count" id="streakCount">0</span>
         </div>
-        <div class="countdown" id="countdown" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">3</div>
+        <div class="countdown" id="countdown" role="status" aria-live="polite" aria-atomic="true" aria-hidden="true">
+          <svg class="countdown__dial" viewBox="0 0 100 100" focusable="false">
+            <circle class="countdown__disc" cx="50" cy="50" r="48" aria-hidden="true"/>
+            <circle class="countdown__ring" id="countdownRing" cx="50" cy="50" r="48" pathLength="1" transform="rotate(-90 50 50)" aria-hidden="true"/>
+            <text class="countdown__digit" id="countdownValue" x="50" y="50" text-anchor="middle">3</text>
+          </svg>
+        </div>
         <button class="camera__sound" id="soundToggle" type="button" aria-label="Ton ausschalten" aria-pressed="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M11 5L6 9H2v6h4l5 4V5z"></path>
@@ -231,9 +238,9 @@
               <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 4v6h6"></path><path d="M3.5 15a9 9 0 1 0 2-9.4L1 10"></path></svg></span>
               <span class="round-action__label" data-i18n="btnRetake">Neu aufnehmen</span>
             </button>
-            <button class="round-action round-action--accept" id="landscapeKeep" type="button" aria-label="Foto annehmen" data-i18n-aria="acceptAria">
+            <button class="round-action round-action--accept" id="landscapeKeep" type="button" aria-label="Bearbeitung fertigstellen" data-i18n-aria="acceptAria">
               <span class="round-action__icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M4 12.5 9.5 18 20 6.5"></path></svg></span>
-              <span class="round-action__label" data-i18n="btnAccept">Annehmen</span>
+              <span class="round-action__label" data-i18n="btnAccept">Fertig</span>
             </button>
           </div>
 
@@ -250,7 +257,7 @@
             <div class="bar-slot bar-slot--options" id="captureOptions" aria-hidden="true" inert>
               <div class="bar-slot__inner">
                 <div class="capture-switch">
-                  <p class="capture-switch__label" data-i18n="captionTimer">COUNTDOWN</p>
+                  <p class="capture-switch__label" data-i18n="captionTimerMenu">COUNT&shy;DOWN</p>
                   <div class="option-cycle-group" id="kioskTimer">
                     <button class="option-cycle" data-cycle="timer" type="button" aria-label="Countdown">
                       <span class="option-cycle__value">5s</span>
@@ -593,8 +600,26 @@
        auf das ganze UI und gilt nur für die aktuelle Sitzung. -->
   <div class="settings-modal" id="settingsModal" hidden>
     <div class="settings-modal__card" role="dialog" aria-modal="true" aria-labelledby="settingsTitle" aria-describedby="settingsHint">
-      <button class="settings-modal__close" id="settingsClose" type="button" aria-label="Einstellungen schließen" data-i18n-aria="settingsCloseAria">×</button>
-      <h3 class="settings-modal__title" id="settingsTitle" data-i18n="settingsTitle">Einstellungen</h3>
+      <div class="settings-modal__header">
+      <button class="settings-modal__close" id="settingsClose" type="button" aria-label="Zurück" title="Zurück" data-i18n-aria="settingsCloseAria" data-i18n-title="settingsCloseAria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button>
+      <h3 class="settings-modal__title" id="settingsTitle" data-i18n="settingsTitle">Barrierefreiheit</h3>
+      </div>
+      <div class="settings-modal__body">
+      <div class="accessibility-sizes">
+        <fieldset><legend data-i18n="accessibilityButtons">Buttongröße</legend>
+          <div class="accessibility-size-options accessibility-size-options--buttons">
+            <label><input type="radio" name="buttonSize" data-accessibility="buttonSize" value="normal" checked><span class="accessibility-preview" aria-hidden="true"><span class="accessibility-button-example"></span></span><span data-i18n="accessibilityButtonsNormal">Normal</span></label>
+            <label><input type="radio" name="buttonSize" data-accessibility="buttonSize" value="large"><span class="accessibility-preview" aria-hidden="true"><span class="accessibility-button-example"></span></span><span data-i18n="accessibilityButtonsLarge">Groß</span></label>
+          </div>
+        </fieldset>
+        <fieldset><legend data-i18n="accessibilityText">Schriftgröße</legend>
+          <div class="accessibility-size-options">
+            <label><input type="radio" name="textSize" data-accessibility="textSize" value="normal" checked><span class="accessibility-preview" aria-hidden="true"><span class="accessibility-text-example">Aa</span></span><span data-i18n="accessibilityTextNormal">Normal</span></label>
+            <label><input type="radio" name="textSize" data-accessibility="textSize" value="large"><span class="accessibility-preview" aria-hidden="true"><span class="accessibility-text-example">Aa</span></span><span data-i18n="accessibilityTextLarge">Groß</span></label>
+          </div>
+        </fieldset>
+      </div>
+      <div class="settings-modal__colors">
       <p class="settings-modal__hint" id="settingsHint" data-i18n="cvdHint">Farbmodus für Sehschwächen</p>
       <div class="cvd-options" id="cvdOptions" role="radiogroup" aria-label="Farbmodus" data-i18n-aria="cvdGroupLabel">
         <button class="cvd-option" type="button" role="radio" aria-checked="true" tabindex="0" data-cvd="standard">
@@ -635,6 +660,8 @@
           <span class="cvd-option__swatch cvd-option__swatch--mono" aria-hidden="true"><span></span><span></span><span></span></span>
         </button>
       </div>
+      </div>
+      </div>
     </div>
   </div>
 
@@ -657,6 +684,14 @@
   <!-- Inaktivitäts-Warnung: Countdown in der im Admin-Panel gesetzten Warnzeit; jeder Tipp bricht ab -->
   <div class="idle-warning" id="idleWarning" hidden>
     <div class="idle-warning__card" id="idleWarningCard" role="alertdialog" aria-modal="true" aria-labelledby="idleWarningTitle" aria-describedby="idleWarningText idleWarningHint" tabindex="-1">
+      <svg class="idle-warning__illustration" viewBox="0 0 128 96" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+        <path d="M91 53h8a11 11 0 0 1 0 22h-8"/>
+        <path d="M27 48h64v23a18 18 0 0 1-18 18H45a18 18 0 0 1-18-18Z" fill="currentColor" fill-opacity=".08"/>
+        <path d="M20 90h79M40 65q5 6 10 0M66 65q5 6 10 0M55 76q4 3 8 0"/>
+        <path d="M59 36a3 3 0 1 0 0 .1M69 28a2 2 0 1 0 0 .1" stroke="#c9ccd6"/>
+        <rect x="69" y="5" width="53" height="25" rx="12" stroke="#c9ccd6"/>
+        <text x="96" y="22" fill="#eef1f6" stroke="none" text-anchor="middle" font-size="14" font-family="inherit">Zzz...</text>
+      </svg>
       <p class="idle-warning__title" id="idleWarningTitle" data-i18n="idleResetTitle">Hey, bist du noch da?</p>
       <p class="idle-warning__text" id="idleWarningText" data-i18n="idleResetText">Zurück zum Start in</p>
       <p class="idle-warning__count"><span id="idleCount">15</span><span class="idle-warning__unit">s</span></p>

@@ -39,7 +39,7 @@ body.orientation-landscape .splash__content--kiosk {
    sichtbarem Label. Beide Buttons bleiben als ganze Spalte klickbar. */
 body.orientation-landscape .splash__gallery,
 body.orientation-landscape .splash__sound {
-  --splash-tool-size: clamp(76px, 7.6vw, 92px);
+  --splash-tool-size: calc((clamp(76px, 7.6vw, 92px)) * var(--a11y-control-scale, 1));
   display: flex;
   width: calc(var(--splash-tool-size) + 20px);
   height: auto;
@@ -51,9 +51,32 @@ body.orientation-landscape .splash__sound {
   backdrop-filter: none;
 }
 body.orientation-landscape .splash__gallery {
-  left: calc(clamp(22px, 2.6vw, 44px) + clamp(76px, 7.6vw, 92px) + 32px);
+  left: calc(clamp(22px, 2.6vw, 44px) + var(--splash-tool-size) + 32px);
   right: auto;
   bottom: clamp(16px, 2.6vh, 32px);
+}
+body.orientation-landscape .splash__settings {
+  --splash-tool-size: calc((clamp(76px, 7.6vw, 92px)) * var(--a11y-control-scale, 1));
+  position: absolute;
+  top: auto;
+  right: auto;
+  bottom: clamp(16px, 2.6vh, 32px);
+  left: calc(clamp(22px, 2.6vw, 44px) + (2 * var(--splash-tool-size)) + 64px);
+  width: calc(var(--splash-tool-size) + 20px);
+  padding: 4px 0 2px;
+  gap: 10px;
+}
+body.orientation-landscape .splash__settings-icon {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(18, 19, 24, 0.72);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
+}
+body.orientation-landscape .splash__settings-label {
+  font-size: calc((0.9rem) * var(--a11y-text-scale, 1));
+}
+body.orientation-landscape .splash__settings-icon svg {
+  width: calc((42px) * var(--a11y-control-scale, 1));
+  height: calc((42px) * var(--a11y-control-scale, 1));
 }
 body.orientation-landscape .splash__gallery .splash__tool-icon,
 body.orientation-landscape .splash__sound .splash__tool-icon {
@@ -65,12 +88,12 @@ body.orientation-landscape .splash__sound .splash__tool-icon {
 }
 body.orientation-landscape .splash__gallery .splash__tool-icon svg,
 body.orientation-landscape .splash__sound .splash__tool-icon svg {
-  width: 42px;
-  height: 42px;
+  width: calc((42px) * var(--a11y-control-scale, 1));
+  height: calc((42px) * var(--a11y-control-scale, 1));
 }
 body.orientation-landscape .splash__gallery .splash__tool-label,
 body.orientation-landscape .splash__sound .splash__tool-label {
-  font-size: 0.9rem;
+  font-size: calc((0.9rem) * var(--a11y-text-scale, 1));
   font-weight: 800;
   letter-spacing: 0.005em;
 }
@@ -92,7 +115,7 @@ body.orientation-landscape .splash__brand {
   text-align: center;
   line-height: 1.02;
   z-index: 5;
-  font-size: clamp(3rem, 5.6vw, 5rem);
+  font-size: calc((clamp(3rem, 5.6vw, 5rem)) * var(--a11y-text-scale, 1));
   text-shadow: none;
   font-weight: 800;
   letter-spacing: -0.02em;
@@ -174,12 +197,14 @@ body.orientation-landscape .splash__chain {
 
 /* Tippen-Affordance: Der Start läuft über Klick/Tipp, nicht über Wischen. */
 .splash__start {
+  container-type: inline-size;
+  max-width: calc(100vw - 32px);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: clamp(10px, 1.5vh, 17px);
-  width: clamp(340px, 38vw, 500px);
-  min-height: clamp(190px, 32vh, 230px);
+  gap: calc((clamp(10px, 1.5vh, 17px)) * var(--a11y-control-scale, 1));
+  width: calc((clamp(340px, 38vw, 500px)) * var(--a11y-control-scale, 1));
+  min-height: calc((clamp(190px, 32vh, 230px)) * var(--a11y-control-scale, 1));
   border: 1.5px solid rgb(var(--c-highlight-rgb) / 0.74);
   background: linear-gradient(180deg, rgba(25, 27, 33, 0.76), rgba(8, 9, 12, 0.84));
   -webkit-backdrop-filter: blur(16px);
@@ -189,7 +214,7 @@ body.orientation-landscape .splash__chain {
   color: #fff;
   cursor: pointer;
   font: inherit;
-  padding: clamp(22px, 3.6vh, 36px) clamp(26px, 3.6vw, 48px);
+  padding: calc((clamp(22px, 3.6vh, 36px)) * var(--a11y-control-scale, 1)) calc((clamp(26px, 3.6vw, 48px)) * var(--a11y-control-scale, 1));
   border-radius: 26px;
   transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
 }
@@ -201,19 +226,53 @@ body.orientation-landscape .splash__chain {
 .splash__start:active { transform: scale(0.98); }
 .splash__start:focus-visible { outline: none; box-shadow: 0 0 0 3px rgb(var(--c-accent-rgb) / 0.55); }
 .splash__start-copy {
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 6px;
+  gap: calc((6px) * var(--a11y-control-scale, 1));
 }
 .splash__start-label {
-  font-size: clamp(2rem, 3.4vw, 3.4rem);
+  font-size: calc((clamp(2rem, 3.4vw, 3.4rem)) * var(--a11y-text-scale, 1));
   font-weight: 800;
   letter-spacing: -0.02em;
   text-shadow: 0 6px 30px rgba(0, 0, 0, 0.8);
 }
+body.orientation-landscape .splash__start-label.splash__brand {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow-wrap: normal;
+  font-size: min(calc(clamp(3rem, 5.6vw, 5rem) * var(--a11y-text-scale)), 22cqw);
+}
+html[data-text-size="large"] body.orientation-landscape .splash__start {
+  width: min(calc(100vw - 32px), max(calc(clamp(340px, 38vw, 500px) * var(--a11y-control-scale)), clamp(360px, 42vw, 560px)));
+}
+@media (max-width: 480px) and (max-height: 640px) {
+  .splash__start {
+    min-height: calc(152px * var(--a11y-control-scale));
+    padding-block: calc(8px * var(--a11y-control-scale));
+    gap: calc(6px * var(--a11y-control-scale));
+  }
+  .splash__start-copy { gap: calc(4px * var(--a11y-control-scale)); }
+}
+@media (min-width: 600px) and (max-width: 900px) and (max-height: 600px) {
+  body.orientation-landscape .splash__content--kiosk {
+    position: absolute;
+    inset: 0 0 calc(clamp(76px, 7.6vw, 92px) * var(--a11y-control-scale) + 0.9rem * var(--a11y-text-scale) + 32px + clamp(16px, 2.6vh, 32px));
+    width: 100%;
+    max-width: none;
+  }
+  body.orientation-landscape .splash__start {
+    max-width: calc(100vw - 320px);
+    min-height: calc(136px * var(--a11y-control-scale));
+    padding-block: calc(8px * var(--a11y-control-scale));
+    gap: calc(4px * var(--a11y-control-scale));
+  }
+  .splash__start-copy { gap: calc(3px * var(--a11y-control-scale)); }
+}
 .splash__start-hint {
-  font-size: clamp(1.45rem, 2vw, 1.75rem);
+  font-size: calc((clamp(1.45rem, 2vw, 1.75rem)) * var(--a11y-text-scale, 1));
   font-weight: 700;
   line-height: 1.2;
   letter-spacing: 0.01em;
@@ -275,13 +334,13 @@ body.orientation-landscape .challenge-card {
   text-align: left;
 }
 .challenge-card__title {
-  font-size: clamp(1rem, 1.25vw, 1.35rem);
+  font-size: calc((clamp(1rem, 1.25vw, 1.35rem)) * var(--a11y-text-scale, 1));
   font-weight: 800;
   color: var(--c-alert-text);
   margin-bottom: 8px;
 }
 .challenge-card__progress {
-  font-size: clamp(0.9rem, 1.05vw, 1.15rem);
+  font-size: calc((clamp(0.9rem, 1.05vw, 1.15rem)) * var(--a11y-text-scale, 1));
   color: #fff;
   line-height: 1.35;
 }
@@ -290,7 +349,7 @@ body.orientation-landscape .challenge-card {
 .challenge-card__days { display: block; color: var(--c-alert-soft); font-size: 0.88em; margin-top: 2px; }
 .challenge-card__theme {
   margin-top: 10px;
-  font-size: clamp(1.05rem, 1.3vw, 1.45rem);
+  font-size: calc((clamp(1.05rem, 1.3vw, 1.45rem)) * var(--a11y-text-scale, 1));
   font-weight: 700;
   font-style: italic;
   color: var(--c-alert-text);
@@ -413,7 +472,7 @@ body.orientation-landscape .capture-bar > .bar-options {
   gap: 8px;
 }
 .capture-switch__label {
-  font-size: clamp(10px, 0.78vw, 12px);
+  font-size: calc((clamp(10px, 0.78vw, 12px)) * var(--a11y-text-scale, 1));
   font-weight: 700;
   letter-spacing: 0.14em;
   color: #8b909c;
@@ -434,9 +493,9 @@ body.orientation-landscape .capture-bar > .bar-options {
   background: transparent;
   color: #e6e8ee;
   font: inherit;
-  font-size: clamp(13px, 1.02vw, 16px);
+  font-size: calc((clamp(13px, 1.02vw, 16px)) * var(--a11y-text-scale, 1));
   font-weight: 500;
-  padding: clamp(9px, 0.85vw, 13px) clamp(14px, 1.7vw, 26px);
+  padding: calc((clamp(9px, 0.85vw, 13px)) * var(--a11y-control-scale, 1)) calc((clamp(14px, 1.7vw, 26px)) * var(--a11y-control-scale, 1));
   cursor: pointer;
   white-space: nowrap;
   transition: background 0.2s ease, color 0.2s ease;
@@ -502,7 +561,7 @@ body.orientation-landscape .capture-bar > .bar-options {
   color: var(--c-highlight);
 }
 .bar-btn__label {
-  font-size: clamp(11px, 0.85vw, 13px);
+  font-size: calc((clamp(11px, 0.85vw, 13px)) * var(--a11y-text-scale, 1));
   font-weight: 700;
   letter-spacing: 0.1em;
   line-height: 1.2;
@@ -539,13 +598,14 @@ body.orientation-landscape .capture-bar > .bar-options {
 .bar-popover .seg__btn {
   flex: 1 1 0;
   min-width: 0;
-  padding-inline: clamp(8px, 0.8vw, 14px);
+  padding-inline: calc((clamp(8px, 0.8vw, 14px)) * var(--a11y-control-scale, 1));
   text-align: center;
 }
 
 /* Zentraler, sichtbarer Auslöser in der unteren Leiste. */
 .kiosk-shutter {
-  --shutter-size: clamp(88px, 9.2vw, 124px);
+  position: relative;
+  --shutter-size: calc((clamp(88px, 9.2vw, 124px)) * var(--a11y-control-scale, 1));
   grid-column: 2;
   grid-row: 1;
   justify-self: center;
@@ -576,7 +636,7 @@ body.orientation-landscape .capture-bar > .bar-options {
 }
 .kiosk-shutter__disc svg { width: 38%; height: 38%; }
 .kiosk-shutter__label {
-  font-size: clamp(13px, 1vw, 15px);
+  font-size: calc((clamp(13px, 1vw, 15px)) * var(--a11y-text-scale, 1));
   font-weight: 800;
   letter-spacing: 0.12em;
   line-height: 1.1;
@@ -609,12 +669,12 @@ body.orientation-landscape .capture-bar > .bar-options {
   /* Start-Button so groß wie die runden Review-/Sticker-Aktionen; die
      Schiene wächst mit, damit der Kreis nicht am Rand klebt. */
   /* Start-Knopf genau so groß wie Filter- und Options-Knopf */
-  --home-size: clamp(60px, 5.5vw, 77px);
+  --home-size: calc((clamp(60px, 5.5vw, 77px)) * var(--a11y-control-scale, 1));
   /* Keine rechte Schiene mehr: Das Foto nutzt die volle Breite, der
      Start-Button liegt als runder Button über der unteren linken Ecke. */
   --rail-w: 0px;
   --action-gap: 8px;
-  --action-label-size: clamp(12px, 0.95vw, 15px);
+  --action-label-size: calc((clamp(12px, 0.95vw, 15px)) * var(--a11y-text-scale, 1));
   --action-label-line: 1.25;
 }
 .cancel-home {
@@ -667,10 +727,10 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
 .cancel-home.is-done {
   left: auto;
   right: calc(var(--stage-pad) + var(--bar-edge-inset));
-  min-height: 56px;
+  min-height: calc((56px) * var(--a11y-control-scale, 1));
   justify-content: center;
   gap: 0;
-  padding: clamp(12px, 1vw, 16px) clamp(24px, 2.2vw, 36px);
+  padding: calc((clamp(12px, 1vw, 16px)) * var(--a11y-control-scale, 1)) calc((clamp(24px, 2.2vw, 36px)) * var(--a11y-control-scale, 1));
   border: 1px solid var(--c-success);
   border-radius: 9999px;
   background: var(--c-success);
@@ -688,7 +748,7 @@ body.orientation-landscape .cancel-home:not([hidden]) { display: flex; }
 }
 .cancel-home.is-done .cancel-home__label {
   color: #06230f;
-  font-size: clamp(16px, 1.2vw, 20px);
+  font-size: calc((clamp(16px, 1.2vw, 20px)) * var(--a11y-text-scale, 1));
   font-weight: 700;
   line-height: 1.2;
 }
@@ -741,7 +801,7 @@ body.orientation-landscape .review-actions {
   padding: 0;
 }
 .round-action__icon {
-  width: clamp(58px, 5.6vw, 78px);
+  width: calc((clamp(58px, 5.6vw, 78px)) * var(--a11y-control-scale, 1));
   aspect-ratio: 1;
   border-radius: 50%;
   border: 3px solid #e8eaf0;
@@ -825,7 +885,7 @@ body.orientation-landscape .side-rail__home { display: contents; }
   background: rgb(var(--c-context-stamp-rgb) / 0.5);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   color: var(--c-alert-soft);
-  font-size: clamp(12px, 0.95vw, 14px);
+  font-size: calc((clamp(12px, 0.95vw, 14px)) * var(--a11y-text-scale, 1));
   line-height: 1.35;
   text-align: center;
 }
@@ -851,7 +911,7 @@ body.orientation-landscape .side-rail__home { display: contents; }
   background: #282a32;
   color: #c7ccd6;
   font: inherit;
-  font-size: clamp(14px, 1.08vw, 17px);
+  font-size: calc((clamp(14px, 1.08vw, 17px)) * var(--a11y-text-scale, 1));
   font-weight: 700;
   line-height: 1.15;
   cursor: pointer;
@@ -894,7 +954,7 @@ body.orientation-landscape .side-rail__home { display: contents; }
   padding: 12px 4px 7px;
   background: #17181d;
   color: #9aa1ad;
-  font-size: clamp(11px, 0.8vw, 13px);
+  font-size: calc((clamp(11px, 0.8vw, 13px)) * var(--a11y-text-scale, 1));
   font-weight: 800;
   letter-spacing: 0.13em;
   line-height: 1.2;
@@ -907,15 +967,15 @@ body.orientation-landscape .side-rail__home { display: contents; }
   justify-content: flex-start;
   gap: 10px;
   width: 100%;
-  min-height: 54px;
+  min-height: calc((54px) * var(--a11y-control-scale, 1));
   margin: 0;
-  padding: clamp(11px, 1vw, 16px) clamp(12px, 1.1vw, 18px);
+  padding: calc((clamp(11px, 1vw, 16px)) * var(--a11y-control-scale, 1)) calc((clamp(12px, 1.1vw, 18px)) * var(--a11y-control-scale, 1));
   border: 2px solid transparent;
   border-radius: 10px;
   background: #2a2c33;
   color: #e7e9ef;
   font: inherit;
-  font-size: clamp(14px, 1.08vw, 17px);
+  font-size: calc((clamp(14px, 1.08vw, 17px)) * var(--a11y-text-scale, 1));
   font-weight: 500;
   text-align: left;
   cursor: pointer;
@@ -957,13 +1017,13 @@ body.orientation-landscape .side-rail__home { display: contents; }
   line-height: 1;
 }
 .side-menu__item--shape .side-menu__glyph {
-  width: 46px;
-  height: 34px;
+  width: calc((46px) * var(--a11y-control-scale, 1));
+  height: calc((34px) * var(--a11y-control-scale, 1));
 }
 .side-menu__item--shape .side-menu__glyph svg {
   display: block;
-  width: 42px;
-  height: 32px;
+  width: calc((42px) * var(--a11y-control-scale, 1));
+  height: calc((32px) * var(--a11y-control-scale, 1));
 }
 
 .side-menu__empty {
@@ -973,7 +1033,7 @@ body.orientation-landscape .side-rail__home { display: contents; }
   gap: 12px;
   padding: clamp(24px, 3vw, 40px) clamp(12px, 1.4vw, 22px);
   color: #b9bec9;
-  font-size: clamp(13px, 0.98vw, 15px);
+  font-size: calc((clamp(13px, 0.98vw, 15px)) * var(--a11y-text-scale, 1));
   line-height: 1.5;
   text-align: center;
 }
@@ -994,10 +1054,10 @@ body.orientation-landscape .side-rail__home { display: contents; }
   color: #b9bec9;
   flex: 0 0 auto;
 }
-.side-menu__hint { font-size: clamp(12px, 0.9vw, 14px); letter-spacing: 0.02em; }
+.side-menu__hint { font-size: calc((clamp(12px, 0.9vw, 14px)) * var(--a11y-text-scale, 1)); letter-spacing: 0.02em; }
 .side-menu__arrow {
-  width: 44px;
-  height: 44px;
+  width: calc((44px) * var(--a11y-control-scale, 1));
+  height: calc((44px) * var(--a11y-control-scale, 1));
   padding: 0;
   border: 0;
   border-radius: 10px;
@@ -1010,7 +1070,7 @@ body.orientation-landscape .side-rail__home { display: contents; }
   transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
   touch-action: manipulation;
 }
-.side-menu__arrow svg { width: 22px; height: 22px; }
+.side-menu__arrow svg { width: calc((22px) * var(--a11y-control-scale, 1)); height: calc((22px) * var(--a11y-control-scale, 1)); }
 .side-menu__arrow:hover { transform: scale(1.06); background: rgba(255, 255, 255, 0.06); }
 .side-menu__arrow.is-enabled { opacity: 1; }
 .side-menu__arrow:disabled { opacity: 0.22; cursor: default; }
@@ -1097,7 +1157,7 @@ body.orientation-landscape .endscreen {
   cursor: pointer;
 }
 .endscreen__icon {
-  width: clamp(78px, 7.6vw, 112px);
+  width: calc((clamp(78px, 7.6vw, 112px)) * var(--a11y-control-scale, 1));
   aspect-ratio: 1;
   border-radius: 50%;
   border: 4px solid #0a0a0a;
@@ -1113,7 +1173,7 @@ body.orientation-landscape .endscreen {
   height: 46%;
 }
 .endscreen__label {
-  font-size: clamp(12px, 1.05vw, 16px);
+  font-size: calc((clamp(12px, 1.05vw, 16px)) * var(--a11y-text-scale, 1));
   font-weight: 600;
   line-height: 1.1;
   white-space: nowrap;
@@ -1127,25 +1187,27 @@ body.orientation-landscape .endscreen {
   :root {
     --menu-w: clamp(240px, 26vw, 300px);
     /* gleiche Größe wie .round-action__icon in diesem Breakpoint */
-    --home-size: clamp(60px, 5.5vw, 77px);
+    --home-size: calc((clamp(60px, 5.5vw, 77px)) * var(--a11y-control-scale, 1));
   }
-  .splash__start-label { font-size: clamp(1.7rem, 3.2vw, 2.5rem); }
+  .splash__start-label { font-size: calc((clamp(1.7rem, 3.2vw, 2.5rem)) * var(--a11y-text-scale, 1)); }
   body.orientation-landscape .challenge-card { width: clamp(220px, 24vw, 280px); }
-  .round-action__icon { width: clamp(52px, 5.8vw, 68px); }
-  .capture-switch__label { font-size: 10px; }
-  .seg__btn { padding: 9px 14px; font-size: 13px; }
-  .kiosk-shutter { --shutter-size: clamp(78px, 9.2vw, 100px); }
-  .kiosk-shutter__label { font-size: 13px; }
+  .round-action__icon { width: calc((clamp(52px, 5.8vw, 68px)) * var(--a11y-control-scale, 1)); }
+  .capture-switch__label { font-size: calc((10px) * var(--a11y-text-scale, 1)); }
+  .seg__btn { padding: calc((9px) * var(--a11y-control-scale, 1)) calc((14px) * var(--a11y-control-scale, 1)); font-size: calc((13px) * var(--a11y-text-scale, 1)); }
+  .kiosk-shutter { --shutter-size: calc((clamp(78px, 9.2vw, 100px)) * var(--a11y-control-scale, 1)); }
+  .kiosk-shutter__label { font-size: calc((13px) * var(--a11y-text-scale, 1)); }
   .endscreen__actions { gap: clamp(22px, 4vw, 46px); }
 }
 
 @media (max-width: 460px) {
+  body.orientation-landscape .splash__settings { --splash-tool-size: calc((68px) * var(--a11y-control-scale, 1)); }
   body.orientation-landscape .splash__gallery,
   body.orientation-landscape .splash__sound {
-    --splash-tool-size: 68px;
+    --splash-tool-size: calc((68px) * var(--a11y-control-scale, 1));
   }
   body.orientation-landscape .splash__sound { left: 16px; }
-  body.orientation-landscape .splash__gallery { left: 116px; }
+  body.orientation-landscape .splash__gallery { left: calc(48px + var(--splash-tool-size)); }
+  body.orientation-landscape .splash__settings { left: calc(48px + (2 * var(--splash-tool-size)) + 32px); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1177,20 +1239,28 @@ body.orientation-landscape .endscreen {
 /* Fortschritt bei der Fotocollage */
 .strip-progress {
   position: absolute;
-  top: 16px;
-  right: 16px;
+  bottom: calc(100% + clamp(12px, 1.5vh, 20px));
+  left: 50%;
+  transform: translateX(-50%);
   z-index: 30;
   padding: 6px 14px;
   border-radius: 999px;
   background: rgba(0, 0, 0, 0.72);
   color: var(--c-highlight);
-  font-size: 16px;
+  font-size: calc((clamp(20px, 1.5vw, 24px)) * var(--a11y-text-scale, 1));
   font-weight: 800;
+  line-height: 1.2;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
   letter-spacing: 0.04em;
   opacity: 0;
   transition: opacity 0.2s ease;
 }
 .strip-progress.is-visible { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .strip-progress { transition: none; }
+}
 
 /* Alte Review-Leiste und Sucher-Ecken im Kiosk ausblenden */
 body.orientation-landscape #review { display: none !important; }
@@ -1226,12 +1296,12 @@ body.orientation-landscape .viewfinder {
 body.orientation-landscape .capture-bar {
   --bar-gap: clamp(8px, 1vw, 18px);
   /* Knopfgrößen: 40 % kleiner als im letzten Schritt. */
-  --bar-side-size: clamp(60px, 5.5vw, 77px);
-  --bar-shutter-size: clamp(78px, 7.3vw, 109px);
+  --bar-side-size: calc((clamp(60px, 5.5vw, 77px)) * var(--a11y-control-scale, 1));
+  --bar-shutter-size: calc((clamp(78px, 7.3vw, 109px)) * var(--a11y-control-scale, 1));
   /* Höhe der unteren Reihe: der höchste Knopf (Auslöser) samt Beschriftung.
      Beide Menükapseln sind genau so hoch und liegen damit auf derselben
      Zeile wie die Knöpfe. */
-  --bar-label-h: clamp(14px, 1.15vw, 18px);
+  --bar-label-h: calc((clamp(14px, 1.15vw, 18px)) * var(--a11y-text-scale, 1));
   --bar-row-h: calc(var(--bar-shutter-size) + var(--action-gap) + var(--bar-label-h));
   /* Zusätzliche Luft zwischen Knopf und aufgeklapptem Menü. */
   --bar-slot-gap: clamp(8px, 0.8vw, 14px);
@@ -1304,7 +1374,7 @@ body.orientation-landscape .bar-btn__icon {
 }
 body.orientation-landscape .bar-btn__label {
   color: #eef1f6;
-  font-size: clamp(11px, 0.85vw, 13px);
+  font-size: calc((clamp(11px, 0.85vw, 13px)) * var(--a11y-text-scale, 1));
   text-shadow: 0 1px 6px rgba(0, 0, 0, 0.65);
 }
 /* Beide runden Knöpfe haben dieselbe Breite. Damit sitzen ihre Kreise
@@ -1315,7 +1385,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle {
   width: var(--bar-side-size);
 }
 body.orientation-landscape .kiosk-shutter__disc { width: var(--bar-shutter-size); }
-body.orientation-landscape .kiosk-shutter__label { font-size: clamp(12px, 0.95vw, 15px); }
+body.orientation-landscape .kiosk-shutter__label { font-size: calc((clamp(12px, 0.95vw, 15px)) * var(--a11y-text-scale, 1)); }
 /* .bar-options ist nur noch Hülle, damit die Optionsgruppe als eigenes
    Flex-Element zwischen Auslöser und Optionsbutton liegt. */
 .bar-options { display: contents; }
@@ -1433,7 +1503,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   order: 2;
   max-width: 100%;
   overflow: hidden;
-  font-size: clamp(9px, 0.7vw, 11px);
+  font-size: calc((clamp(9px, 0.7vw, 11px)) * var(--a11y-text-scale, 1));
   letter-spacing: 0.12em;
   text-align: center;
   text-overflow: ellipsis;
@@ -1457,9 +1527,9 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   flex: 1 1 auto;
   min-width: 0;
   min-height: var(--options-control-h);
-  padding: 0 clamp(5px, 0.55vw, 9px);
+  padding: 0 calc((clamp(5px, 0.55vw, 9px)) * var(--a11y-control-scale, 1));
   overflow: hidden;
-  font-size: clamp(11px, 1.05vw, 15px);
+  font-size: calc((clamp(11px, 1.05vw, 15px)) * var(--a11y-text-scale, 1));
   font-weight: 600;
   line-height: var(--options-control-h);
   text-align: center;
@@ -1508,7 +1578,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 }
 .bar-slot--menu[data-mode="filters"] .dot-chip__emoji {
   font-family: 'Segoe UI Emoji', 'Apple Color Emoji', 'Noto Color Emoji', sans-serif;
-  font-size: clamp(28px, 2.7vw, 42px);
+  font-size: calc((clamp(28px, 2.7vw, 42px)) * var(--a11y-control-scale, 1));
   line-height: 1;
 }
 .bar-slot--menu[data-mode="filters"] .dot-chip__disc svg {
@@ -1526,7 +1596,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   margin: 0;
   padding-inline: 12px;
   color: #eef1f6;
-  font-size: clamp(12px, 1vw, 15px);
+  font-size: calc((clamp(12px, 1vw, 15px)) * var(--a11y-text-scale, 1));
   font-weight: 600;
   line-height: 1.4;
   text-align: center;
@@ -1541,7 +1611,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   opacity: 1;
   transition: opacity 120ms ease 160ms;
 }
-.bar-slot--menu[data-mode="overlays"] .bar-active-filters { display: none; }
+.bar-slot--menu[data-mode="overlays"] .bar-filter-remove-hint { display: none; }
 .bar-filter-remove-hint {
   position: absolute;
   bottom: calc(100% + 5px);
@@ -1626,7 +1696,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   display: block;
   /* Füllt die Höhe des Menüs: nur noch ein Kreis, Text ist innen. Ein paar
      Pixel Luft bleiben für Hover-/Auswahl-Ringe. */
-  width: clamp(64px, 6vw, 84px);
+  width: calc((clamp(64px, 6vw, 84px)) * var(--a11y-control-scale, 1));
   padding: 0;
   border: 0;
   background: transparent;
@@ -1653,7 +1723,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
      hervorzuschimmern. */
   background-clip: padding-box;
   overflow: hidden;
-  font-size: clamp(18px, 1.6vw, 24px);
+  font-size: calc((clamp(18px, 1.6vw, 24px)) * var(--a11y-text-scale, 1));
   line-height: 1;
   transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
@@ -1668,7 +1738,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   overflow-wrap: anywhere;
   white-space: normal;
   text-align: center;
-  font-size: clamp(9px, 0.68vw, 10px);
+  font-size: calc((clamp(9px, 0.68vw, 10px)) * var(--a11y-text-scale, 1));
   font-weight: 800;
   letter-spacing: 0.02em;
   line-height: 1.1;
@@ -1768,7 +1838,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 
 /* The shutter/cancel circle provides the size and clear icon hierarchy. */
 body.orientation-landscape #camera.is-reviewing .review-actions .round-action {
-  width: max(var(--bar-shutter-size), calc(var(--action-label-size) * 8));
+  width: max(var(--bar-shutter-size), calc(var(--action-label-size) * 8), calc(var(--action-label-size) / var(--a11y-text-scale) * 8 * var(--a11y-control-scale)));
   flex: 0 0 auto;
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
@@ -1879,6 +1949,9 @@ body.orientation-landscape #camera.is-reviewing .review-actions .round-action:di
   scroll-padding-inline: var(--slot-pad-x, 20px);
 }
 #stampList {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-right: 6px;
   justify-content: safe flex-end;
   scroll-snap-type: none;
   scroll-behavior: auto;
@@ -1892,6 +1965,11 @@ body.orientation-landscape #camera.is-reviewing .review-actions .round-action:di
   align-items: center;
   gap: inherit;
 }
+#stampPanel [data-action="clear-stickers"] {
+  flex: 0 0 auto;
+  margin-right: var(--slot-pad-x, 20px);
+}
+#stampPanel.has-drag-trash [data-action="clear-stickers"] { visibility: hidden; }
 #stampSwipeHint .bar-swipe-hint__trail { right: auto; left: -10px; }
 #stampSwipeHint .bar-swipe-hint__trail + .bar-swipe-hint__trail { left: -20px; }
 
@@ -1908,7 +1986,7 @@ body.orientation-landscape #camera.is-reviewing .review-actions .round-action:di
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  width: clamp(64px, 6vw, 84px);
+  width: calc((clamp(64px, 6vw, 84px)) * var(--a11y-control-scale, 1));
   aspect-ratio: 1;
   padding: 0;
   border: 2px solid rgba(255, 255, 255, 0.22);
@@ -1944,7 +2022,7 @@ body.orientation-landscape #camera.is-reviewing .review-actions .round-action:di
   align-items: center;
   gap: inherit;
 }
-.bar-tile--frame { padding: 6px; background: rgba(0, 0, 0, 0.34); }
+.bar-tile--frame { padding: calc((6px) * var(--a11y-control-scale, 1)); background: rgba(0, 0, 0, 0.34); }
 .bar-tile--frame img {
   width: 100%;
   height: 100%;
@@ -1962,7 +2040,7 @@ body.orientation-landscape #camera.is-reviewing .review-actions .round-action:di
 .bar-tile--reset:is(:hover, :active) { transform: none; filter: none; }
 .bar-tile--reset .dot-chip__disc { padding: 18%; }
 .bar-tile--reset svg { width: 100%; height: 100%; pointer-events: none; }
-.bar-tile--stamp-emoji { font-size: clamp(22px, 2vw, 30px); line-height: 1; }
+.bar-tile--stamp-emoji { font-size: calc((clamp(22px, 2vw, 30px)) * var(--a11y-control-scale, 1)); line-height: 1; }
 .bar-tile__glyph { display: block; line-height: 1; }
 
 /* --- Ziehen aus den Menüs aufs Foto -------------------------------
@@ -2027,8 +2105,8 @@ body.orientation-landscape #camera.is-reviewing .review-actions .round-action:di
 @media (prefers-reduced-motion: reduce) {
   .element-trash__visual { transform: none; }
 }
-/* Beim Ziehen blendet die Leiste aus, damit das Foto frei liegt. */
-#camera.is-dragging-element .capture-bar {
+/* Keep the sticker capsule visible while its fixed reset slot is the drop zone. */
+#camera.is-dragging-element:not(:has(#stampPanel.has-drag-trash)) .capture-bar {
   opacity: 0.1;
   pointer-events: none;
   transition: opacity 0.2s ease;
@@ -2109,10 +2187,10 @@ html[data-ui="2"] .bar-slot--options .bar-slot__inner {
 }
 /* Die Filterkreise werden mitverkleinert, damit sie in der flacheren Pille
    weder oben/unten herausragen noch den runden Rand schneiden. */
-html[data-ui="2"] .bar-slot--menu .dot-chip { width: clamp(56px, 4.6vw, 72px); }
+html[data-ui="2"] .bar-slot--menu .dot-chip { width: calc((clamp(56px, 4.6vw, 72px)) * var(--a11y-control-scale, 1)); }
 /* Kacheln passen sich der flacheren Pille an, damit sie nicht oben/unten
    aus dem Glas ragen. */
-html[data-ui="2"] .bar-tile { width: clamp(56px, 4.6vw, 72px); }
+html[data-ui="2"] .bar-tile { width: calc((clamp(56px, 4.6vw, 72px)) * var(--a11y-control-scale, 1)); }
 /* Menüs belegen keinen Platz in der Reihe mehr, also rückt die Leiste
    nicht mehr zur Seite und der Auslöser behält seinen Abstand. */
 html[data-ui="2"] .capture-bar.is-menu-open,
@@ -2195,11 +2273,11 @@ html[data-ui="2"] .bar-slot--options {
 .bar-slot--options .option-cycle:hover:not(:disabled) { background: var(--cycle-bg); border-color: rgba(255, 255, 255, 0.75); }
 .bar-slot--options .option-cycle__value {
   margin-top: -7px;
-  font-size: clamp(22px, 1.8vw, 26px);
+  font-size: calc((clamp(22px, 1.8vw, 26px)) * var(--a11y-text-scale, 1));
   font-weight: 900;
 }
 .bar-slot--options [data-cycle="mode"] .option-cycle__value {
-  font-size: clamp(14px, 1.3vw, 18px);
+  font-size: calc((clamp(14px, 1.3vw, 18px)) * var(--a11y-text-scale, 1));
   letter-spacing: -0.04em;
 }
 .bar-slot--options .capture-switch { gap: 4px; }
@@ -2315,6 +2393,92 @@ html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(#captureOptio
   position: relative;
   z-index: 2;
 }
+
+/* On compact displays, reserve enough room for a full enlarged menu tile.
+   Keep the same capsules and let the row allocate space to its open side. */
+html:is([data-button-size="large"], [data-text-size="large"]) .bar-slot--options {
+  --a11y-option-size: calc((var(--bar-side-size) / var(--a11y-control-scale) + var(--action-gap) + var(--bar-label-h) / var(--a11y-text-scale) - 2 * clamp(8px, 0.7vw, 12px) - clamp(9px, 0.7vw, 11px) - 4px) * var(--a11y-control-scale));
+}
+html[data-ui="2"]:is([data-button-size="large"], [data-text-size="large"]) #camera:not(.is-reviewing):not(.is-stamping) .bar-slot--options {
+  width: min(calc(260px * var(--a11y-control-scale)), calc(var(--ui2-pill-w-home) + var(--ui2-slot-air) + var(--stage-pad) + var(--bar-edge-inset) + var(--bar-gap)));
+}
+html[data-ui="2"]:is([data-button-size="large"], [data-text-size="large"]) #camera:not(.is-reviewing):not(.is-stamping) .bar-slot--options .bar-slot__inner {
+  height: auto;
+  min-height: calc(var(--bar-side-size) + 12px);
+  padding: 4px 3px;
+  justify-content: safe center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  touch-action: pan-x;
+}
+html:is([data-button-size="large"], [data-text-size="large"]) .bar-slot--options .option-cycle {
+  --cycle-size: var(--a11y-option-size);
+}
+html:is([data-button-size="large"], [data-text-size="large"]) .bar-slot--options .capture-switch {
+  width: var(--a11y-option-size);
+  flex: 0 0 auto;
+}
+html:is([data-button-size="large"], [data-text-size="large"]) .bar-slot--options .capture-switch__label {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+html[data-text-size="large"] .bar-slot--options [data-i18n="captionTimerMenu"] {
+  overflow-wrap: normal;
+  word-break: normal;
+  hyphens: manual;
+}
+html:not([data-text-size="large"]) .bar-slot--options [data-i18n="captionTimerMenu"] {
+  white-space: nowrap;
+}
+html:is([data-button-size="large"], [data-text-size="large"]) .camera__stage {
+  /* Focus must not scroll a clipped stage sideways when labels grow. */
+  overflow: clip;
+}
+@media (max-height: 540px) {
+  html:is([data-button-size="large"], [data-text-size="large"]) .countdown__dial {
+    width: min(1.84em, 36vh, 40vw);
+    height: min(1.84em, 36vh, 40vw);
+  }
+}
+@media (max-width: 900px) {
+  html:is([data-button-size="large"], [data-text-size="large"]) #camera.is-reviewing .review-actions .round-action {
+    width: var(--bar-shutter-size);
+  }
+  html:is([data-button-size="large"], [data-text-size="large"]) #camera.is-reviewing .round-action__label {
+    max-width: 100%;
+    white-space: normal;
+    text-align: center;
+  }
+  html:is([data-button-size="large"], [data-text-size="large"]) #camera.is-reviewing .capture-bar:has(#stampPanel.is-open) {
+    grid-template-columns: minmax(0, 1.4fr) max-content minmax(0, 0.6fr);
+  }
+  html:is([data-button-size="large"], [data-text-size="large"]) #camera.is-reviewing .capture-bar:has(#barMenuPanel.is-open) {
+    grid-template-columns: minmax(0, 0.6fr) max-content minmax(0, 1.4fr);
+  }
+}
+@media (max-width: 720px) {
+  html:is([data-button-size="large"], [data-text-size="large"]) #camera.is-reviewing .capture-bar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    row-gap: 12px;
+  }
+  html:is([data-button-size="large"], [data-text-size="large"]) #camera.is-reviewing .capture-bar > .review-actions {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
+  }
+  html:is([data-button-size="large"], [data-text-size="large"]) #camera.is-reviewing :is(.bar-slot--menu, #sideMenuToggle) {
+    grid-column: 2;
+  }
+  html:is([data-button-size="large"], [data-text-size="large"]) #camera.is-reviewing .capture-bar:has(#stampPanel.is-open) {
+    grid-template-columns: minmax(0, 1fr) var(--bar-side-size);
+  }
+  html:is([data-button-size="large"], [data-text-size="large"]) #camera.is-reviewing .capture-bar:has(#barMenuPanel.is-open) {
+    grid-template-columns: var(--bar-side-size) minmax(0, 1fr);
+  }
+}
 html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--options, .bar-slot--menu) {
   bottom: calc(var(--bar-edge-inset) + var(--action-gap) + clamp(11px, 0.85vw, 13px) * 1.2 - 6px);
   opacity: 1;
@@ -2334,7 +2498,7 @@ html[data-ui="2"] #camera:not(.is-reviewing):not(.is-stamping) :is(.bar-slot--op
   top: 6px;
   width: var(--bar-side-size);
   height: var(--bar-side-size);
-  font-size: clamp(11px, 0.85vw, 13px);
+  font-size: calc((clamp(11px, 0.85vw, 13px)) * var(--a11y-text-scale, 1));
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 9999px;
   background: rgba(255, 255, 255, 0.12);
