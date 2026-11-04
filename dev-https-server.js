@@ -16,6 +16,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const crypto = require('crypto');
+const { execFile } = require('child_process');
 
 const selfsigned = require('selfsigned');
 
@@ -270,6 +271,38 @@ function readBody(req, limit) {
   });
 }
 
+// Lists every .jpg object name under a prefix, beyond Supabase's 1000-object
+// page limit. Only the usage statistics need the complete list; gallery and
+// trash keep their single-page behaviour for fast first paints.
+async function listAllJpgNames(cfg, prefix) {
+  const names = [];
+  const seen = new Set();
+  for (let offset = 0; offset < 20000; offset += 1000) {
+    const listRes = await supabaseFetch(cfg, `/object/list/${encodeURIComponent(cfg.bucket)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prefix,
+        limit: 1000,
+        offset,
+        sortBy: { column: 'name', order: 'asc' }
+      })
+    });
+    const files = await listRes.json();
+    if (!Array.isArray(files) || files.length === 0) break;
+    for (const file of files) {
+      if (!file.name || !file.name.endsWith('.jpg')) continue;
+      const name = file.name.replace(new RegExp('^' + prefix), '');
+      if (!seen.has(name)) {
+        seen.add(name);
+        names.push(name);
+      }
+    }
+    if (files.length < 1000) break;
+  }
+  return names;
+}
+
 // Lists .jpg object names directly under a prefix (no folder recursion).
 async function listJpgNames(cfg, prefix) {
   const listRes = await supabaseFetch(cfg, `/object/list/${encodeURIComponent(cfg.bucket)}`, {
@@ -314,6 +347,210 @@ async function moveObject(cfg, sourceKey, destinationKey) {
       body: JSON.stringify({ bucketId: cfg.bucket, sourceKey, destinationKey })
     });
     await supabaseFetch(cfg, `/object/${encodeURIComponent(cfg.bucket)}/${sourceKey}`, { method: 'DELETE' });
+  }
+}
+
+// ---- Nutzungsstatistik ----
+// Leichtgewichtige Tagesaggregate liegen lokal in usage-stats.json. Fotos
+// werden zusätzlich aus den Zeitstempeln der gespeicherten Objektnamen
+// rekonstruiert (photos/<ms>-....jpg bzw. trash/<expiry>-<ms>-....jpg),
+// dadurch zeigen die Diagramme sofort auch den vorhandenen Bestand.
+// Endaktionen werden ab dem ersten Start nach diesem Update gezählt; ältere
+// Aktionen lassen sich nicht nachträglich ermitteln.
+const USAGE_STATS_FILE = path.join(DIST_DIR, 'usage-stats.json');
+const USAGE_ACTIONS = ['qr', 'print', 'share', 'download'];
+const USAGE_MAX_DAYS = 400;
+const OBJECT_TS_RE = /^(\d{10,13})-/;
+
+function localDateKey(date = new Date()) {
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0')
+  ].join('-');
+}
+
+function emptyUsageDay() {
+  return { photos: 0, actions: { qr: 0, print: 0, share: 0, download: 0 } };
+}
+
+function sanitizeUsageStats(raw) {
+  const stats = { version: 1, startedAt: null, days: {} };
+  if (!raw || typeof raw !== 'object') return stats;
+  if (typeof raw.startedAt === 'string') stats.startedAt = raw.startedAt;
+  const cutoff = localDateKey(new Date(Date.now() - USAGE_MAX_DAYS * 86400000));
+  const days = raw.days && typeof raw.days === 'object' ? raw.days : {};
+  for (const [key, value] of Object.entries(days)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(key) || key < cutoff) continue;
+    const day = emptyUsageDay();
+    day.photos = Math.max(0, Math.floor(Number(value && value.photos) || 0));
+    for (const action of USAGE_ACTIONS) {
+      day.actions[action] = Math.max(0, Math.floor(Number(value && value.actions && value.actions[action]) || 0));
+    }
+    stats.days[key] = day;
+  }
+  return stats;
+}
+
+function loadUsageStats() {
+  try {
+    if (fs.existsSync(USAGE_STATS_FILE)) {
+      return sanitizeUsageStats(JSON.parse(fs.readFileSync(USAGE_STATS_FILE, 'utf8')));
+    }
+  } catch (err) {
+    console.warn('Could not read usage-stats.json:', err.message);
+  }
+  return sanitizeUsageStats(null);
+}
+
+function saveUsageStats(stats) {
+  // Kleine Datei, synchrones Schreiben: Node bedient die Anfragen seriell,
+  // dadurch können parallele Zähler nicht verloren gehen.
+  fs.writeFileSync(USAGE_STATS_FILE, JSON.stringify(stats, null, 2), 'utf8');
+}
+
+function recordUsage({ photos = 0, action = '' } = {}) {
+  try {
+    const stats = loadUsageStats();
+    if (!stats.startedAt) stats.startedAt = new Date().toISOString();
+    const key = localDateKey();
+    const day = stats.days[key] || (stats.days[key] = emptyUsageDay());
+    if (photos > 0) day.photos += Math.floor(photos);
+    if (action && USAGE_ACTIONS.includes(action)) day.actions[action] += 1;
+    const cutoff = localDateKey(new Date(Date.now() - USAGE_MAX_DAYS * 86400000));
+    stats.days = Object.fromEntries(
+      Object.entries(stats.days)
+        .filter(([dateKey]) => dateKey >= cutoff)
+        .sort(([a], [b]) => a.localeCompare(b))
+    );
+    saveUsageStats(stats);
+  } catch (err) {
+    console.warn('Usage statistics could not be recorded:', err.message);
+  }
+}
+
+// Reads the capture timestamp encoded in an object name. Trash names keep the
+// original photo name after the expiry prefix, so deleted photos still count.
+function capturedAtMs(name, fromTrash = false) {
+  let candidate = name;
+  if (fromTrash) {
+    const m = name.match(TRASH_NAME_RE);
+    if (!m) return null;
+    candidate = m[2];
+  }
+  const m = candidate.match(OBJECT_TS_RE);
+  if (!m) return null;
+  let ms = Number(m[1]);
+  if (m[1].length === 10) ms *= 1000;
+  const earliest = Date.UTC(2000, 0, 1);
+  if (!Number.isFinite(ms) || ms < earliest || ms > Date.now() + 86400000) return null;
+  return ms;
+}
+
+async function handleUsageStatsApi(req, res) {
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  // Nutzungsdaten sind interne Betriebsdaten und nur im Admin-Panel sichtbar.
+  if (!isAdmin(req)) {
+    return sendJson(res, 403, { error: 'Admin PIN required' });
+  }
+
+  const url = new URL(req.url, 'http://localhost');
+  const requestedDays = Number.parseInt(url.searchParams.get('days'), 10);
+  const rangeDays = [7, 14, 30].includes(requestedDays) ? requestedDays : 14;
+  const stats = loadUsageStats();
+  const today = new Date();
+  const todayKey = localDateKey(today);
+  const daily = [];
+  const dailyByKey = new Map();
+  for (let i = rangeDays - 1; i >= 0; i -= 1) {
+    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i, 12);
+    const entry = { date: localDateKey(date), photos: 0 };
+    daily.push(entry);
+    dailyByKey.set(entry.date, entry);
+  }
+
+  let photoNames = [];
+  let trashNames = [];
+  let storageError = false;
+  try {
+    const cfg = getSupabaseConfig();
+    [photoNames, trashNames] = await Promise.all([
+      listAllJpgNames(cfg, PHOTO_PREFIX),
+      listAllJpgNames(cfg, TRASH_PREFIX)
+    ]);
+  } catch (err) {
+    storageError = true;
+    console.warn('Usage stats could not read storage:', err.message);
+  }
+
+  const hours = Array(24).fill(0);
+  let capturesInRange = 0;
+  let photosToday = 0;
+  for (const [names, fromTrash] of [[photoNames, false], [trashNames, true]]) {
+    for (const name of names) {
+      const ms = capturedAtMs(name, fromTrash);
+      if (ms == null) continue;
+      const date = new Date(ms);
+      const key = localDateKey(date);
+      if (key === todayKey) photosToday += 1;
+      const row = dailyByKey.get(key);
+      if (!row) continue;
+      row.photos += 1;
+      capturesInRange += 1;
+      hours[date.getHours()] += 1;
+    }
+  }
+
+  const actions = { qr: 0, print: 0, share: 0, download: 0 };
+  for (const entry of daily) {
+    const day = stats.days[entry.date];
+    if (!day) continue;
+    for (const action of USAGE_ACTIONS) actions[action] += day.actions[action];
+  }
+
+  let busiestDay = null;
+  for (const entry of daily) {
+    if (entry.photos > 0 && (!busiestDay || entry.photos > busiestDay.photos)) {
+      busiestDay = { date: entry.date, photos: entry.photos };
+    }
+  }
+  const peakHourValue = Math.max(...hours);
+  const busiestHour = peakHourValue > 0 ? hours.indexOf(peakHourValue) : null;
+
+  return sendJson(res, 200, {
+    rangeDays,
+    generatedAt: new Date().toISOString(),
+    storageError,
+    trackingSince: stats.startedAt,
+    kpis: {
+      totalPhotos: storageError ? null : photoNames.length,
+      trashCount: storageError ? null : trashNames.length,
+      capturesInRange: storageError ? null : capturesInRange,
+      photosToday: storageError ? null : photosToday
+    },
+    daily,
+    hours,
+    actions,
+    busiestDay,
+    busiestHour
+  });
+}
+
+async function handleUsageEventApi(req, res) {
+  if (req.method !== 'POST') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  try {
+    const body = JSON.parse(await readBody(req, 4096));
+    if (!body || !USAGE_ACTIONS.includes(body.event)) {
+      return sendJson(res, 400, { error: 'Invalid event' });
+    }
+    recordUsage({ action: body.event });
+    return sendJson(res, 200, { ok: true });
+  } catch (err) {
+    return sendJson(res, 400, { error: 'Invalid JSON' });
   }
 }
 
@@ -390,6 +627,56 @@ function verifyAdminSession(token) {
 function isAdmin(req) {
   return verifyAdminSession(parseCookies(req)[ADMIN_COOKIE]);
 }
+
+// ---- Gäste-Sitzung ----
+// Löschen ist nur während einer laufenden Gäste-Sitzung erlaubt, und nur für
+// Fotos, die in genau dieser Sitzung hochgeladen wurden. Die Sitzung beginnt
+// mit dem Startbildschirm-Start und endet beim Zurückspringen dorthin. Gäste
+// löschen endgültig und haben keinen Papierkorb; der Papierkorb gehört
+// ausschließlich zum Admin-Panel.
+const PHOTO_SESSION_HEADER = 'x-photo-session';
+const PHOTO_SESSION_MS = 4 * 60 * 60 * 1000;
+const photoSessions = new Map();
+
+function getPhotoSession(req) {
+  const token = String(req.headers[PHOTO_SESSION_HEADER] || '').trim();
+  if (!/^[a-f0-9]{32,64}$/.test(token)) return null;
+  const session = photoSessions.get(token);
+  if (!session) return null;
+  if (session.expiresAt < Date.now()) {
+    photoSessions.delete(token);
+    return null;
+  }
+  return session;
+}
+
+function endPhotoSession(req) {
+  const token = String(req.headers[PHOTO_SESSION_HEADER] || '').trim();
+  if (token) photoSessions.delete(token);
+}
+
+async function handlePhotoSessionApi(req, res) {
+  if (req.method === 'POST') {
+    const token = crypto.randomBytes(24).toString('hex');
+    photoSessions.set(token, {
+      expiresAt: Date.now() + PHOTO_SESSION_MS,
+      photoIds: new Set()
+    });
+    return sendJson(res, 201, { token });
+  }
+  if (req.method === 'DELETE') {
+    endPhotoSession(req);
+    return sendJson(res, 200, { ok: true });
+  }
+  return sendJson(res, 405, { error: 'Method not allowed' });
+}
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [token, session] of photoSessions) {
+    if (session.expiresAt < now) photoSessions.delete(token);
+  }
+}, 15 * 60 * 1000).unref();
 
 function setAdminCookie(req, res) {
   const secure = req.socket.encrypted ? '; Secure' : '';
@@ -536,6 +823,7 @@ async function handlePhotosApi(req, res) {
       const rel = item.signedUrl || item.signedURL || '';
       if (!rel) throw new Error('no signed url in response');
       const url = rel.startsWith('http') ? rel : cfg.baseUrl + '/storage/v1' + rel;
+      recordUsage({ action: 'qr' });
       return sendJson(res, 200, { url, ttl: qrTtlSeconds });
     }
 
@@ -583,6 +871,7 @@ async function handlePhotosApi(req, res) {
 
     if (req.method === 'POST') {
       const { image, id } = JSON.parse(await readBody(req, 15 * 1024 * 1024));
+      const session = getPhotoSession(req);
       const match = typeof image === 'string' && image.match(/^data:image\/jpeg;base64,(.+)$/);
       if (!match) {
         return sendJson(res, 400, { error: 'Invalid image' });
@@ -611,6 +900,11 @@ async function handlePhotosApi(req, res) {
         },
         body: Buffer.from(match[1], 'base64')
       });
+      // Nur Fotos dieser Sitzung dürfen vom Gast später gelöscht werden.
+      if (session) session.photoIds.add(key);
+      // Nur neue Aufnahmen zählen; Sticker-/Filter-Bearbeitungen überschreiben
+      // ein vorhandenes Foto und sind keine zusätzliche Nutzung.
+      if (!id) recordUsage({ photos: 1 });
       // The photo is stored, so advance the global streak. A streak failure
       // must not report the upload as failed; the client skips the toast.
       let streak = null;
@@ -625,13 +919,28 @@ async function handlePhotosApi(req, res) {
     if (req.method === 'DELETE') {
       const params = new URL(req.url, 'http://localhost').searchParams;
       const id = params.get('id') || '';
+      const admin = isAdmin(req);
+      const session = getPhotoSession(req);
+      // Gäste dürfen nur während ihrer laufenden Sitzung löschen. Danach ist
+      // die Aktion ausschließlich im Admin-Panel möglich.
+      if (!admin && !session) {
+        return sendJson(res, 403, { error: 'Deleting is only allowed during a guest session' });
+      }
       // Only photo objects inside the photos/ prefix may be deleted.
       if (!new RegExp(`^${PHOTO_PREFIX}(${PHOTO_NAME})$`).test(id)) {
         return sendJson(res, 400, { error: 'Invalid id' });
       }
-      // purge=1: endgültig löschen (verworfene, nie angenommene Aufnahme).
-      if (params.get('purge') === '1') {
+      // Gäste dürfen ausschließlich Fotos löschen, die in ihrer aktuellen
+      // Sitzung aufgenommen wurden — nicht den Bestand früherer Gäste.
+      if (!admin && !session.photoIds.has(id)) {
+        return sendJson(res, 403, { error: 'Photo does not belong to this session' });
+      }
+      // Gäste löschen endgültig: Es gibt für sie keinen Papierkorb. Das
+      // Admin-Panel verschiebt Fotos weiterhin in den Papierkorb.
+      if (params.get('purge') === '1' || session) {
         await supabaseFetch(cfg, `/object/${encodeURIComponent(cfg.bucket)}/${id}`, { method: 'DELETE' });
+        if (session) session.photoIds.delete(id);
+        syncChallengeRemoval(id);
         return sendJson(res, 200, { ok: true, purged: true });
       }
       const name = id.slice(PHOTO_PREFIX.length);
@@ -640,6 +949,10 @@ async function handlePhotosApi(req, res) {
       const expiresAt = Math.floor(Date.now() / 1000) + readSettings().trashRetentionDays * 86400;
       const trashId = `${TRASH_PREFIX}${expiresAt}-${name}`;
       await moveObject(cfg, id, trashId);
+      // Im Papierkorb ist das Foto öffentlich nicht mehr sichtbar. Beim
+      // Wiederherstellen wird es bewusst nicht erneut eingereicht: Nicht jedes
+      // wiederhergestellte Foto war zuvor Teil der Challenge.
+      syncChallengeRemoval(id);
       return sendJson(res, 200, { ok: true, trashId });
     }
 
@@ -661,6 +974,10 @@ async function handleTrashCountApi(req, res) {
     if (req.method !== 'GET') {
       return sendJson(res, 405, { error: 'Method not allowed' });
     }
+    // Der Papierkorb ist ausschließlich im Admin-Panel sichtbar.
+    if (!isAdmin(req)) {
+      return sendJson(res, 403, { error: 'Admin PIN required' });
+    }
     await purgeExpiredTrash();
     const cfg = getSupabaseConfig();
     const names = await listJpgNames(cfg, TRASH_PREFIX);
@@ -678,11 +995,45 @@ async function handleTrashApi(req, res) {
     const params = new URL(req.url, 'http://localhost').searchParams;
     const id = params.get('id') || '';
     const trashIdRe = new RegExp(`^${TRASH_PREFIX}(\\d{10,})-(${PHOTO_NAME})$`);
+    // Der Papierkorb ist ausschließlich im Admin-Panel sichtbar.
+    if (!isAdmin(req)) {
+      return sendJson(res, 403, { error: 'Admin PIN required' });
+    }
 
     if (req.method === 'GET') {
       await purgeExpiredTrash();
       const names = await listJpgNames(cfg, TRASH_PREFIX);
-      const items = await Promise.all(names.map(async (name) => {
+
+      // Ohne limit bleibt die alte Vollliste erhalten (Abwärtskompatibilität).
+      // Die aktuelle App fordert immer genau eine Seite an.
+      if (!params.has('limit')) {
+        const items = await Promise.all(names.map(async (name) => {
+          const m = name.match(TRASH_NAME_RE);
+          return {
+            id: TRASH_PREFIX + name,
+            image: await objectToDataUrl(cfg, TRASH_PREFIX + name),
+            expiresAt: m ? Number(m[1]) : null,
+            name: m ? m[2] : name
+          };
+        }));
+        return sendJson(res, 200, items);
+      }
+
+      const requestedLimit = Number.parseInt(params.get('limit'), 10);
+      const limit = Number.isFinite(requestedLimit)
+        ? Math.min(50, Math.max(1, requestedLimit))
+        : 12;
+      const before = params.get('before') || '';
+      if (before && !TRASH_NAME_RE.test(before)) {
+        return sendJson(res, 400, { error: 'Invalid cursor' });
+      }
+
+      // Neueste Löschungen zuerst. Der Zeitstempel steht am Namensanfang,
+      // deshalb funktioniert dieselbe Cursor-Logik wie bei den Fotos.
+      const sorted = names.slice().sort().reverse();
+      const eligible = before ? sorted.filter((name) => name < before) : sorted;
+      const pageNames = eligible.slice(0, limit);
+      const items = await Promise.all(pageNames.map(async (name) => {
         const m = name.match(TRASH_NAME_RE);
         return {
           id: TRASH_PREFIX + name,
@@ -691,7 +1042,13 @@ async function handleTrashApi(req, res) {
           name: m ? m[2] : name
         };
       }));
-      return sendJson(res, 200, items);
+
+      return sendJson(res, 200, {
+        items,
+        total: sorted.length,
+        hasMore: eligible.length > pageNames.length,
+        nextCursor: pageNames.length ? pageNames[pageNames.length - 1] : null
+      });
     }
 
     if (req.method === 'POST') { // restore: trash/<ts>-<name>.jpg -> photos/<name>.jpg
@@ -705,6 +1062,7 @@ async function handleTrashApi(req, res) {
       const m = id.match(trashIdRe);
       if (!m) return sendJson(res, 400, { error: 'Invalid id' });
       await supabaseFetch(cfg, `/object/${encodeURIComponent(cfg.bucket)}/${id}`, { method: 'DELETE' });
+      syncChallengeRemoval(PHOTO_PREFIX + m[2]);
       return sendJson(res, 200, { ok: true });
     }
 
@@ -726,6 +1084,14 @@ async function handleTrashApi(req, res) {
 // Server ist die einzige Quelle der Wahrheit; das Admin-Panel schickt immer
 // nur die geänderten Felder. So bleiben mehrere Terminals synchron.
 const SETTINGS_FILE = path.join(DIST_DIR, 'settings.json');
+// Der API-Schlüssel der öffentlichen Challenge-App liegt bewusst NEBEN den
+// Einstellungen in einer ignorierten Datei: settings.json ist versioniert und
+// wird über /api/settings an alle Boxen verteilt — ein Schlüssel darin wäre
+// für jeden Browser lesbar.
+const CHALLENGE_SECRET_FILE = path.join(DIST_DIR, 'challenge-secret.json');
+const CHALLENGE_LOCATIONS = ['lcc', 'coburg'];
+const CHALLENGE_MONTH_RE = /^\d{4}-(0[1-9]|1[0-2])$/;
+const CHALLENGE_KEY_RE = /^[A-Za-z0-9_-]{20,128}$/;
 const COLOR_RE = /^#[0-9a-f]{6}$/i;
 const BRAND_MAX_LENGTH = 32;
 // Die Fotobox ist gestalterisch ein Dark-Theme. Ein zu heller Hintergrund
@@ -743,7 +1109,7 @@ function hexLuminance(hex) {
 }
 
 const DEFAULT_SETTINGS = Object.freeze({
-  orientation: 'portrait',
+  orientation: 'landscape',
   defaultLanguage: 'de',
   trashRetentionDays: 7,
   idleEndSeconds: 40,
@@ -762,12 +1128,32 @@ const DEFAULT_SETTINGS = Object.freeze({
   backgroundColor: '#0d0d0d',
   brandName: 'SnapBox',
   qrTtlHours: 24,
+  challengeEnabled: false,
+  challengeLocation: 'lcc',
+  challengeAppUrl: '',
+  challengeMonthlyGoal: 42,
   updatedAt: null
 });
 
 function numberInRange(value, fallback, min, max) {
   const n = Number(value);
   return Number.isInteger(n) ? Math.min(max, Math.max(min, n)) : fallback;
+}
+
+// Nur eine Basis-URL ohne Zugangsdaten, Query oder Fragment. Der Kiosk baut
+// daraus die API-Pfade und den QR-Code; alles andere wäre fehleranfällig.
+function sanitizeChallengeAppUrl(value) {
+  if (typeof value !== 'string') return '';
+  const raw = value.trim();
+  if (!raw || raw.length > 300) return '';
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+    if (url.username || url.password || url.search || url.hash) return '';
+    return (url.origin + url.pathname).replace(/\/+$/, '');
+  } catch (err) {
+    return '';
+  }
 }
 
 function sanitizeSettings(data) {
@@ -782,7 +1168,9 @@ function sanitizeSettings(data) {
     ? background : DEFAULT_SETTINGS.backgroundColor;
 
   const settings = {
-    orientation: raw.orientation === 'landscape' ? 'landscape' : 'portrait',
+    // Hochformat wird nicht mehr unterstützt; alte Einstellungen werden
+    // beim Lesen automatisch auf Querformat normalisiert.
+    orientation: 'landscape',
     defaultLanguage: raw.defaultLanguage === 'en' ? 'en' : 'de',
     trashRetentionDays: [7, 14, 30].includes(retention) ? retention : DEFAULT_SETTINGS.trashRetentionDays,
     idleEndSeconds: numberInRange(raw.idleEndSeconds, DEFAULT_SETTINGS.idleEndSeconds, 15, 180),
@@ -803,6 +1191,15 @@ function sanitizeSettings(data) {
     backgroundColor: safeBackground,
     brandName: brand || DEFAULT_SETTINGS.brandName,
     qrTtlHours: numberInRange(raw.qrTtlHours, DEFAULT_SETTINGS.qrTtlHours, 1, 168),
+    challengeEnabled: raw.challengeEnabled === true,
+    challengeLocation: raw.challengeLocation === 'coburg' ? 'coburg' : 'lcc',
+    challengeAppUrl: sanitizeChallengeAppUrl(raw.challengeAppUrl),
+    challengeMonthlyGoal: numberInRange(
+      raw.challengeMonthlyGoal,
+      DEFAULT_SETTINGS.challengeMonthlyGoal,
+      1,
+      9999
+    ),
     updatedAt: typeof raw.updatedAt === 'string' ? raw.updatedAt : null
   };
 
@@ -827,6 +1224,24 @@ function readSettings() {
   return { ...DEFAULT_SETTINGS };
 }
 
+function readChallengeKey() {
+  try {
+    const parsed = JSON.parse(fs.readFileSync(CHALLENGE_SECRET_FILE, 'utf8'));
+    const key = parsed && typeof parsed.apiKey === 'string' ? parsed.apiKey.trim() : '';
+    return CHALLENGE_KEY_RE.test(key) ? key : '';
+  } catch (err) {
+    return '';
+  }
+}
+
+function writeChallengeKey(key) {
+  fs.writeFileSync(
+    CHALLENGE_SECRET_FILE,
+    JSON.stringify({ apiKey: key }, null, 2) + '\n',
+    { encoding: 'utf8', mode: 0o600 }
+  );
+}
+
 function assertInteger(value, name, min, max) {
   const n = Number(value);
   if (!Number.isInteger(n) || n < min || n > max) {
@@ -840,10 +1255,10 @@ function validateSettingsPatch(patch) {
   const has = (key) => Object.prototype.hasOwnProperty.call(patch, key);
 
   if (has('orientation')) {
-    if (patch.orientation !== 'portrait' && patch.orientation !== 'landscape') {
-      throw new Error('Ungültige Ausrichtung.');
+    if (patch.orientation !== 'landscape') {
+      throw new Error('Hochformat wird nicht mehr unterstützt.');
     }
-    next.orientation = patch.orientation;
+    next.orientation = 'landscape';
   }
   if (has('defaultLanguage')) {
     if (patch.defaultLanguage !== 'de' && patch.defaultLanguage !== 'en') {
@@ -911,6 +1326,35 @@ function validateSettingsPatch(patch) {
     next.brandName = brand;
   }
   if (has('qrTtlHours')) next.qrTtlHours = assertInteger(patch.qrTtlHours, 'QR-Gültigkeit', 1, 168);
+  if (has('challengeEnabled')) {
+    if (typeof patch.challengeEnabled !== 'boolean') throw new Error('Ungültiger Challenge-Schalter.');
+    next.challengeEnabled = patch.challengeEnabled;
+  }
+  if (has('challengeLocation')) {
+    if (!CHALLENGE_LOCATIONS.includes(patch.challengeLocation)) {
+      throw new Error('Bitte LCC oder Coburg als Standort wählen.');
+    }
+    next.challengeLocation = patch.challengeLocation;
+  }
+  if (has('challengeAppUrl')) {
+    const rawUrl = typeof patch.challengeAppUrl === 'string' ? patch.challengeAppUrl.trim() : '';
+    const url = sanitizeChallengeAppUrl(rawUrl);
+    if (rawUrl && !url) {
+      throw new Error('Die Web-App-URL muss mit http:// oder https:// beginnen und ohne Query/Fragment auskommen.');
+    }
+    next.challengeAppUrl = url;
+  }
+  if (has('challengeMonthlyGoal')) {
+    next.challengeMonthlyGoal = assertInteger(patch.challengeMonthlyGoal, 'Challenge-Ziel', 1, 9999);
+  }
+  if (has('challengeApiKey')) {
+    const key = typeof patch.challengeApiKey === 'string' ? patch.challengeApiKey.trim() : '';
+    // Leer lassen heißt „bestehenden Schlüssel behalten“ — das Passwortfeld
+    // zeigt den gespeicherten Wert nie an.
+    if (key && !CHALLENGE_KEY_RE.test(key)) {
+      throw new Error('Der API-Schlüssel muss 20–128 Zeichen aus A–Z, a–z, 0–9, _ oder - haben.');
+    }
+  }
 
   next.updatedAt = new Date().toISOString();
   return next;
@@ -919,6 +1363,8 @@ function validateSettingsPatch(patch) {
 function saveSettings(patch) {
   const next = validateSettingsPatch(patch);
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(next, null, 2), 'utf8');
+  const key = typeof patch.challengeApiKey === 'string' ? patch.challengeApiKey.trim() : '';
+  if (key) writeChallengeKey(key);
   return next;
 }
 
@@ -928,6 +1374,8 @@ async function handleSettingsApi(req, res) {
     const localIP = getLocalIP();
     return sendJson(res, 200, {
       ...settings,
+      // Nur ob ein Schlüssel existiert, nie der Schlüssel selbst.
+      challengeApiKeySet: !!readChallengeKey(),
       server: {
         port: PORT,
         localIP,
@@ -946,12 +1394,277 @@ async function handleSettingsApi(req, res) {
         return sendJson(res, 400, { error: 'Invalid JSON or settings' });
       }
       const saved = saveSettings(body);
-      return sendJson(res, 200, { ok: true, settings: saved });
+      return sendJson(res, 200, {
+        ok: true,
+        settings: saved,
+        challengeApiKeySet: !!readChallengeKey()
+      });
     } catch (err) {
       return sendJson(res, 400, { error: err.message || 'Invalid JSON or settings' });
     }
   }
   return sendJson(res, 405, { error: 'Method not allowed' });
+}
+
+// ---- Challenge-App (öffentliche Web-App) ----
+// Der Server ist die einzige Stelle, die den API-Schlüssel kennt. Der Kiosk
+// fragt hier nach dem Monatsstand und reicht Fotos ein; der Browser bekommt
+// weder Schlüssel noch direkten Zugriff auf die Challenge-API.
+function currentChallengeMonth() {
+  return new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Europe/Berlin',
+    year: 'numeric',
+    month: '2-digit'
+  }).format(new Date());
+}
+
+function readChallengeConfig() {
+  const settings = readSettings();
+  const apiKey = readChallengeKey();
+  return {
+    enabled: settings.challengeEnabled === true,
+    appUrl: settings.challengeAppUrl,
+    location: settings.challengeLocation,
+    goal: settings.challengeMonthlyGoal,
+    apiKey,
+    // Für Einreichungen muss die Challenge aktiv sein; für das Entfernen
+    // gelöschter Fotos reicht eine vollständige Verbindung.
+    configured: !!(settings.challengeAppUrl && apiKey)
+  };
+}
+
+async function challengeFetch(urlPath, options = {}, timeoutMs = 15000) {
+  const cfg = readChallengeConfig();
+  if (!cfg.appUrl || !cfg.apiKey) {
+    throw Object.assign(new Error('Die Challenge-App ist noch nicht vollständig eingerichtet.'), { status: 503 });
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(cfg.appUrl + urlPath, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        'x-challenge-key': cfg.apiKey
+      },
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function handleChallengeSummaryApi(req, res) {
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  const cfg = readChallengeConfig();
+  const url = new URL(req.url, 'http://localhost');
+  const requested = url.searchParams.get('month') || '';
+  const month = CHALLENGE_MONTH_RE.test(requested) ? requested : currentChallengeMonth();
+  const base = {
+    ok: true,
+    enabled: cfg.enabled,
+    configured: cfg.enabled && cfg.configured,
+    online: false,
+    location: cfg.location,
+    month,
+    goal: cfg.goal,
+    appUrl: cfg.appUrl,
+    entries: 0,
+    votes: 0,
+    score: 0
+  };
+
+  if (!cfg.enabled || !cfg.configured) {
+    return sendJson(res, 200, base);
+  }
+
+  try {
+    const query = new URLSearchParams({ location: cfg.location, month });
+    const remote = await challengeFetch('/api/summary?' + query.toString());
+    const data = await remote.json().catch(() => ({}));
+    if (!remote.ok) throw new Error(data.error || ('HTTP ' + remote.status));
+    return sendJson(res, 200, {
+      ...base,
+      online: true,
+      entries: Number(data.entries) || 0,
+      votes: Number(data.votes) || 0,
+      score: Number(data.score) || 0,
+      theme: typeof data.theme === 'string' ? data.theme : ''
+    });
+  } catch (err) {
+    console.warn('Challenge summary failed:', err.message);
+    return sendJson(res, 200, {
+      ...base,
+      error: 'Die Challenge-App ist gerade nicht erreichbar.'
+    });
+  }
+}
+
+async function handleChallengeEntryApi(req, res) {
+  const cfg = readChallengeConfig();
+  if (!cfg.enabled || !cfg.configured) {
+    return sendJson(res, 503, { error: 'Die Challenge ist nicht eingerichtet oder ausgeschaltet.' });
+  }
+
+  if (req.method === 'POST') {
+    let body;
+    try {
+      body = JSON.parse(await readBody(req, 16 * 1024));
+    } catch (err) {
+      return sendJson(res, 400, { error: 'Invalid JSON' });
+    }
+    const photoId = body && typeof body.photoId === 'string' ? body.photoId : '';
+    if (!new RegExp(`^${PHOTO_PREFIX}(${PHOTO_NAME})$`).test(photoId)) {
+      return sendJson(res, 400, { error: 'Invalid photo id' });
+    }
+    // Nur das gerade aufgenommene Foto der laufenden Gäste-Sitzung darf
+    // eingereicht werden — die Auswahl auf dem Endscreen bleibt verbindlich.
+    const session = getPhotoSession(req);
+    if (!session || !session.photoIds.has(photoId)) {
+      return sendJson(res, 403, { error: 'Photo does not belong to this session' });
+    }
+
+    try {
+      const supabase = getSupabaseConfig();
+      const image = await objectToDataUrl(supabase, photoId);
+      const month = currentChallengeMonth();
+      const remote = await challengeFetch('/api/entries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          photoId,
+          location: cfg.location,
+          month,
+          image
+        })
+      }, 30000);
+      const data = await remote.json().catch(() => ({}));
+      if (!remote.ok) {
+        return sendJson(res, remote.status, { error: data.error || 'Die Challenge hat das Foto nicht angenommen.' });
+      }
+      return sendJson(res, 200, {
+        ok: true,
+        id: data.id || null,
+        duplicate: data.duplicate === true,
+        month,
+        location: cfg.location
+      });
+    } catch (err) {
+      console.error('Challenge submit failed:', err.message);
+      return sendJson(res, 502, { error: 'Die Challenge-App ist gerade nicht erreichbar.' });
+    }
+  }
+
+  if (req.method === 'DELETE') {
+    const url = new URL(req.url, 'http://localhost');
+    const photoId = url.searchParams.get('photoId') || '';
+    if (!new RegExp(`^${PHOTO_PREFIX}(${PHOTO_NAME})$`).test(photoId)) {
+      return sendJson(res, 400, { error: 'Invalid photo id' });
+    }
+    const session = getPhotoSession(req);
+    if (!isAdmin(req) && (!session || !session.photoIds.has(photoId))) {
+      return sendJson(res, 403, { error: 'Photo does not belong to this session' });
+    }
+    try {
+      const remote = await challengeFetch(
+        '/api/entries?photoId=' + encodeURIComponent(photoId),
+        { method: 'DELETE' },
+        8000
+      );
+      const data = await remote.json().catch(() => ({}));
+      if (!remote.ok) throw new Error(data.error || ('HTTP ' + remote.status));
+      return sendJson(res, 200, { ok: true, removed: data.removed === true });
+    } catch (err) {
+      console.warn('Challenge delete failed:', err.message);
+      return sendJson(res, 502, { error: 'Die Challenge-App ist gerade nicht erreichbar.' });
+    }
+  }
+
+  return sendJson(res, 405, { error: 'Method not allowed' });
+}
+
+// Löscht den öffentlichen Challenge-Eintrag im Hintergrund. Fehler dürfen das
+// Löschen in der Fotobox nie blockieren: Das Foto selbst ist bereits weg.
+function syncChallengeRemoval(photoId) {
+  const cfg = readChallengeConfig();
+  if (!cfg.appUrl || !cfg.apiKey) return;
+  challengeFetch('/api/entries?photoId=' + encodeURIComponent(photoId), { method: 'DELETE' }, 8000)
+    .then(async (remote) => {
+      if (!remote.ok) {
+        const text = await remote.text().catch(() => '');
+        console.warn('Challenge cleanup failed:', remote.status, text.slice(0, 160));
+      }
+    })
+    .catch((err) => console.warn('Challenge cleanup failed:', err.message));
+}
+
+// ---- Druckerstatus ----
+// Der Kiosk druckt ohne Dialog direkt auf den Standarddrucker. Ist dieser
+// ein virtueller PDF-/XPS-Drucker, würde Windows einen Speichern-Dialog
+// öffnen. Das muss die Fotobox vorher erkennen und den Druck abbrechen.
+const VIRTUAL_PRINTER_RE = /(print to pdf|xps document writer|onenote|fax|pdf24|adobe pdf|cutepdf|bullzip|dopdf)/i;
+const PRINTER_CACHE_MS = 30000;
+let printerCache = null;
+
+function queryDefaultPrinter() {
+  return new Promise((resolve) => {
+    if (process.platform !== 'win32') {
+      return resolve({ supported: false, printer: null, virtual: false, offline: false });
+    }
+    const script = 'Get-CimInstance Win32_Printer -Filter "Default=True" | '
+      + 'Select-Object -First 1 Name,WorkOffline,PrinterStatus,PortName | ConvertTo-Json -Compress';
+    execFile(
+      'powershell.exe',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+      { timeout: 5000, windowsHide: true },
+      (err, stdout) => {
+        if (err) {
+          return resolve({ supported: true, printer: null, virtual: false, offline: false, error: true });
+        }
+        let raw = null;
+        try {
+          raw = JSON.parse(String(stdout).trim() || 'null');
+        } catch (e) {
+          raw = null;
+        }
+        if (!raw || !raw.Name) {
+          return resolve({ supported: true, printer: null, virtual: false, offline: false });
+        }
+        const name = String(raw.Name);
+        const port = String(raw.PortName || '').toUpperCase();
+        const virtual = VIRTUAL_PRINTER_RE.test(name)
+          || port === 'PORTPROMPT:'
+          || port === 'FILE:'
+          || port === 'NUL:';
+        resolve({
+          supported: true,
+          printer: name,
+          virtual,
+          offline: !!raw.WorkOffline,
+          status: Number(raw.PrinterStatus) || 0
+        });
+      }
+    );
+  });
+}
+
+async function getPrinterInfo() {
+  if (printerCache && Date.now() - printerCache.at < PRINTER_CACHE_MS) {
+    return printerCache.data;
+  }
+  const data = await queryDefaultPrinter();
+  printerCache = { at: Date.now(), data };
+  return data;
+}
+
+async function handlePrinterApi(req, res) {
+  if (req.method !== 'GET') {
+    return sendJson(res, 405, { error: 'Method not allowed' });
+  }
+  const info = await getPrinterInfo();
+  return sendJson(res, 200, info);
 }
 
 // Nur Dateien ausliefern, die die Fotobox wirklich braucht. Insbesondere
@@ -962,6 +1675,7 @@ const BLOCKED_STATIC_FILES = new Set([
   '/.env.local',
   '/dev-https-server.js',
   '/settings.json',
+  '/usage-stats.json',
   '/package.json',
   '/package-lock.json',
   '/Fotobox-Kiosk.cmd'
@@ -983,6 +1697,15 @@ const requestHandler = (req, res) => {
   if (route === '/api/photos') {
     return handlePhotosApi(req, res);
   }
+  if (route === '/api/photo-session') {
+    return handlePhotoSessionApi(req, res);
+  }
+  if (route === '/api/stats/event') {
+    return handleUsageEventApi(req, res);
+  }
+  if (route === '/api/stats') {
+    return handleUsageStatsApi(req, res);
+  }
   if (route === '/api/streak') {
     return handleStreakApi(req, res);
   }
@@ -995,6 +1718,12 @@ const requestHandler = (req, res) => {
   if (route === '/api/settings') {
     return handleSettingsApi(req, res);
   }
+  if (route === '/api/challenge/summary') {
+    return handleChallengeSummaryApi(req, res);
+  }
+  if (route === '/api/challenge/entries') {
+    return handleChallengeEntryApi(req, res);
+  }
   if (route === '/api/admin/login') {
     return handleAdminLoginApi(req, res);
   }
@@ -1003,6 +1732,9 @@ const requestHandler = (req, res) => {
   }
   if (route === '/api/admin/session') {
     return handleAdminSessionApi(req, res);
+  }
+  if (route === '/api/printer') {
+    return handlePrinterApi(req, res);
   }
 
   let urlPath = decodeURIComponent(req.url.split('?')[0]);

@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="kiosk.css" />
 </head>
-<body>
+<body class="orientation-landscape">
   <!-- Landing / Idle: Foto-Kette, Swipe-up und Monats-Challenge -->
   <section class="splash" id="splash">
     <div class="splash__bg">
@@ -503,6 +503,44 @@
             <span class="endscreen__label" data-i18n="galleryBtn">Galerie</span>
           </button>
         </div>
+
+        <!-- Monats-Challenge: bewusste Ja/Nein-Entscheidung nach dem Foto,
+             mit direktem Feedback und QR zur öffentlichen Web-App. -->
+        <div class="challenge-end" id="challengeEnd" hidden>
+          <div class="challenge-end__copy">
+            <p class="challenge-end__kicker">
+              <span class="challenge-end__badge" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+                  <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"></path>
+                  <path d="M7 6H4a3 3 0 0 0 3 3M17 6h3a3 3 0 0 1-3 3"></path>
+                </svg>
+              </span>
+              <span data-i18n="endChallengeKicker">MONATS-CHALLENGE</span>
+              <span class="challenge-end__theme" id="challengeEndTheme"></span>
+            </p>
+            <p class="challenge-end__question" id="challengeEndQuestion"></p>
+            <p class="challenge-end__status" id="challengeEndStatus" role="status" aria-live="polite"></p>
+          </div>
+          <div class="challenge-end__choices" id="challengeEndChoices">
+            <button class="challenge-choice challenge-choice--yes" type="button" data-challenge-choice="yes">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+                <path d="M4 12.5l5 5L20 6.5"></path>
+              </svg>
+              <span data-i18n="endChallengeYes">Ja, mitmachen</span>
+            </button>
+            <button class="challenge-choice challenge-choice--no" type="button" data-challenge-choice="no">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true" focusable="false">
+                <path d="M6 6l12 12M18 6 6 18"></path>
+              </svg>
+              <span data-i18n="endChallengeNo">Nein, danke</span>
+            </button>
+          </div>
+          <div class="challenge-end__qr" id="challengeEndQrWrap" hidden>
+            <div class="challenge-end__qr-code" id="challengeEndQr"></div>
+            <span class="challenge-end__qr-label" data-i18n="endChallengeQrLabel">Web-App</span>
+            <span class="challenge-end__qr-hint" data-i18n="endChallengeQrHint">Scannen &amp; liken</span>
+          </div>
+        </div>
       </div>
     </div>
   </section>
@@ -542,20 +580,7 @@
   <!-- Gallery -->
   <section class="gallery" id="gallery">
     <div class="gallery__header">
-      <button class="btn btn--ghost gallery__back" data-action="back-camera">
-        <span class="btn__icon btn__icon--left">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"></path></svg>
-        </span>
-        <span id="galleryBackLabel" data-i18n="galleryBack">Zurück</span>
-      </button>
       <h2 class="gallery__title" id="galleryTitle" data-i18n="galleryTitle">Deine Fotos</h2>
-      <button class="btn btn--ghost gallery__trash-toggle" data-action="toggle-trash" id="trashToggle">
-        <span class="btn__icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"></path></svg>
-        </span>
-        <span data-i18n="galleryTrash">Papierkorb</span>
-        <span class="btn__badge btn__badge--muted" id="trashBadge" hidden>0</span>
-      </button>
     </div>
     <div class="gallery__grid" id="galleryGrid"></div>
     <div class="gallery__load-more" id="galleryLoadMoreWrap" hidden>
@@ -568,22 +593,6 @@
         <path d="M21 15l-5-5-5 5"></path>
       </svg>
       <p data-i18n="galleryEmpty">Noch keine Fotos — mach dein erstes Foto!</p>
-    </div>
-
-    <!-- Papierkorb (trash view) -->
-    <div class="trash" id="trashView" hidden>
-      <div class="trash__bar">
-        <p class="trash__hint">
-          <span id="trashRetentionText">Neu gelöschte Fotos werden nach 7 Tagen endgültig gelöscht.</span>
-        </p>
-      </div>
-      <div class="gallery__grid" id="trashGrid"></div>
-      <div class="gallery__empty" id="trashEmpty">
-        <svg class="gallery__empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z"></path>
-        </svg>
-        <p data-i18n="trashEmpty">Der Papierkorb ist leer.</p>
-      </div>
     </div>
   </section>
 

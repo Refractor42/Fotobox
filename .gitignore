@@ -16,6 +16,12 @@ Thumbs.db
 *.swp
 *.swo
 
+# Lokale Nutzungsstatistik (Laufzeitdaten)
+usage-stats.json
+
+# Server-Schlüssel der Challenge-App (darf nie ins Repository)
+challenge-secret.json
+
 # Logs
 *.log
 npm-debug.log*

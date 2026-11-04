@@ -25,6 +25,7 @@
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    [hidden] { display: none !important; }
 
     body {
       min-height: 100vh;
@@ -190,13 +191,25 @@
       transition: all 0.2s ease;
     }
 
+    .btn:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn:focus-visible {
+      outline: 2px solid var(--c-accent);
+      outline-offset: 2px;
+    }
+
     .btn--primary {
       background: var(--c-accent);
       color: #0b0c10;
       font-weight: 600;
     }
 
-    .btn--primary:hover {
+    .btn--primary:hover:not(:disabled) {
       background: #eab308;
       box-shadow: 0 4px 16px var(--c-accent-glow);
       transform: translateY(-1px);
@@ -208,7 +221,7 @@
       border-color: var(--c-border);
     }
 
-    .btn--ghost:hover {
+    .btn--ghost:hover:not(:disabled) {
       background: rgba(255, 255, 255, 0.09);
       border-color: rgba(255, 255, 255, 0.16);
       transform: translateY(-1px);
@@ -347,7 +360,6 @@
       grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
       gap: 1.5rem;
     }
-
     .format-card {
       position: relative;
       background: rgba(255, 255, 255, 0.02);
@@ -379,7 +391,6 @@
       background: rgba(250, 204, 21, 0.04);
       box-shadow: 0 0 24px var(--c-accent-glow), inset 0 0 0 1px var(--c-accent);
     }
-
     .format-card__badge {
       position: absolute;
       top: 1.25rem;
@@ -419,173 +430,6 @@
       padding: 1rem;
       overflow: hidden;
       position: relative;
-    }
-
-    /* Miniature Portrait Mockup */
-    .mini-portrait {
-      width: 110px;
-      height: 165px;
-      background: #111318;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 12px;
-      display: flex;
-      flex-direction: column;
-      padding: 6px;
-      gap: 6px;
-      position: relative;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-    }
-
-    .mini-portrait__stage {
-      flex: 1;
-      background: linear-gradient(135deg, #1e293b, #0f172a);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      position: relative;
-    }
-
-    .mini-portrait__stage::after {
-      content: "3:4";
-      font-size: 9px;
-      color: rgba(255, 255, 255, 0.35);
-      font-weight: 700;
-    }
-
-    .mini-portrait__dock {
-      height: 12px;
-      background: rgba(255, 255, 255, 0.08);
-      border-radius: 4px;
-      width: 75%;
-      align-self: center;
-    }
-
-    .mini-portrait__shutter {
-      width: 22px;
-      height: 22px;
-      border-radius: 50%;
-      background: var(--c-accent);
-      align-self: center;
-      border: 2px solid rgba(255, 255, 255, 0.4);
-      box-shadow: 0 0 8px var(--c-accent-glow);
-    }
-
-    /* Miniature Landscape Mockup */
-    .mini-landscape {
-      width: 230px;
-      height: 145px;
-      background: #111318;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-      border-radius: 14px;
-      display: flex;
-      padding: 6px;
-      position: relative;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
-      overflow: hidden;
-    }
-
-    .mini-landscape__screen {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #1e293b, #0f172a);
-      border-radius: 8px;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .mini-landscape__screen::before {
-      content: "16:9 Querformat";
-      font-size: 10px;
-      color: rgba(255, 255, 255, 0.3);
-      font-weight: 700;
-    }
-
-    .mini-landscape__gallery {
-      position: absolute;
-      top: 6px;
-      left: 6px;
-      width: 44px;
-      height: 14px;
-      background: rgba(30, 32, 40, 0.8);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 5px;
-      display: flex;
-      align-items: center;
-      padding: 0 3px;
-      font-size: 7px;
-      color: #fff;
-    }
-
-    .mini-landscape__gallery::after {
-      content: "0";
-      position: absolute;
-      top: -3px;
-      right: -3px;
-      width: 8px;
-      height: 8px;
-      background: #facc15;
-      color: #000;
-      font-size: 6px;
-      font-weight: bold;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .mini-landscape__shutter {
-      position: absolute;
-      right: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      width: 32px;
-      height: 32px;
-      background: #facc15;
-      border-radius: 50%;
-      box-shadow: 0 0 12px rgba(250, 204, 21, 0.8);
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .mini-landscape__shutter::after {
-      content: "";
-      width: 10px;
-      height: 7px;
-      background: #000;
-      border-radius: 2px;
-    }
-
-    .mini-landscape__dock {
-      position: absolute;
-      bottom: 6px;
-      left: 45%;
-      transform: translateX(-50%);
-      width: 120px;
-      height: 16px;
-      background: rgba(20, 22, 28, 0.85);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 6px;
-      display: flex;
-      align-items: center;
-      justify-content: space-around;
-      padding: 0 4px;
-    }
-
-    .mini-landscape__pill {
-      height: 8px;
-      width: 18px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 3px;
-    }
-
-    .mini-landscape__pill.active {
-      border: 1px solid #facc15;
-      background: rgba(250, 204, 21, 0.2);
     }
 
     .format-card__info {
@@ -668,6 +512,7 @@
     }
 
     .admin-toast {
+      max-width: min(360px, calc(100vw - 2rem));
       background: #1e293b;
       color: #fff;
       border: 1px solid var(--c-accent);
@@ -676,6 +521,7 @@
       border-radius: var(--radius-sm);
       font-size: 0.9rem;
       font-weight: 500;
+      line-height: 1.35;
       display: flex;
       align-items: center;
       gap: 0.65rem;
@@ -1254,12 +1100,545 @@
       color: #fca5a5;
     }
 
-    .btn--danger-ghost:hover {
+    .btn--danger-ghost:hover:not(:disabled) {
       background: rgba(239, 68, 68, 0.16);
       border-color: rgba(239, 68, 68, 0.5);
     }
 
     .stats-grid--compact { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+
+    /* Nutzungsstatistik */
+    .usage-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 0.65rem;
+    }
+
+    .usage-source {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .usage-source__item {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.7rem;
+      padding: 0.85rem 0.95rem;
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-md);
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .usage-source__badge {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      padding: 0.15rem 0.5rem;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #7dd3fc;
+      font-size: 0.68rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      white-space: nowrap;
+    }
+
+    .usage-source__badge--local {
+      border-color: rgba(250, 204, 21, 0.35);
+      background: rgba(250, 204, 21, 0.12);
+      color: #fde68a;
+    }
+
+    .usage-source__title {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .usage-source__text {
+      margin-top: 0.2rem;
+      color: var(--c-text-muted);
+      font-size: 0.78rem;
+      line-height: 1.5;
+    }
+
+    .usage-chart-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+      gap: 1rem;
+    }
+
+    .usage-panel {
+      background: rgba(255, 255, 255, 0.025);
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-md);
+      padding: 1.1rem 1.15rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      min-width: 0;
+    }
+
+    .usage-panel__head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .usage-panel__title {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .usage-panel__meta {
+      color: var(--c-text-dim);
+      font-size: 0.78rem;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .usage-panel__desc {
+      color: var(--c-text-muted);
+      font-size: 0.8rem;
+      line-height: 1.5;
+      margin: -0.25rem 0 0;
+    }
+
+    .usage-chart-wrap {
+      width: 100%;
+      min-height: 190px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .usage-chart {
+      width: 100%;
+      height: auto;
+      display: block;
+      overflow: visible;
+    }
+
+    .usage-chart text { font-family: inherit; }
+    .usage-chart__grid { stroke: rgba(255, 255, 255, 0.07); stroke-width: 1; }
+    .usage-chart__axis {
+      fill: var(--c-text-dim);
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+    }
+    .usage-chart__axis-title {
+      fill: var(--c-text-muted);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    /* Das Stunden-Diagramm ist schmaler; dort würden die Standardgrößen
+       beim Skalieren zu klein. */
+    .usage-chart--hours .usage-chart__axis { font-size: 13px; }
+    .usage-chart--hours .usage-chart__value { font-size: 12px; }
+    .usage-chart--hours .usage-chart__axis-title { font-size: 13.5px; }
+    .usage-chart__axis-line,
+    .usage-chart__tick { stroke: rgba(255, 255, 255, 0.16); stroke-width: 1; }
+    .usage-chart__value {
+      fill: var(--c-text-muted);
+      font-size: 10.5px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .usage-chart__bar { fill: var(--c-accent); }
+    .usage-chart__bar--muted { fill: rgba(255, 255, 255, 0.22); }
+    .usage-chart__bar--peak { fill: #38bdf8; }
+
+    .usage-empty {
+      color: var(--c-text-muted);
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 1.5rem 0.5rem;
+      line-height: 1.5;
+    }
+
+    .usage-actions {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 0.85rem;
+      margin: 0;
+      padding: 0;
+    }
+
+    .usage-action {
+      display: grid;
+      grid-template-columns: 6.6rem minmax(0, 1fr) 2.2rem;
+      gap: 0.6rem;
+      align-items: center;
+      font-size: 0.85rem;
+    }
+
+    .usage-action__label { color: var(--c-text-muted); }
+    .usage-action__track {
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.06);
+      overflow: hidden;
+    }
+    .usage-action__fill {
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #38bdf8, #22d3ee);
+    }
+    .usage-action__value {
+      text-align: right;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .usage-data { border-top: 1px solid var(--c-border); padding-top: 0.75rem; }
+    .usage-data summary {
+      cursor: pointer;
+      color: var(--c-text-muted);
+      font-size: 0.82rem;
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .usage-data summary:focus-visible {
+      outline: 2px solid var(--c-accent);
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    .usage-data__scroll { max-height: 240px; overflow: auto; margin-top: 0.5rem; }
+    .usage-data table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .usage-data th,
+    .usage-data td {
+      padding: 0.35rem 0.4rem;
+      text-align: left;
+      border-bottom: 1px solid var(--c-border);
+    }
+    .usage-data th {
+      color: var(--c-text-dim);
+      font-weight: 600;
+      position: sticky;
+      top: 0;
+      background: var(--c-surface);
+    }
+    .usage-data td:not(:first-child),
+    .usage-data th:not(:first-child) { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .usage-error {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.8rem 1rem;
+      border: 1px solid rgba(239, 68, 68, 0.4);
+      border-radius: var(--radius-md);
+      background: rgba(239, 68, 68, 0.08);
+      color: #fca5a5;
+      font-size: 0.85rem;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 860px) {
+      .usage-chart-grid { grid-template-columns: 1fr; }
+      .usage-chart__axis { font-size: 14px; }
+      .usage-chart__axis-title { font-size: 14px; }
+      .usage-chart__value { font-size: 13px; }
+      .usage-chart--hours .usage-chart__axis { font-size: 14px; }
+      .usage-chart--hours .usage-chart__value { font-size: 13px; }
+      .usage-chart--hours .usage-chart__axis-title { font-size: 14px; }
+    }
+
+    @media (max-width: 640px) {
+      .usage-toolbar { width: 100%; justify-content: flex-start; }
+      .usage-action { grid-template-columns: 5.4rem minmax(0, 1fr) 2rem; }
+      .usage-chart__axis { font-size: 17px; }
+      .usage-chart__axis-title { font-size: 16px; }
+      .usage-chart__value { font-size: 15px; }
+      .usage-chart--hours .usage-chart__axis { font-size: 17px; }
+      .usage-chart--hours .usage-chart__value { font-size: 15px; }
+      .usage-chart--hours .usage-chart__axis-title { font-size: 16px; }
+    }
+
+    /* Admin-Galerie und -Papierkorb */
+    .admin-media-grid {
+      display: grid;
+      /* Etwas größere Kacheln, damit das 16:9-Foto und die Aktionen
+         zuverlässig erkennbar und gut treffbar bleiben. */
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 0.9rem;
+    }
+
+    .admin-media-grid.is-busy {
+      opacity: 0.72;
+      pointer-events: none;
+    }
+
+    /* Auswahlleiste bleibt beim Scrollen unter dem Admin-Kopf sichtbar,
+       damit Status und Sammelaktionen nicht außer Sicht geraten. */
+    .media-select {
+      position: sticky;
+      top: 80px;
+      z-index: 20;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.65rem 0.9rem;
+      padding: 0.7rem 0.8rem;
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-md);
+      background: rgba(17, 19, 24, 0.96);
+      box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    .media-select__status,
+    .media-select__actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Großzügige Trefferflächen für Maus und Touch (Fitts' Law). */
+    .media-select .btn { min-height: 44px; }
+
+    .media-select__toggle[aria-pressed="true"] {
+      border-color: var(--c-accent);
+      background: rgba(250, 204, 21, 0.1);
+      color: #fde68a;
+    }
+
+    .media-select__count {
+      margin-inline: 0.2rem;
+      color: var(--c-text-muted);
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .media-select__count.is-active { color: var(--c-text); }
+    .media-select__count.is-busy { color: var(--c-accent); }
+
+    .media-select__clear {
+      min-height: 44px;
+      padding: 0.25rem 0.5rem;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--c-text-muted);
+      font: inherit;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      cursor: pointer;
+    }
+
+    .media-select__clear:hover { color: var(--c-text); }
+    .media-select__clear:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.5);
+    }
+
+    @media (max-width: 760px) {
+      .media-select { position: static; }
+    }
+
+    .media-card {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 1px solid var(--c-border);
+      border-radius: var(--radius-md);
+      background: #0b0c10;
+    }
+
+    .media-card__thumb {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      background: #07080a;
+    }
+
+    .media-card__thumb img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      /* Das ganze Foto zeigen: wichtig für die Entscheidung zwischen
+         Wiederherstellen und endgültigem Löschen. */
+      object-fit: contain;
+    }
+
+    /* Die ganze Bildfläche ist die Auswahlfläche: großer Trefferbereich,
+       sichtbarer Fokus und eine zusätzliche Checkmarke als Statusanzeige. */
+    .media-card__select {
+      position: absolute;
+      inset: 0;
+      z-index: 2;
+      width: 100%;
+      height: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .media-card__select:hover { background: rgba(255, 255, 255, 0.045); }
+    .media-card__select:focus-visible {
+      outline: 3px solid var(--c-accent);
+      outline-offset: -3px;
+    }
+
+    .media-card__check {
+      position: absolute;
+      top: 0.55rem;
+      left: 0.55rem;
+      display: grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border: 2px solid rgba(255, 255, 255, 0.78);
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.72);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+      transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+    }
+
+    .media-card__check::after {
+      content: "✓";
+      color: #0b0c10;
+      font-size: 22px;
+      font-weight: 900;
+      line-height: 1;
+      opacity: 0;
+      transform: scale(0.6);
+      transition: opacity 0.18s ease, transform 0.18s ease;
+    }
+
+    .media-card__select:hover .media-card__check,
+    .media-card__select:focus-visible .media-card__check {
+      border-color: #fff;
+      transform: scale(1.04);
+    }
+
+    .media-card.is-selected {
+      border-color: var(--c-accent);
+      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.55), 0 10px 28px rgba(0, 0, 0, 0.45);
+    }
+
+    .media-card.is-selected .media-card__check {
+      border-color: var(--c-accent);
+      background: var(--c-accent);
+    }
+
+    .media-card.is-selected .media-card__check::after {
+      opacity: 1;
+      transform: scale(1);
+    }
+
+    .media-card__delete {
+      z-index: 3;
+      position: absolute;
+      top: 0.55rem;
+      right: 0.55rem;
+      display: grid;
+      place-items: center;
+      width: 44px;
+      height: 44px;
+      padding: 0;
+      border: 1.5px solid rgba(255, 255, 255, 0.28);
+      border-radius: 50%;
+      background: rgba(0, 0, 0, 0.78);
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.18s ease, transform 0.18s ease;
+    }
+
+    .media-card__delete:hover,
+    .media-card__delete:focus-visible {
+      background: rgba(239, 68, 68, 0.92);
+      border-color: rgba(239, 68, 68, 1);
+      outline: none;
+      transform: scale(1.05);
+    }
+
+    .media-card__delete:disabled { opacity: 0.45; cursor: default; }
+
+    .media-card__delete svg { width: 20px; height: 20px; pointer-events: none; }
+
+    .media-card__meta {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      padding: 0.55rem 0.6rem 0.65rem;
+    }
+
+    .media-card__note {
+      color: var(--c-text-muted);
+      font-size: 0.72rem;
+      line-height: 1.3;
+    }
+
+    .media-card__actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+    }
+
+    .media-card__btn {
+      flex: 1 1 auto;
+      min-height: 36px;
+      padding: 0.25rem 0.5rem;
+      border: 1px solid var(--c-border);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--c-text);
+      font: inherit;
+      font-size: 0.72rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.18s ease, border-color 0.18s ease;
+    }
+
+    .media-card__btn:hover:not(:disabled),
+    .media-card__btn:focus-visible {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.22);
+      outline: none;
+    }
+
+    .media-card__btn--danger {
+      color: #fca5a5;
+      border-color: rgba(239, 68, 68, 0.35);
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    .media-card__btn--danger:hover:not(:disabled) {
+      background: rgba(239, 68, 68, 0.18);
+      border-color: rgba(239, 68, 68, 0.55);
+    }
+
+    .media-card__btn:disabled { opacity: 0.45; cursor: default; }
 
     @media (max-width: 760px) {
       .setting-row { grid-template-columns: 1fr; align-items: start; }
@@ -1328,7 +1707,7 @@
     <div class="admin-intro">
       <div>
         <h1 class="hero-title">Fotobox konfigurieren</h1>
-        <p class="hero-subtitle">Format, Sprache, Zeiten, Aufnahme-Standards, Farben und Galerie zentral steuern. Änderungen werden sofort gespeichert und an alle geöffneten Fotobox-Terminals übertragen.</p>
+        <p class="hero-subtitle">Sprache, Zeiten, Aufnahme-Standards, Farben und Galerie zentral steuern. Änderungen werden sofort gespeichert und an alle geöffneten Fotobox-Terminals übertragen.</p>
       </div>
       <div class="settings-status" id="settingsStatus" role="status" aria-live="polite">
         <span class="settings-status__dot" aria-hidden="true"></span>
@@ -1337,87 +1716,18 @@
     </div>
 
     <nav class="admin-nav" aria-label="Admin-Bereiche">
-      <a href="#format">Format</a>
       <a href="#language">Sprache</a>
-      <a href="#retentionSection">Papierkorb</a>
+      <a href="#retentionSection">Aufbewahrung</a>
       <a href="#times">Zeiten</a>
       <a href="#capture">Aufnahme</a>
       <a href="#appearance">Darstellung</a>
-      <a href="#gallerySettings">Galerie</a>
+      <a href="#adminGallery">Fotos</a>
+      <a href="#adminTrash">Papierkorb</a>
+      <a href="#gallerySettings">Galerie & Leistung</a>
+      <a href="#challenge">Challenge</a>
+      <a href="#usageStats">Nutzung</a>
       <a href="#system">System</a>
     </nav>
-
-    <!-- Section: Orientation -->
-    <section class="section-card" id="format">
-      <div class="section-header">
-        <div>
-          <h2 class="section-header__title">
-            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
-              <line x1="8" y1="21" x2="16" y2="21"></line>
-              <line x1="12" y1="17" x2="12" y2="21"></line>
-            </svg>
-            Bildschirm-Ausrichtung (Format)
-          </h2>
-          <p class="section-header__desc">Klicke auf das gewünschte Format. Das Layout aktualisiert sich sofort auf allen aktiven Fotobox-Bildschirmen.</p>
-        </div>
-      </div>
-
-      <!-- Orientation Cards -->
-      <div class="orientation-grid" role="radiogroup" aria-label="Fotobox Ausrichtung">
-
-        <!-- Portrait Card -->
-        <div class="format-card" id="cardPortrait" role="radio" aria-checked="false" tabindex="0">
-          <span class="format-card__badge" id="badgePortrait">Wählen</span>
-          <div class="preview-box">
-            <div class="mini-portrait">
-              <div class="mini-portrait__stage"></div>
-              <div class="mini-portrait__dock"></div>
-              <div class="mini-portrait__shutter"></div>
-            </div>
-          </div>
-          <div class="format-card__info">
-            <h3 class="format-card__title">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="5" y="2" width="14" height="20" rx="3"></rect>
-                <line x1="12" y1="18" x2="12.01" y2="18" stroke-width="3"></line>
-              </svg>
-              Hochformat (Portrait)
-            </h3>
-            <p class="format-card__desc">Klassisches 3:4 Layout mit Auslöser unten im Bild. Ideal für Smartphones, iPads im Hochkant-Modus und vertikale Säulen-Kioske.</p>
-          </div>
-        </div>
-
-        <!-- Landscape Card -->
-        <div class="format-card" id="cardLandscape" role="radio" aria-checked="false" tabindex="0">
-          <span class="format-card__badge" id="badgeLandscape">Wählen</span>
-          <div class="preview-box">
-            <div class="mini-landscape">
-              <div class="mini-landscape__screen">
-                <div class="mini-landscape__gallery">Galerie</div>
-                <div class="mini-landscape__shutter"></div>
-                <div class="mini-landscape__dock">
-                  <span class="mini-landscape__pill"></span>
-                  <span class="mini-landscape__pill active"></span>
-                  <span class="mini-landscape__pill"></span>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div class="format-card__info">
-            <h3 class="format-card__title">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="2" y="5" width="20" height="14" rx="3"></rect>
-                <circle cx="19" cy="12" r="1.5" fill="currentColor"></circle>
-              </svg>
-              Querformat (Landscape)
-            </h3>
-            <p class="format-card__desc">16:9-Kiosk-Layout mit rundem Auslöser unten, Sticker-Menü, Foto-Kette und Endscreen für QR-Code, Teilen und Drucken.</p>
-          </div>
-        </div>
-
-      </div>
-    </section>
 
         <!-- Section: Default Language -->
     <section class="section-card" id="language">
@@ -1482,7 +1792,7 @@
             </svg>
             Papierkorb-Aufbewahrung
           </h2>
-          <p class="section-header__desc">Wie lange neu gelöschte Fotos im Papierkorb bleiben, bevor sie endgültig entfernt werden. Gilt für alle Geräte; bereits gelöschte Fotos behalten ihren bisherigen Ablauf.</p>
+          <p class="section-header__desc">Wie lange Fotos im Admin-Papierkorb bleiben, bevor sie endgültig entfernt werden. Gilt für Löschungen im Admin-Panel; bereits gelöschte Fotos behalten ihren bisherigen Ablauf.</p>
         </div>
       </div>
 
@@ -1752,7 +2062,7 @@
             <span class="section-kicker">04</span>
             Galerie & Leistung
           </h2>
-          <p class="section-header__desc">Die Galerie lädt Fotos seitenweise. Eine kleinere Seite startet schneller; „Mehr laden“ bleibt für alle weiteren Fotos sichtbar.</p>
+          <p class="section-header__desc">Galerie und Papierkorb laden Fotos seitenweise. Eine kleinere Seite startet schneller; „Mehr laden“ bleibt für alle weiteren Fotos sichtbar.</p>
         </div>
       </div>
 
@@ -1775,6 +2085,265 @@
       <p class="section-note">Empfehlung: 12 Fotos. Das entspricht der bisherigen Geschwindigkeit und hält den ersten Aufruf unter einer halben Megabyte.</p>
     </section>
 
+    <!-- Section: Monthly Challenge -->
+    <section class="section-card" id="challenge">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"></path>
+              <path d="M7 6H4a3 3 0 0 0 3 3M17 6h3a3 3 0 0 1-3 3"></path>
+            </svg>
+            <span class="section-kicker">05</span>
+            Monats-Challenge
+          </h2>
+          <p class="section-header__desc">Verknüpft diese Fotobox mit der öffentlichen Challenge-Web-App. Standort, Adresse, Monatsziel und API-Schlüssel werden hier hinterlegt. Der Schlüssel bleibt auf dem Server und wird nie an den Kiosk-Browser ausgeliefert.</p>
+        </div>
+      </div>
+
+      <div class="settings-stack">
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Challenge aktiv</span>
+            <p class="setting-row__desc">Blendet Challenge-Karte, Einreichung und Leaderboard-QR auf der Fotobox ein. Erst einschalten, wenn Standort, Web-App-Adresse und Schlüssel stimmen.</p>
+          </div>
+          <div class="setting-control">
+            <button class="switch" id="challengeEnabledToggle" type="button" role="switch" aria-checked="false">
+              <span class="switch__track" aria-hidden="true"></span>
+              <span id="challengeEnabledText">Aus</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="challengeLocation">Standort dieser Box</label>
+            <p class="setting-row__desc">Bestimmt, für welches Team die Fotos dieser Fotobox im Leaderboard zählen.</p>
+          </div>
+          <div class="setting-control">
+            <select class="field-select" id="challengeLocation" style="max-width: 220px">
+              <option value="lcc">LCC</option>
+              <option value="coburg">Coburg</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="challengeAppUrl">Web-App-Adresse</label>
+            <p class="setting-row__desc">Öffentliche Adresse der Challenge-Seite, ohne Pfad-Anhang. Daraus entsteht der QR-Code auf dem Endscreen.</p>
+          </div>
+          <div class="setting-control">
+            <input class="field-input" id="challengeAppUrl" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://…" style="max-width: 360px" />
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="challengeMonthlyGoal">Fotos pro Monat</label>
+            <p class="setting-row__desc">Zielwert auf der Challenge-Karte, zum Beispiel 42. Er ändert nur die Anzeige, nicht die Wertung.</p>
+          </div>
+          <div class="setting-control">
+            <input class="field-input" id="challengeMonthlyGoal" type="number" min="1" max="9999" step="1" inputmode="numeric" style="max-width: 150px" />
+            <span class="section-note">Fotos</span>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="challengeApiKey">API-Schlüssel</label>
+            <p class="setting-row__desc">Server-Schlüssel der Challenge-App. Wird verschlüsselt nicht angezeigt; ein neuer Wert ersetzt den bisherigen.</p>
+          </div>
+          <div class="setting-control setting-control--stack">
+            <input class="field-input" id="challengeApiKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="Noch kein Schlüssel gespeichert" style="max-width: 360px" />
+            <button class="btn btn--ghost" id="challengeKeySave" type="button">Schlüssel speichern</button>
+          </div>
+        </div>
+      </div>
+
+      <p class="section-note" id="challengeKeyStatus" role="status" aria-live="polite">Noch kein API-Schlüssel gespeichert.</p>
+      <p class="section-note" id="challengeTestStatus" role="status" aria-live="polite">Verbindung noch nicht geprüft.</p>
+      <div class="button-row">
+        <button class="btn btn--ghost" id="challengeTestBtn" type="button">Verbindung testen</button>
+      </div>
+    </section>
+
+    <!-- Section: Admin Gallery -->
+    <section class="section-card" id="adminGallery">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="18" height="18" rx="3"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <path d="m21 15-5-5L5 21"></path>
+            </svg>
+            Fotos
+          </h2>
+          <p class="section-header__desc">Alle Fotos der Fotobox. Wähle Fotos über die Bildfläche aus; gelöschte Fotos bleiben im Papierkorb bis zum Ablauf der Aufbewahrungszeit.</p>
+        </div>
+        <div class="button-row">
+          <button class="btn btn--ghost" id="adminGalleryRefresh" type="button">Neu laden</button>
+        </div>
+      </div>
+
+      <p class="section-note" id="adminGallerySummary">Fotos werden geladen…</p>
+      <div class="media-select" id="adminGallerySelectBar" role="group" aria-label="Mehrfachauswahl Fotos">
+        <div class="media-select__status">
+          <button class="btn btn--ghost media-select__toggle" id="adminGallerySelectAll" type="button" aria-pressed="false" aria-describedby="adminGallerySelectionCount">Alle sichtbaren auswählen</button>
+          <span class="media-select__count" id="adminGallerySelectionCount" role="status" aria-live="polite">0 ausgewählt</span>
+          <button class="media-select__clear" id="adminGalleryClearSelection" type="button" hidden>Auswahl aufheben</button>
+        </div>
+        <div class="media-select__actions">
+          <button class="btn btn--danger-ghost" id="adminGalleryBulkDelete" type="button" aria-describedby="adminGallerySelectionCount" disabled>Auswahl in den Papierkorb</button>
+        </div>
+      </div>
+      <div class="admin-media-grid" id="adminGalleryGrid"></div>
+      <p class="section-note" id="adminGalleryEmpty" hidden>Noch keine Fotos vorhanden.</p>
+      <div class="button-row">
+        <button class="btn btn--ghost" id="adminGalleryLoadMore" type="button" hidden>Mehr laden</button>
+      </div>
+    </section>
+
+    <!-- Section: Admin Trash -->
+    <section class="section-card" id="adminTrash">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path>
+              <line x1="10" y1="11" x2="10" y2="17"></line>
+              <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+            Papierkorb
+          </h2>
+          <p class="section-header__desc">Fotos, die im Admin-Panel gelöscht wurden, bleiben hier bis zum Ablauf der Aufbewahrungszeit. Wähle Fotos über die Bildfläche aus, um sie gemeinsam wiederherzustellen oder endgültig zu löschen. Gäste löschen endgültig und sehen keinen Papierkorb.</p>
+        </div>
+        <div class="button-row">
+          <button class="btn btn--ghost" id="adminTrashRefresh" type="button">Neu laden</button>
+        </div>
+      </div>
+
+      <p class="section-note" id="adminTrashSummary">Papierkorb wird geladen…</p>
+      <div class="media-select" id="adminTrashSelectBar" role="group" aria-label="Mehrfachauswahl Papierkorb">
+        <div class="media-select__status">
+          <button class="btn btn--ghost media-select__toggle" id="adminTrashSelectAll" type="button" aria-pressed="false" aria-describedby="adminTrashSelectionCount">Alle sichtbaren auswählen</button>
+          <span class="media-select__count" id="adminTrashSelectionCount" role="status" aria-live="polite">0 ausgewählt</span>
+          <button class="media-select__clear" id="adminTrashClearSelection" type="button" hidden>Auswahl aufheben</button>
+        </div>
+        <div class="media-select__actions">
+          <button class="btn btn--primary" id="adminTrashBulkRestore" type="button" aria-describedby="adminTrashSelectionCount" disabled>Auswahl wiederherstellen</button>
+          <button class="btn btn--danger-ghost" id="adminTrashBulkPurge" type="button" aria-describedby="adminTrashSelectionCount" disabled>Auswahl endgültig löschen</button>
+        </div>
+      </div>
+      <div class="admin-media-grid" id="adminTrashGrid"></div>
+      <p class="section-note" id="adminTrashEmpty" hidden>Der Papierkorb ist leer.</p>
+      <div class="button-row">
+        <button class="btn btn--ghost" id="adminTrashLoadMore" type="button" hidden>Mehr laden</button>
+      </div>
+    </section>
+
+    <!-- Section: Usage Statistics -->
+    <section class="section-card" id="usageStats" aria-labelledby="usageStatsTitle">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title" id="usageStatsTitle">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M3 3v18h18"></path>
+              <path d="m7 15 4-4 3 3 5-6"></path>
+            </svg>
+            Nutzung & Statistik
+          </h2>
+          <p class="section-header__desc">Wie oft die Fotobox genutzt wird: Aufnahmen pro Tag, Tageszeiten und die Nutzung der Endbuttons. Fotos kommen aus dem gemeinsamen Supabase-Speicher; Aktionen am Ende werden nur auf diesem Server gezählt.</p>
+        </div>
+        <div class="usage-toolbar">
+          <div class="choice-group" role="group" aria-label="Zeitraum der Nutzungsstatistik">
+            <button class="choice-btn" type="button" data-usage-days="7" aria-pressed="false">7 Tage</button>
+            <button class="choice-btn" type="button" data-usage-days="14" aria-pressed="true">14 Tage</button>
+            <button class="choice-btn" type="button" data-usage-days="30" aria-pressed="false">30 Tage</button>
+          </div>
+          <button class="btn btn--ghost" id="usageRefresh" type="button">Aktualisieren</button>
+        </div>
+      </div>
+
+      <p class="section-note" id="usageStatus" role="status" aria-live="polite">Statistik wird geladen…</p>
+
+      <div class="usage-error" id="usageError" role="alert" hidden>
+        <span id="usageErrorText">Statistik konnte nicht geladen werden.</span>
+        <button class="btn btn--ghost" id="usageRetry" type="button">Erneut versuchen</button>
+      </div>
+
+      <div class="stats-grid" aria-label="Nutzungskennzahlen">
+        <div class="stat-card">
+          <span class="stat-card__label">Fotos gesamt</span>
+          <div class="stat-card__val" id="usageTotalPhotos">—</div>
+          <span class="stat-card__sub">Gemeinsamer Supabase-Speicher</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-card__label">Aufnahmen im Zeitraum</span>
+          <div class="stat-card__val" id="usageCaptures">—</div>
+          <span class="stat-card__sub" id="usageCapturesSub">Alle Boxen am selben Speicher · inkl. Papierkorb</span>
+        </div>
+      </div>
+
+      <div class="usage-source" aria-label="Woher die Statistikdaten kommen">
+        <div class="usage-source__item">
+          <span class="usage-source__badge">Alle Boxen</span>
+          <div>
+            <h3 class="usage-source__title">Fotos &amp; Aufnahmezeiten</h3>
+            <p class="usage-source__text">Werden aus dem gemeinsamen Supabase-Storage gelesen, nicht aus einer lokalen Datenbank. Jede Fotobox am selben Bucket ist enthalten — auch rückwirkend.</p>
+          </div>
+        </div>
+        <div class="usage-source__item">
+          <span class="usage-source__badge usage-source__badge--local">Nur dieser Server</span>
+          <div>
+            <h3 class="usage-source__title">Aktionen am Ende</h3>
+            <p class="usage-source__text">Werden lokal auf diesem Server gezählt. Andere Boxen mit einem eigenen Server sind hier nicht enthalten.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="usage-panel">
+        <div class="usage-panel__head">
+          <h3 class="usage-panel__title">Fotos pro Tag</h3>
+          <span class="usage-panel__meta" id="usageDailyMeta">—</span>
+        </div>
+        <div class="usage-chart-wrap" id="usageDailyChart" role="img" aria-label="Fotos pro Tag im gewählten Zeitraum"></div>
+        <details class="usage-data">
+          <summary>Daten als Tabelle anzeigen</summary>
+          <div class="usage-data__scroll">
+            <table>
+              <caption class="sr-only">Fotos pro Tag im gewählten Zeitraum</caption>
+              <thead>
+                <tr><th scope="col">Datum</th><th scope="col">Fotos</th></tr>
+              </thead>
+              <tbody id="usageDailyTableBody"></tbody>
+            </table>
+          </div>
+        </details>
+      </div>
+
+      <div class="usage-chart-grid">
+        <div class="usage-panel">
+          <div class="usage-panel__head">
+            <h3 class="usage-panel__title">Aufnahmezeiten</h3>
+            <span class="usage-panel__meta" id="usageHoursMeta">—</span>
+          </div>
+          <div class="usage-chart-wrap" id="usageHoursChart" role="img" aria-label="Aufnahmezeiten über 24 Stunden"></div>
+        </div>
+        <div class="usage-panel">
+          <div class="usage-panel__head">
+            <h3 class="usage-panel__title">Aktionen am Ende</h3>
+            <span class="usage-panel__meta" id="usageActionsMeta">—</span>
+          </div>
+          <p class="usage-panel__desc">Zählt Klicks auf QR-Code, Drucken, Teilen und Download auf dem letzten Bildschirm. Nicht gezählt werden Fotos, Gäste oder abgebrochene Aufnahmen; Mehrfachklicks zählen mehrfach.</p>
+          <div id="usageActions"></div>
+        </div>
+      </div>
+
+      <p class="section-note" id="usageTrackingNote">Fotos und Aufnahmezeiten werden aus dem gemeinsamen Supabase-Speicher gelesen und umfassen alle Fotoboxen, die denselben Bucket verwenden. Aktionen am Ende zählt ausschließlich dieser Server lokal seit dem ersten Start nach dem Update.</p>
+    </section>
+
     <!-- Section: System & Quick Info -->
     <section class="section-card" id="system">
       <div class="section-header">
@@ -1794,8 +2363,8 @@
       <div class="stats-grid">
         <div class="stat-card">
           <span class="stat-card__label">Aktiver Modus</span>
-          <div class="stat-card__val" id="statOrientationDisplay">—</div>
-          <span class="stat-card__sub" id="statOrientationSub">Wird geladen…</span>
+          <div class="stat-card__val">Querformat</div>
+          <span class="stat-card__sub">16:9 Breitbild (Tablet/Widescreen)</span>
         </div>
 
         <div class="stat-card">
@@ -1854,7 +2423,6 @@
     (function () {
       'use strict';
 
-      let currentOrientation = 'portrait';
       let broadcastChannel = null;
 
       try {
@@ -1863,15 +2431,27 @@
         }
       } catch (e) {}
 
-      const $cardPortrait  = document.getElementById('cardPortrait');
-      const $cardLandscape = document.getElementById('cardLandscape');
-      const $badgePortrait = document.getElementById('badgePortrait');
-      const $badgeLandscape = document.getElementById('badgeLandscape');
-      const $statOrientationDisplay = document.getElementById('statOrientationDisplay');
-      const $statOrientationSub = document.getElementById('statOrientationSub');
       const $statPhotoCount = document.getElementById('statPhotoCount');
       const $statTrashCount = document.getElementById('statTrashCount');
       const $statStreak = document.getElementById('statStreak');
+      const $usageSection = document.getElementById('usageStats');
+      const $usageRefresh = document.getElementById('usageRefresh');
+      const $usageRetry = document.getElementById('usageRetry');
+      const $usageStatus = document.getElementById('usageStatus');
+      const $usageError = document.getElementById('usageError');
+      const $usageErrorText = document.getElementById('usageErrorText');
+      const $usageDaysButtons = Array.from(document.querySelectorAll('[data-usage-days]'));
+      const $usageTotalPhotos = document.getElementById('usageTotalPhotos');
+      const $usageCaptures = document.getElementById('usageCaptures');
+      const $usageCapturesSub = document.getElementById('usageCapturesSub');
+      const $usageDailyChart = document.getElementById('usageDailyChart');
+      const $usageDailyMeta = document.getElementById('usageDailyMeta');
+      const $usageDailyTableBody = document.getElementById('usageDailyTableBody');
+      const $usageHoursChart = document.getElementById('usageHoursChart');
+      const $usageHoursMeta = document.getElementById('usageHoursMeta');
+      const $usageActions = document.getElementById('usageActions');
+      const $usageActionsMeta = document.getElementById('usageActionsMeta');
+      const $usageTrackingNote = document.getElementById('usageTrackingNote');
       const $copyUrlBtn = document.getElementById('copyUrlBtn');
       const $copyUrlText = document.getElementById('copyUrlText');
       const $toastContainer = document.getElementById('toastContainer');
@@ -1888,7 +2468,6 @@
       // Gemeinsame Einstellungs-Struktur mit der Hauptseite. Der Server
       // validiert jeden Wert; das Panel schickt immer nur die Änderung.
       const DEFAULT_SETTINGS = {
-        orientation: 'portrait',
         defaultLanguage: 'de',
         trashRetentionDays: 7,
         idleEndSeconds: 40,
@@ -1906,7 +2485,11 @@
         secondaryColor: '#00e0d6',
         backgroundColor: '#0d0d0d',
         brandName: 'SnapBox',
-        qrTtlHours: 24
+        qrTtlHours: 24,
+        challengeEnabled: false,
+        challengeLocation: 'lcc',
+        challengeAppUrl: '',
+        challengeMonthlyGoal: 42
       };
       const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS);
       const $settingsStatus = document.getElementById('settingsStatus');
@@ -1920,6 +2503,16 @@
       const $idleWarnValue = document.getElementById('idleWarnValue');
       const $idleSummary = document.getElementById('idleSummary');
       const $qrTtlHours = document.getElementById('qrTtlHours');
+      const $challengeEnabledToggle = document.getElementById('challengeEnabledToggle');
+      const $challengeEnabledText = document.getElementById('challengeEnabledText');
+      const $challengeLocation = document.getElementById('challengeLocation');
+      const $challengeAppUrl = document.getElementById('challengeAppUrl');
+      const $challengeMonthlyGoal = document.getElementById('challengeMonthlyGoal');
+      const $challengeApiKey = document.getElementById('challengeApiKey');
+      const $challengeKeySave = document.getElementById('challengeKeySave');
+      const $challengeKeyStatus = document.getElementById('challengeKeyStatus');
+      const $challengeTestBtn = document.getElementById('challengeTestBtn');
+      const $challengeTestStatus = document.getElementById('challengeTestStatus');
       const $captureModeOptions = Array.from(document.querySelectorAll('[data-capture-mode]'));
       const $countdownOptions = Array.from(document.querySelectorAll('[data-default-countdown]'));
       const $defaultSoundToggle = document.getElementById('defaultSoundToggle');
@@ -1943,9 +2536,72 @@
       const $backgroundColorHex = document.getElementById('backgroundColorHex');
       const $pageSizeOptions = Array.from(document.querySelectorAll('[data-page-size]'));
       const $resetColorsBtn = document.getElementById('resetColorsBtn');
+      const $adminGalleryGrid = document.getElementById('adminGalleryGrid');
+      const $adminGallerySummary = document.getElementById('adminGallerySummary');
+      const $adminGalleryEmpty = document.getElementById('adminGalleryEmpty');
+      const $adminGalleryRefresh = document.getElementById('adminGalleryRefresh');
+      const $adminGalleryLoadMore = document.getElementById('adminGalleryLoadMore');
+      const $adminTrashGrid = document.getElementById('adminTrashGrid');
+      const $adminTrashSummary = document.getElementById('adminTrashSummary');
+      const $adminTrashEmpty = document.getElementById('adminTrashEmpty');
+      const $adminTrashRefresh = document.getElementById('adminTrashRefresh');
+      const $adminTrashLoadMore = document.getElementById('adminTrashLoadMore');
+      const $adminGallerySelectAll = document.getElementById('adminGallerySelectAll');
+      const $adminGallerySelectionCount = document.getElementById('adminGallerySelectionCount');
+      const $adminGalleryClearSelection = document.getElementById('adminGalleryClearSelection');
+      const $adminGalleryBulkDelete = document.getElementById('adminGalleryBulkDelete');
+      const $adminGallerySelectBar = document.getElementById('adminGallerySelectBar');
+      const $adminTrashSelectAll = document.getElementById('adminTrashSelectAll');
+      const $adminTrashSelectionCount = document.getElementById('adminTrashSelectionCount');
+      const $adminTrashClearSelection = document.getElementById('adminTrashClearSelection');
+      const $adminTrashBulkRestore = document.getElementById('adminTrashBulkRestore');
+      const $adminTrashBulkPurge = document.getElementById('adminTrashBulkPurge');
+      const $adminTrashSelectBar = document.getElementById('adminTrashSelectBar');
+
+      const ADMIN_MEDIA_PAGE_SIZE = 18;
+      let adminGalleryCursor = null;
+      let adminGalleryHasMore = false;
+      let adminGalleryLoading = false;
+      let adminGalleryTotal = 0;
+      let adminGalleryVersion = 0;
+      let adminTrashCursor = null;
+      let adminTrashHasMore = false;
+      let adminTrashLoading = false;
+      let adminTrashTotal = 0;
+      let adminTrashVersion = 0;
+      let adminTrashInitialized = false;
+
+      const mediaSelection = {
+        gallery: { ids: new Set(), busy: false, progress: null },
+        trash: { ids: new Set(), busy: false, progress: null }
+      };
+
+      const MEDIA_SELECT_UI = {
+        gallery: {
+          grid: $adminGalleryGrid,
+          bar: $adminGallerySelectBar,
+          selectAll: $adminGallerySelectAll,
+          count: $adminGallerySelectionCount,
+          clear: $adminGalleryClearSelection,
+          actions: [$adminGalleryBulkDelete],
+          refresh: $adminGalleryRefresh,
+          loadMore: $adminGalleryLoadMore
+        },
+        trash: {
+          grid: $adminTrashGrid,
+          bar: $adminTrashSelectBar,
+          selectAll: $adminTrashSelectAll,
+          count: $adminTrashSelectionCount,
+          clear: $adminTrashClearSelection,
+          actions: [$adminTrashBulkRestore, $adminTrashBulkPurge],
+          refresh: $adminTrashRefresh,
+          loadMore: $adminTrashLoadMore
+        }
+      };
 
       let networkUrl = window.location.origin;
       let currentSettings = { ...DEFAULT_SETTINGS };
+      let challengeApiKeySet = false;
       let statusTimer = null;
 
       const MIN_BACKGROUND_LUMINANCE = 0.18;
@@ -1953,6 +2609,8 @@
       function showToast(message, isError = false) {
         const toast = document.createElement('div');
         toast.className = 'admin-toast' + (isError ? ' admin-toast--error' : '');
+        toast.setAttribute('role', isError ? 'alert' : 'status');
+        toast.setAttribute('aria-atomic', 'true');
         const icon = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         icon.setAttribute('viewBox', '0 0 24 24');
         icon.setAttribute('width', '18');
@@ -1970,10 +2628,11 @@
         toast.append(icon, label);
         $toastContainer.appendChild(toast);
         requestAnimationFrame(() => toast.classList.add('show'));
+        // Fehler brauchen mehr Lesezeit als Erfolgsmeldungen.
         setTimeout(() => {
           toast.classList.remove('show');
           setTimeout(() => toast.remove(), 350);
-        }, 3600);
+        }, isError ? 6000 : 3600);
       }
 
       function setSaveStatus(text, state = '') {
@@ -2051,14 +2710,31 @@
           : `Nur ${ratio.toFixed(1)}:1 Kontrast zwischen Akzent und Hintergrund. Bitte eine deutlichere Akzentfarbe wählen.`;
       }
 
+      function renderChallengeKeyStatus() {
+        if (!$challengeKeyStatus) return;
+        $challengeKeyStatus.textContent = challengeApiKeySet
+          ? 'API-Schlüssel ist gespeichert. Ein neuer Wert ersetzt ihn; der alte wird nie angezeigt.'
+          : 'Noch kein API-Schlüssel gespeichert. Ohne Schlüssel bleibt die Challenge auf der Fotobox aus.';
+        if ($challengeApiKey) {
+          $challengeApiKey.placeholder = challengeApiKeySet
+            ? 'Gespeichert — neuer Schlüssel zum Ersetzen'
+            : 'Noch kein Schlüssel gespeichert';
+        }
+      }
+
       function renderAllSettings() {
-        updateUI(currentSettings.orientation);
         updateLangUI(currentSettings.defaultLanguage);
         updateRetentionUI(currentSettings.trashRetentionDays);
         syncRange($idleEndRange, $idleEndValue, currentSettings.idleEndSeconds);
         syncRange($idleProcessRange, $idleProcessValue, currentSettings.idleProcessSeconds);
         syncRange($idleWarnRange, $idleWarnValue, currentSettings.idleWarnSeconds);
         $qrTtlHours.value = String(currentSettings.qrTtlHours);
+        $challengeEnabledToggle.setAttribute('aria-checked', String(currentSettings.challengeEnabled));
+        $challengeEnabledText.textContent = currentSettings.challengeEnabled ? 'Ein' : 'Aus';
+        $challengeLocation.value = currentSettings.challengeLocation;
+        $challengeAppUrl.value = currentSettings.challengeAppUrl;
+        $challengeMonthlyGoal.value = String(currentSettings.challengeMonthlyGoal);
+        renderChallengeKeyStatus();
         $captureModeOptions.forEach((btn) => {
           btn.setAttribute('aria-pressed', String(btn.dataset.captureMode === currentSettings.defaultCaptureMode));
         });
@@ -2092,12 +2768,14 @@
 
       function applyServerSettings(data, { broadcast = false } = {}) {
         if (!data) return;
+        if (typeof data.challengeApiKeySet === 'boolean') {
+          challengeApiKeySet = data.challengeApiKeySet;
+        }
         SETTING_KEYS.forEach((key) => {
           if (data[key] !== undefined) currentSettings[key] = data[key];
         });
         renderAllSettings();
         try {
-          localStorage.setItem('snapbox_orientation', currentSettings.orientation);
           localStorage.setItem('snapbox_default_language', currentSettings.defaultLanguage);
         } catch (e) {}
         if (broadcast && broadcastChannel) {
@@ -2352,40 +3030,6 @@
           .catch(() => {});
       });
 
-      function updateUI(orientation) {
-        currentOrientation = orientation === 'landscape' ? 'landscape' : 'portrait';
-        const isLandscape = currentOrientation === 'landscape';
-
-        $cardPortrait.classList.toggle('is-active', !isLandscape);
-        $cardPortrait.setAttribute('aria-checked', String(!isLandscape));
-        $badgePortrait.textContent = !isLandscape ? 'Aktiv ✓' : 'Wählen';
-
-        $cardLandscape.classList.toggle('is-active', isLandscape);
-        $cardLandscape.setAttribute('aria-checked', String(isLandscape));
-        $badgeLandscape.textContent = isLandscape ? 'Aktiv ✓' : 'Wählen';
-
-        $statOrientationDisplay.textContent = isLandscape ? 'Querformat' : 'Hochformat';
-        $statOrientationSub.textContent = isLandscape ? '16:9 Breitbild (Tablet/Widescreen)' : '3:4 Hochkant (Smartphone/Säule)';
-      }
-
-      function setOrientation(orientation) {
-        if (orientation === currentSettings.orientation) return;
-        persistSettings(
-          { orientation },
-          orientation === 'landscape' ? 'Querformat aktiviert — alle Terminals werden aktualisiert.' : 'Hochformat aktiviert — alle Terminals werden aktualisiert.'
-        );
-      }
-
-      $cardPortrait.addEventListener('click', () => setOrientation('portrait'));
-      $cardPortrait.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOrientation('portrait'); }
-      });
-
-      $cardLandscape.addEventListener('click', () => setOrientation('landscape'));
-      $cardLandscape.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOrientation('landscape'); }
-      });
-
       const $cardLangDe = document.getElementById('cardLangDe');
       const $cardLangEn = document.getElementById('cardLangEn');
       const $badgeLangDe = document.getElementById('badgeLangDe');
@@ -2479,6 +3123,110 @@
           return;
         }
         persistSettings({ qrTtlHours: value }, 'QR-Gültigkeit gespeichert.');
+      });
+
+      // ---- Monats-Challenge ----
+      $challengeEnabledToggle.addEventListener('click', () => {
+        const enabled = !currentSettings.challengeEnabled;
+        persistSettings(
+          { challengeEnabled: enabled },
+          enabled ? 'Challenge auf der Fotobox eingeschaltet.' : 'Challenge auf der Fotobox ausgeschaltet.'
+        );
+      });
+
+      $challengeLocation.addEventListener('change', () => {
+        const value = $challengeLocation.value === 'coburg' ? 'coburg' : 'lcc';
+        if (value === currentSettings.challengeLocation) return;
+        persistSettings({ challengeLocation: value }, 'Challenge-Standort gespeichert.');
+      });
+
+      function normalizeChallengeUrl(value) {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        try {
+          const url = new URL(raw);
+          if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+          if (url.username || url.password || url.search || url.hash) return '';
+          return (url.origin + url.pathname).replace(/\/+$/, '');
+        } catch (err) {
+          return '';
+        }
+      }
+
+      $challengeAppUrl.addEventListener('change', () => {
+        const raw = $challengeAppUrl.value.trim();
+        const url = normalizeChallengeUrl(raw);
+        if (raw && !url) {
+          showToast('Bitte eine vollständige http(s)-Adresse ohne Query oder Fragment eingeben.', true);
+          renderAllSettings();
+          return;
+        }
+        if (url === currentSettings.challengeAppUrl) {
+          renderAllSettings();
+          return;
+        }
+        persistSettings({ challengeAppUrl: url }, 'Web-App-Adresse gespeichert.');
+      });
+
+      $challengeMonthlyGoal.addEventListener('change', () => {
+        const value = Number($challengeMonthlyGoal.value);
+        if (!Number.isInteger(value) || value < 1 || value > 9999) {
+          showToast('Das Monatsziel muss zwischen 1 und 9999 liegen.', true);
+          renderAllSettings();
+          return;
+        }
+        if (value === currentSettings.challengeMonthlyGoal) return;
+        persistSettings({ challengeMonthlyGoal: value }, 'Monatsziel gespeichert.');
+      });
+
+      $challengeKeySave.addEventListener('click', async () => {
+        const key = $challengeApiKey.value.trim();
+        if (!key) {
+          showToast('Bitte den API-Schlüssel der Challenge-App eingeben.', true);
+          $challengeApiKey.focus();
+          return;
+        }
+        if (!/^[A-Za-z0-9_-]{20,128}$/.test(key)) {
+          showToast('Der Schlüssel muss 20–128 Zeichen aus A–Z, a–z, 0–9, _ oder - haben.', true);
+          $challengeApiKey.focus();
+          return;
+        }
+        const saved = await persistSettings({ challengeApiKey: key }, 'API-Schlüssel gespeichert.');
+        if (saved) $challengeApiKey.value = '';
+      });
+
+      $challengeApiKey.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          $challengeKeySave.click();
+        }
+      });
+
+      $challengeTestBtn.addEventListener('click', async () => {
+        $challengeTestBtn.disabled = true;
+        $challengeTestStatus.textContent = 'Verbindung wird geprüft…';
+        try {
+          const res = await fetch('/api/challenge/summary', { cache: 'no-store' });
+          const data = await res.json().catch(() => ({}));
+          if (!data.enabled) {
+            $challengeTestStatus.textContent = 'Challenge ist ausgeschaltet. Erst einschalten, dann testen.';
+            return;
+          }
+          if (!data.configured) {
+            $challengeTestStatus.textContent = 'Noch nicht vollständig eingerichtet: Web-App-Adresse und API-Schlüssel prüfen.';
+            return;
+          }
+          if (!data.online) {
+            $challengeTestStatus.textContent = 'Nicht erreichbar. Adresse, Schlüssel und Internetverbindung prüfen.';
+            return;
+          }
+          const location = data.location === 'coburg' ? 'Coburg' : 'LCC';
+          $challengeTestStatus.textContent = `Verbunden · ${location} · ${data.entries} Fotos · ${data.votes} Likes in diesem Monat.`;
+        } catch (err) {
+          $challengeTestStatus.textContent = 'Nicht erreichbar. Adresse, Schlüssel und Internetverbindung prüfen.';
+        } finally {
+          $challengeTestBtn.disabled = false;
+        }
       });
 
       // ---- Aufnahme-Standards ----
@@ -2580,9 +3328,7 @@
       async function loadSettings() {
         // Lokale Werte sofort anzeigen, damit das Panel nicht leer aufblitzt.
         try {
-          const localOrientation = localStorage.getItem('snapbox_orientation');
           const localLanguage = localStorage.getItem('snapbox_default_language');
-          if (localOrientation === 'landscape' || localOrientation === 'portrait') currentSettings.orientation = localOrientation;
           if (localLanguage === 'en' || localLanguage === 'de') currentSettings.defaultLanguage = localLanguage;
         } catch (e) {}
         renderAllSettings();
@@ -2656,6 +3402,840 @@
         });
       });
 
+      // ---- Admin-Galerie und Admin-Papierkorb -------------------------
+      function makeMediaSvg(paths) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2');
+        paths.forEach((d) => {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('d', d);
+          svg.appendChild(path);
+        });
+        return svg;
+      }
+
+      function updateGallerySummary() {
+        const shown = $adminGalleryGrid.querySelectorAll('.media-card').length;
+        $adminGallerySummary.textContent = adminGalleryTotal
+          ? `${shown} von ${adminGalleryTotal} Fotos angezeigt.`
+          : 'Noch keine Fotos vorhanden.';
+      }
+
+      function updateAdminTrashSummary() {
+        const shown = $adminTrashGrid.querySelectorAll('.media-card').length;
+        $adminTrashSummary.textContent = adminTrashTotal
+          ? `${shown} von ${adminTrashTotal} Fotos im Papierkorb.`
+          : 'Der Papierkorb ist leer.';
+      }
+
+      function bumpStat(id, delta) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const current = Number.parseInt(el.textContent, 10);
+        if (!Number.isFinite(current)) return;
+        el.textContent = String(Math.max(0, current + delta));
+      }
+
+      function mediaItemLabel(item, kind) {
+        return kind === 'trash'
+          ? (item.name || 'Gelöschtes Foto')
+          : item.id.replace(/^photos\//, '');
+      }
+
+      function mediaCardForId(kind, id) {
+        return [...MEDIA_SELECT_UI[kind].grid.querySelectorAll('.media-card')]
+          .find((card) => card.dataset.id === id) || null;
+      }
+
+      function updateMediaCardSelection(card, selected, kind, label) {
+        card.classList.toggle('is-selected', selected);
+        const button = card.querySelector('.media-card__select');
+        if (!button) return;
+        button.setAttribute('aria-pressed', String(selected));
+        button.setAttribute('aria-label',
+          (kind === 'trash' ? 'Gelöschtes Foto ' : 'Foto ') +
+          (selected ? 'abwählen' : 'auswählen') + ': ' + label);
+      }
+
+      function updateMediaSelectionUI(kind) {
+        const state = mediaSelection[kind];
+        const ui = MEDIA_SELECT_UI[kind];
+        const cards = [...ui.grid.querySelectorAll('.media-card')];
+        const count = state.ids.size;
+        const total = cards.length;
+        const allSelected = total > 0 && count === total;
+
+        if (state.busy && state.progress) {
+          ui.count.textContent = `${state.progress.verb} ${state.progress.done} von ${state.progress.total}…`;
+        } else if (!total) {
+          ui.count.textContent = kind === 'trash' ? 'Papierkorb ist leer' : 'Keine Fotos vorhanden';
+        } else {
+          ui.count.textContent = `${count} von ${total} ausgewählt`;
+        }
+        // Bei leerer Liste wäre die Auswahlleiste nur ein deaktivierter
+        // Leerzustand; die eigentliche Leermeldung steht bereits darunter.
+        ui.bar.hidden = total === 0 && !state.busy;
+        ui.count.classList.toggle('is-active', count > 0 && !state.busy);
+        ui.count.classList.toggle('is-busy', state.busy);
+        // Bei vollständiger Auswahl übernimmt der Toggle die Rücknahme;
+        // ein zweiter Link mit identischem Text wäre nur redundant.
+        ui.clear.hidden = count === 0 || state.busy || allSelected;
+        ui.clear.disabled = count === 0 || state.busy || allSelected;
+        ui.selectAll.disabled = state.busy || total === 0;
+        ui.selectAll.textContent = allSelected ? 'Auswahl aufheben' : 'Alle sichtbaren auswählen';
+        ui.selectAll.setAttribute('aria-pressed', String(allSelected));
+        ui.selectAll.setAttribute('aria-label', allSelected
+          ? 'Auswahl aller sichtbaren Fotos aufheben'
+          : `Alle ${total} sichtbaren Fotos auswählen`);
+        ui.actions.forEach((button) => { button.disabled = state.busy || count === 0; });
+        ui.grid.setAttribute('aria-busy', String(state.busy));
+        ui.grid.inert = state.busy;
+        ui.grid.classList.toggle('is-busy', state.busy);
+        ui.refresh.disabled = state.busy;
+      }
+
+      function setMediaBusy(kind, busy, progress = null) {
+        const state = mediaSelection[kind];
+        state.busy = busy;
+        state.progress = progress;
+        // Während einer Sammelaktion keine weitere Seite nachladen: Der
+        // Auswahlbestand und die Kartenliste würden sonst auseinanderlaufen.
+        MEDIA_SELECT_UI[kind].loadMore.disabled = busy;
+        updateMediaSelectionUI(kind);
+      }
+
+      function toggleMediaSelection(kind, item, card) {
+        const state = mediaSelection[kind];
+        if (state.busy) return;
+        const label = mediaItemLabel(item, kind);
+        const selected = !state.ids.has(item.id);
+        if (selected) state.ids.add(item.id);
+        else state.ids.delete(item.id);
+        updateMediaCardSelection(card, selected, kind, label);
+        updateMediaSelectionUI(kind);
+      }
+
+      function selectAllVisibleMedia(kind) {
+        const state = mediaSelection[kind];
+        if (state.busy) return;
+        const ui = MEDIA_SELECT_UI[kind];
+        const cards = [...ui.grid.querySelectorAll('.media-card')];
+        if (!cards.length) return;
+        const allSelected = cards.every((card) => state.ids.has(card.dataset.id));
+        if (allSelected) state.ids.clear();
+        else cards.forEach((card) => state.ids.add(card.dataset.id));
+        cards.forEach((card) => {
+          updateMediaCardSelection(
+            card,
+            state.ids.has(card.dataset.id),
+            kind,
+            card.dataset.mediaLabel || card.dataset.id
+          );
+        });
+        updateMediaSelectionUI(kind);
+      }
+
+      function clearMediaSelection(kind) {
+        const state = mediaSelection[kind];
+        if (state.busy) return;
+        state.ids.clear();
+        const ui = MEDIA_SELECT_UI[kind];
+        ui.grid.querySelectorAll('.media-card').forEach((card) => {
+          updateMediaCardSelection(card, false, kind, card.dataset.mediaLabel || card.dataset.id);
+        });
+        updateMediaSelectionUI(kind);
+      }
+
+      function forgetMediaSelection(kind, id) {
+        mediaSelection[kind].ids.delete(id);
+        const card = mediaCardForId(kind, id);
+        if (card) {
+          updateMediaCardSelection(card, false, kind, card.dataset.mediaLabel || id);
+        }
+        updateMediaSelectionUI(kind);
+      }
+
+      function pruneMediaSelection(kind) {
+        const state = mediaSelection[kind];
+        const visible = new Set(
+          [...MEDIA_SELECT_UI[kind].grid.querySelectorAll('.media-card')]
+            .map((card) => card.dataset.id)
+        );
+        let changed = false;
+        for (const id of [...state.ids]) {
+          if (!visible.has(id)) {
+            state.ids.delete(id);
+            changed = true;
+          }
+        }
+        if (changed) updateMediaSelectionUI(kind);
+      }
+
+      function removeMediaCard(kind, id) {
+        mediaSelection[kind].ids.delete(id);
+        const card = mediaCardForId(kind, id);
+        if (card) card.remove();
+        updateMediaSelectionUI(kind);
+      }
+
+      function photoCountLabel(count) {
+        return count === 1 ? '1 Foto' : count + ' Fotos';
+      }
+
+      async function runBulkMediaAction(kind, ids, options) {
+        const state = mediaSelection[kind];
+        if (state.busy || !ids.length) return { done: 0, failed: 0, total: ids.length };
+        const total = ids.length;
+        let done = 0;
+        let failed = 0;
+        setMediaBusy(kind, true, { verb: options.verb, done: 0, total });
+        for (const id of ids) {
+          try {
+            const res = await fetch(options.url(id), { method: options.method });
+            if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
+            removeMediaCard(kind, id);
+            done++;
+          } catch (err) {
+            failed++;
+            console.warn('Admin bulk action failed for ' + id + ':', err);
+          }
+          state.progress = { verb: options.verb, done: done + failed, total };
+          updateMediaSelectionUI(kind);
+        }
+        setMediaBusy(kind, false);
+        return { done, failed, total };
+      }
+
+      async function bulkDeleteAdminGallery() {
+        const ids = [...mediaSelection.gallery.ids];
+        if (!ids.length || mediaSelection.gallery.busy) return;
+        if (!window.confirm(photoCountLabel(ids.length) + ' in den Papierkorb verschieben? Du kannst sie im Papierkorb wiederherstellen.')) return;
+        const result = await runBulkMediaAction('gallery', ids, {
+          method: 'DELETE',
+          url: (id) => '/api/photos?id=' + encodeURIComponent(id),
+          verb: 'Verschiebe'
+        });
+        adminGalleryTotal = Math.max(0, adminGalleryTotal - result.done);
+        $statPhotoCount.textContent = String(adminGalleryTotal);
+        updateGallerySummary();
+        $adminGalleryEmpty.hidden = adminGalleryTotal > 0;
+        if (result.done) {
+          if (adminTrashInitialized) loadAdminTrash({ reset: true, keepSelection: true });
+          else bumpStat('statTrashCount', result.done);
+        }
+        if (result.failed) {
+          showToast(`${result.done} von ${result.total} Fotos verschoben, ${result.failed} fehlgeschlagen. Bitte erneut versuchen.`, true);
+        } else {
+          showToast(photoCountLabel(result.done) + ' in den Papierkorb verschoben.');
+        }
+        if (!result.failed && !$adminGalleryGrid.querySelector('.media-card') && adminGalleryHasMore) {
+          loadAdminGallery();
+        }
+      }
+
+      async function bulkRestoreAdminTrash() {
+        const ids = [...mediaSelection.trash.ids];
+        if (!ids.length || mediaSelection.trash.busy) return;
+        const result = await runBulkMediaAction('trash', ids, {
+          method: 'POST',
+          url: (id) => '/api/trash?id=' + encodeURIComponent(id),
+          verb: 'Stelle wieder her'
+        });
+        adminTrashTotal = Math.max(0, adminTrashTotal - result.done);
+        $statTrashCount.textContent = String(adminTrashTotal);
+        updateAdminTrashSummary();
+        $adminTrashEmpty.hidden = adminTrashTotal > 0;
+        if (result.done) {
+          bumpStat('statPhotoCount', result.done);
+          loadAdminGallery({ reset: true, keepSelection: true });
+        }
+        if (result.failed) {
+          showToast(`${result.done} von ${result.total} Fotos wiederhergestellt, ${result.failed} fehlgeschlagen. Bitte erneut versuchen.`, true);
+        } else {
+          showToast(photoCountLabel(result.done) + ' wiederhergestellt.');
+        }
+        if (!result.failed && !$adminTrashGrid.querySelector('.media-card') && adminTrashHasMore) {
+          loadAdminTrash();
+        }
+      }
+
+      async function bulkPurgeAdminTrash() {
+        const ids = [...mediaSelection.trash.ids];
+        if (!ids.length || mediaSelection.trash.busy) return;
+        if (!window.confirm(photoCountLabel(ids.length) + ' endgültig löschen? Das kann nicht rückgängig gemacht werden.')) return;
+        const result = await runBulkMediaAction('trash', ids, {
+          method: 'DELETE',
+          url: (id) => '/api/trash?id=' + encodeURIComponent(id),
+          verb: 'Lösche'
+        });
+        adminTrashTotal = Math.max(0, adminTrashTotal - result.done);
+        $statTrashCount.textContent = String(adminTrashTotal);
+        updateAdminTrashSummary();
+        $adminTrashEmpty.hidden = adminTrashTotal > 0;
+        if (result.failed) {
+          showToast(`${result.done} von ${result.total} Fotos gelöscht, ${result.failed} fehlgeschlagen. Bitte erneut versuchen.`, true);
+        } else {
+          showToast(photoCountLabel(result.done) + ' endgültig gelöscht.');
+        }
+        if (!result.failed && !$adminTrashGrid.querySelector('.media-card') && adminTrashHasMore) {
+          loadAdminTrash();
+        }
+      }
+
+      function makeMediaCard(item, kind) {
+        const card = document.createElement('div');
+        card.className = 'media-card';
+        card.dataset.id = item.id;
+        const itemLabel = mediaItemLabel(item, kind);
+        card.dataset.mediaLabel = itemLabel;
+
+        const thumb = document.createElement('div');
+        thumb.className = 'media-card__thumb';
+        const img = document.createElement('img');
+        img.src = item.image;
+        img.alt = kind === 'trash' ? 'Gelöschtes Foto' : 'Foto der Fotobox';
+        img.loading = 'lazy';
+        thumb.appendChild(img);
+
+        // Die gesamte Bildfläche ist die Auswahlfläche. Das ist deutlich
+        // treffsicherer als eine kleine Checkbox und macht die Auswahl auch
+        // ohne Hover sichtbar.
+        const selectButton = document.createElement('button');
+        selectButton.className = 'media-card__select';
+        selectButton.type = 'button';
+        selectButton.setAttribute('aria-pressed', 'false');
+        selectButton.setAttribute('aria-label',
+          (kind === 'trash' ? 'Gelöschtes Foto auswählen: ' : 'Foto auswählen: ') + itemLabel);
+        const check = document.createElement('span');
+        check.className = 'media-card__check';
+        check.setAttribute('aria-hidden', 'true');
+        selectButton.appendChild(check);
+        selectButton.addEventListener('click', () => toggleMediaSelection(kind, item, card));
+        thumb.appendChild(selectButton);
+        card.appendChild(thumb);
+
+        const meta = document.createElement('div');
+        meta.className = 'media-card__meta';
+
+        if (kind === 'gallery') {
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'media-card__delete';
+          deleteBtn.type = 'button';
+          deleteBtn.title = 'In den Papierkorb verschieben';
+          deleteBtn.setAttribute('aria-label', 'Foto in den Papierkorb verschieben');
+          deleteBtn.appendChild(makeMediaSvg(['M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6']));
+          deleteBtn.addEventListener('click', () => adminDeletePhoto(item, card, deleteBtn));
+          thumb.appendChild(deleteBtn);
+
+          const note = document.createElement('span');
+          note.className = 'media-card__note';
+          note.textContent = item.id.replace(/^photos\//, '');
+          meta.appendChild(note);
+        } else {
+          const note = document.createElement('span');
+          note.className = 'media-card__note';
+          note.textContent = item.expiresAt
+            ? 'Löscht endgültig am ' + new Date(item.expiresAt * 1000).toLocaleDateString('de-DE')
+            : 'Ablaufdatum unbekannt';
+          meta.appendChild(note);
+
+          const actions = document.createElement('div');
+          actions.className = 'media-card__actions';
+
+          const restoreBtn = document.createElement('button');
+          restoreBtn.className = 'media-card__btn';
+          restoreBtn.type = 'button';
+          restoreBtn.textContent = 'Wiederherstellen';
+          restoreBtn.addEventListener('click', () => adminRestorePhoto(item, card, restoreBtn));
+
+          const purgeBtn = document.createElement('button');
+          purgeBtn.className = 'media-card__btn media-card__btn--danger';
+          purgeBtn.type = 'button';
+          purgeBtn.textContent = 'Endgültig löschen';
+          purgeBtn.addEventListener('click', () => adminPurgePhoto(item, card, purgeBtn));
+
+          actions.append(restoreBtn, purgeBtn);
+          meta.appendChild(actions);
+        }
+
+        card.appendChild(meta);
+        if (mediaSelection[kind].ids.has(item.id)) {
+          updateMediaCardSelection(card, true, kind, itemLabel);
+        }
+        return card;
+      }
+
+      async function loadAdminGallery({ reset = false, keepSelection = false } = {}) {
+        if (adminGalleryLoading) return;
+        if (reset) {
+          if (!keepSelection) clearMediaSelection('gallery');
+          adminGalleryVersion++;
+          adminGalleryCursor = null;
+          adminGalleryHasMore = false;
+          adminGalleryTotal = 0;
+          $adminGalleryGrid.innerHTML = '';
+          $adminGalleryEmpty.hidden = true;
+          // Während des Ladens keine Sammelaktion auf altem Auswahlstand
+          // anbieten; die Leiste erscheint erst mit den neuen Karten wieder.
+          updateMediaSelectionUI('gallery');
+        }
+        const version = adminGalleryVersion;
+        adminGalleryLoading = true;
+        $adminGalleryRefresh.disabled = true;
+        $adminGalleryLoadMore.disabled = true;
+        $adminGalleryRefresh.textContent = reset ? 'Lädt…' : 'Neu laden';
+        try {
+          const params = new URLSearchParams({ limit: String(ADMIN_MEDIA_PAGE_SIZE) });
+          if (adminGalleryCursor) params.set('before', adminGalleryCursor);
+          const res = await fetch('/api/photos?' + params.toString(), { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          if (version !== adminGalleryVersion) return;
+          const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+          const known = new Set([...$adminGalleryGrid.querySelectorAll('.media-card')].map((el) => el.dataset.id));
+          items.forEach((item) => {
+            if (known.has(item.id)) return;
+            known.add(item.id);
+            $adminGalleryGrid.appendChild(makeMediaCard(item, 'gallery'));
+          });
+          adminGalleryTotal = Array.isArray(data) ? items.length : Number(data.total || 0);
+          adminGalleryHasMore = Array.isArray(data) ? false : data.hasMore === true;
+          adminGalleryCursor = Array.isArray(data) ? null : (data.nextCursor || null);
+          $adminGalleryEmpty.hidden = adminGalleryTotal > 0;
+          $statPhotoCount.textContent = String(adminGalleryTotal);
+          updateGallerySummary();
+          if (reset && keepSelection) pruneMediaSelection('gallery');
+          updateMediaSelectionUI('gallery');
+        } catch (err) {
+          console.warn('Admin gallery could not be loaded:', err);
+          showToast('Fotos konnten nicht geladen werden.', true);
+        } finally {
+          if (version === adminGalleryVersion) {
+            adminGalleryLoading = false;
+            $adminGalleryRefresh.disabled = false;
+            $adminGalleryLoadMore.disabled = mediaSelection.gallery.busy;
+            $adminGalleryRefresh.textContent = 'Neu laden';
+            $adminGalleryLoadMore.hidden = !adminGalleryHasMore;
+          }
+        }
+      }
+
+      async function loadAdminTrash({ reset = false, keepSelection = false } = {}) {
+        if (adminTrashLoading) return;
+        if (reset) {
+          if (!keepSelection) clearMediaSelection('trash');
+          adminTrashVersion++;
+          adminTrashCursor = null;
+          adminTrashHasMore = false;
+          adminTrashTotal = 0;
+          $adminTrashGrid.innerHTML = '';
+          $adminTrashEmpty.hidden = true;
+          updateMediaSelectionUI('trash');
+        }
+        const version = adminTrashVersion;
+        adminTrashLoading = true;
+        adminTrashInitialized = true;
+        $adminTrashRefresh.disabled = true;
+        $adminTrashLoadMore.disabled = true;
+        $adminTrashRefresh.textContent = reset ? 'Lädt…' : 'Neu laden';
+        try {
+          const params = new URLSearchParams({ limit: String(ADMIN_MEDIA_PAGE_SIZE) });
+          if (adminTrashCursor) params.set('before', adminTrashCursor);
+          const res = await fetch('/api/trash?' + params.toString(), { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          if (version !== adminTrashVersion) return;
+          const items = Array.isArray(data) ? data : (Array.isArray(data.items) ? data.items : []);
+          const known = new Set([...$adminTrashGrid.querySelectorAll('.media-card')].map((el) => el.dataset.id));
+          items.forEach((item) => {
+            if (known.has(item.id)) return;
+            known.add(item.id);
+            $adminTrashGrid.appendChild(makeMediaCard(item, 'trash'));
+          });
+          adminTrashTotal = Array.isArray(data) ? items.length : Number(data.total || 0);
+          adminTrashHasMore = Array.isArray(data) ? false : data.hasMore === true;
+          adminTrashCursor = Array.isArray(data) ? null : (data.nextCursor || null);
+          $adminTrashEmpty.hidden = adminTrashTotal > 0;
+          $statTrashCount.textContent = String(adminTrashTotal);
+          updateAdminTrashSummary();
+          if (reset && keepSelection) pruneMediaSelection('trash');
+          updateMediaSelectionUI('trash');
+        } catch (err) {
+          console.warn('Admin trash could not be loaded:', err);
+          showToast('Papierkorb konnte nicht geladen werden.', true);
+        } finally {
+          if (version === adminTrashVersion) {
+            adminTrashLoading = false;
+            $adminTrashRefresh.disabled = false;
+            $adminTrashLoadMore.disabled = mediaSelection.trash.busy;
+            $adminTrashRefresh.textContent = 'Neu laden';
+            $adminTrashLoadMore.hidden = !adminTrashHasMore;
+          }
+        }
+      }
+
+      async function adminDeletePhoto(item, card, button) {
+        if (button.disabled) return;
+        button.disabled = true;
+        try {
+          const res = await fetch('/api/photos?id=' + encodeURIComponent(item.id), { method: 'DELETE' });
+          if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
+          card.remove();
+          forgetMediaSelection('gallery', item.id);
+          adminGalleryTotal = Math.max(0, adminGalleryTotal - 1);
+          $statPhotoCount.textContent = String(adminGalleryTotal);
+          updateGallerySummary();
+          $adminGalleryEmpty.hidden = adminGalleryTotal > 0;
+          showToast('Foto in den Papierkorb verschoben.');
+          if (adminTrashInitialized) loadAdminTrash({ reset: true, keepSelection: true });
+          else bumpStat('statTrashCount', 1);
+        } catch (err) {
+          console.warn('Admin photo could not be deleted:', err);
+          button.disabled = false;
+          showToast('Foto konnte nicht gelöscht werden.', true);
+        }
+      }
+
+      async function adminRestorePhoto(item, card, button) {
+        if (button.disabled) return;
+        button.disabled = true;
+        try {
+          const res = await fetch('/api/trash?id=' + encodeURIComponent(item.id), { method: 'POST' });
+          if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
+          card.remove();
+          forgetMediaSelection('trash', item.id);
+          adminTrashTotal = Math.max(0, adminTrashTotal - 1);
+          updateAdminTrashSummary();
+          $adminTrashEmpty.hidden = adminTrashTotal > 0;
+          bumpStat('statPhotoCount', 1);
+          showToast('Foto wiederhergestellt.');
+          loadAdminGallery({ reset: true, keepSelection: true });
+        } catch (err) {
+          console.warn('Admin photo could not be restored:', err);
+          button.disabled = false;
+          showToast('Foto konnte nicht wiederhergestellt werden.', true);
+        }
+      }
+
+      async function adminPurgePhoto(item, card, button) {
+        if (button.disabled) return;
+        if (!window.confirm('Dieses Foto wird endgültig gelöscht und kann nicht wiederhergestellt werden. Fortfahren?')) return;
+        button.disabled = true;
+        try {
+          const res = await fetch('/api/trash?id=' + encodeURIComponent(item.id), { method: 'DELETE' });
+          if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
+          card.remove();
+          forgetMediaSelection('trash', item.id);
+          adminTrashTotal = Math.max(0, adminTrashTotal - 1);
+          $statTrashCount.textContent = String(adminTrashTotal);
+          updateAdminTrashSummary();
+          $adminTrashEmpty.hidden = adminTrashTotal > 0;
+          showToast('Foto endgültig gelöscht.');
+        } catch (err) {
+          console.warn('Admin photo could not be purged:', err);
+          button.disabled = false;
+          showToast('Foto konnte nicht endgültig gelöscht werden.', true);
+        }
+      }
+
+      $adminGalleryRefresh.addEventListener('click', () => loadAdminGallery({ reset: true }));
+      $adminGalleryLoadMore.addEventListener('click', () => loadAdminGallery());
+      $adminTrashRefresh.addEventListener('click', () => loadAdminTrash({ reset: true }));
+      $adminTrashLoadMore.addEventListener('click', () => loadAdminTrash());
+      $adminGallerySelectAll.addEventListener('click', () => selectAllVisibleMedia('gallery'));
+      $adminGalleryClearSelection.addEventListener('click', () => clearMediaSelection('gallery'));
+      $adminGalleryBulkDelete.addEventListener('click', bulkDeleteAdminGallery);
+      $adminTrashSelectAll.addEventListener('click', () => selectAllVisibleMedia('trash'));
+      $adminTrashClearSelection.addEventListener('click', () => clearMediaSelection('trash'));
+      $adminTrashBulkRestore.addEventListener('click', bulkRestoreAdminTrash);
+      $adminTrashBulkPurge.addEventListener('click', bulkPurgeAdminTrash);
+
+      // ---- Nutzungsstatistik -------------------------------------------
+      // Die Diagramme werden bewusst als leichtes SVG ohne zusätzliche
+      // Bibliothek gerendert. Werte stehen zusätzlich als Text und Tabelle
+      // bereit, damit Farbe nie die einzige Informationsquelle ist.
+      const WEEKDAYS_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+      let usageRangeDays = 14;
+      let usageLoading = false;
+      let usagePendingReload = false;
+      try {
+        const savedUsageDays = Number(localStorage.getItem('snapbox_usage_days'));
+        if ([7, 14, 30].includes(savedUsageDays)) usageRangeDays = savedUsageDays;
+      } catch (e) {}
+      $usageDaysButtons.forEach((button) => {
+        button.setAttribute('aria-pressed', String(Number(button.dataset.usageDays) === usageRangeDays));
+      });
+
+      function usageCount(value) {
+        return Number.isFinite(value) ? new Intl.NumberFormat('de-DE').format(value) : '—';
+      }
+
+      function usageDate(key) {
+        const parts = key.split('-').map(Number);
+        return new Date(parts[0], parts[1] - 1, parts[2]);
+      }
+
+      function usageFullDate(key) {
+        return usageDate(key).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+      }
+
+      function usageShortDate(key, withWeekday) {
+        const date = usageDate(key);
+        const dayMonth = String(date.getDate()).padStart(2, '0') + '.' + String(date.getMonth() + 1).padStart(2, '0') + '.';
+        return withWeekday ? WEEKDAYS_SHORT[date.getDay()] + ' ' + dayMonth : dayMonth;
+      }
+
+      function usageNiceMax(value) {
+        const raw = Math.max(4, Math.ceil(value));
+        const roughStep = raw / 4;
+        const magnitude = Math.pow(10, Math.max(0, Math.floor(Math.log10(roughStep))));
+        return Math.ceil(roughStep / magnitude) * magnitude * 4;
+      }
+
+      function renderUsageDailyChart(daily) {
+        const total = daily.reduce((sum, entry) => sum + entry.photos, 0);
+        const max = daily.reduce((top, entry) => Math.max(top, entry.photos), 0);
+        const maxY = usageNiceMax(max);
+        const width = 720;
+        const height = 280;
+        const left = 58;
+        const right = 16;
+        const top = 24;
+        const bottom = 68;
+        const plotW = width - left - right;
+        const plotH = height - top - bottom;
+        const slot = plotW / daily.length;
+        const barW = Math.max(3, Math.min(38, slot * 0.58));
+        const showValues = daily.length <= 14;
+        const labelStep = daily.length <= 7 ? 1 : daily.length <= 14 ? 2 : 5;
+        const average = total / daily.length;
+        const firstDate = usageDate(daily[0].date);
+        const lastDate = usageDate(daily[daily.length - 1].date);
+        const rangeLabel = firstDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
+          + '–' + lastDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+
+        $usageDailyMeta.textContent = total > 0
+          ? usageCount(total) + ' Aufnahmen · Ø ' + average.toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' pro Tag · ' + rangeLabel
+          : 'Keine Aufnahmen · ' + rangeLabel;
+        $usageDailyTableBody.innerHTML = daily.slice().reverse().map((entry) => (
+          '<tr><td>' + usageFullDate(entry.date) + '</td><td>' + usageCount(entry.photos) + '</td></tr>'
+        )).join('');
+
+        if (total === 0) {
+          $usageDailyChart.innerHTML = '<p class="usage-empty">Noch keine Aufnahmen im gewählten Zeitraum.</p>';
+          $usageDailyChart.setAttribute('aria-label', 'Fotos pro Tag: keine Aufnahmen im gewählten Zeitraum.');
+          return;
+        }
+
+        let svg = '<svg class="usage-chart" viewBox="0 0 ' + width + ' ' + height + '" aria-hidden="true" focusable="false">';
+        // Horizontale Gitterlinien mit Anzahl auf der Y-Achse
+        for (let i = 0; i <= 4; i += 1) {
+          const y = top + (plotH / 4) * i;
+          const value = Math.round(maxY - (maxY / 4) * i);
+          svg += '<line class="usage-chart__grid" x1="' + left + '" y1="' + y + '" x2="' + (width - right) + '" y2="' + y + '"></line>';
+          svg += '<text class="usage-chart__axis" x="' + (left - 10) + '" y="' + (y + 4) + '" text-anchor="end">' + value + '</text>';
+        }
+        // Achsenlinien und Achsentitel
+        svg += '<line class="usage-chart__axis-line" x1="' + left + '" y1="' + top + '" x2="' + left + '" y2="' + (top + plotH) + '"></line>';
+        svg += '<line class="usage-chart__axis-line" x1="' + left + '" y1="' + (top + plotH) + '" x2="' + (width - right) + '" y2="' + (top + plotH) + '"></line>';
+        const yTitleY = top + plotH / 2;
+        svg += '<text class="usage-chart__axis-title" x="15" y="' + yTitleY + '" text-anchor="middle" transform="rotate(-90 15 ' + yTitleY + ')">Fotos</text>';
+
+        daily.forEach((entry, index) => {
+          const barHeight = entry.photos === 0 ? 0 : Math.max(2, (entry.photos / maxY) * plotH);
+          const x = left + slot * index + (slot - barW) / 2;
+          const y = top + plotH - barHeight;
+          const label = usageShortDate(entry.date, daily.length <= 7);
+          if (barHeight > 0) {
+            const title = usageFullDate(entry.date) + ': ' + usageCount(entry.photos) + ' Fotos';
+            svg += '<rect class="usage-chart__bar" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + barHeight.toFixed(1) + '" rx="3"><title>' + title + '</title></rect>';
+            if (showValues) {
+              svg += '<text class="usage-chart__value" x="' + (x + barW / 2).toFixed(1) + '" y="' + (y - 6).toFixed(1) + '" text-anchor="middle">' + entry.photos + '</text>';
+            }
+          }
+          // Von rechts nach links beschriften: So bleibt der aktuelle Tag
+          // immer sichtbar und die Abstände sind gleichmäßig.
+          if ((daily.length - 1 - index) % labelStep === 0) {
+            const labelX = left + slot * index + slot / 2;
+            svg += '<line class="usage-chart__tick" x1="' + labelX.toFixed(1) + '" y1="' + (top + plotH) + '" x2="' + labelX.toFixed(1) + '" y2="' + (top + plotH + 4) + '"></line>';
+            svg += '<text class="usage-chart__axis" x="' + labelX.toFixed(1) + '" y="' + (height - 38) + '" text-anchor="middle">' + label + '</text>';
+          }
+        });
+        svg += '<text class="usage-chart__axis-title" x="' + (left + plotW / 2) + '" y="' + (height - 10) + '" text-anchor="middle">Datum</text>';
+        svg += '</svg>';
+        $usageDailyChart.innerHTML = svg;
+        $usageDailyChart.setAttribute('aria-label', 'Fotos pro Tag: ' + usageCount(total) + ' Aufnahmen in ' + daily.length + ' Tagen, ' + rangeLabel + '. Y-Achse: Anzahl Fotos, X-Achse: Datum.');
+      }
+
+      function renderUsageHoursChart(hours, busiestHour) {
+        const total = hours.reduce((sum, value) => sum + value, 0);
+        const max = Math.max(...hours);
+        if (total === 0) {
+          $usageHoursMeta.textContent = 'Keine Aufnahmen im Zeitraum';
+          $usageHoursChart.innerHTML = '<p class="usage-empty">Noch keine Aufnahmen im gewählten Zeitraum.</p>';
+          $usageHoursChart.setAttribute('aria-label', 'Aufnahmezeiten: keine Aufnahmen im gewählten Zeitraum.');
+          return;
+        }
+
+        const maxY = usageNiceMax(max);
+        const width = 560;
+        const height = 240;
+        const left = 42;
+        const right = 8;
+        const top = 30;
+        const bottom = 60;
+        const plotW = width - left - right;
+        const plotH = height - top - bottom;
+        const slot = plotW / 24;
+        const barW = Math.max(4, slot * 0.62);
+
+        $usageHoursMeta.textContent = busiestHour != null
+          ? 'Meiste Aufnahmen: ' + busiestHour + '–' + ((busiestHour + 1) % 24) + ' Uhr'
+          : 'Keine Aufnahmen im Zeitraum';
+
+        let svg = '<svg class="usage-chart usage-chart--hours" viewBox="0 0 ' + width + ' ' + height + '" aria-hidden="true" focusable="false">';
+        // Horizontale Gitterlinien mit Anzahl auf der Y-Achse
+        for (let i = 0; i <= 4; i += 1) {
+          const y = top + (plotH / 4) * i;
+          const value = Math.round(maxY - (maxY / 4) * i);
+          svg += '<line class="usage-chart__grid" x1="' + left + '" y1="' + y + '" x2="' + (width - right) + '" y2="' + y + '"></line>';
+          svg += '<text class="usage-chart__axis" x="' + (left - 10) + '" y="' + (y + 4) + '" text-anchor="end">' + value + '</text>';
+        }
+        // Achsenlinien und Achsentitel
+        svg += '<line class="usage-chart__axis-line" x1="' + left + '" y1="' + top + '" x2="' + left + '" y2="' + (top + plotH) + '"></line>';
+        svg += '<line class="usage-chart__axis-line" x1="' + left + '" y1="' + (top + plotH) + '" x2="' + (width - right) + '" y2="' + (top + plotH) + '"></line>';
+        const yTitleY = top + plotH / 2;
+        svg += '<text class="usage-chart__axis-title" x="14" y="' + yTitleY + '" text-anchor="middle" transform="rotate(-90 14 ' + yTitleY + ')">Fotos</text>';
+
+        hours.forEach((value, hour) => {
+          const barHeight = value === 0 ? 0 : Math.max(2, (value / maxY) * plotH);
+          const x = left + slot * hour + (slot - barW) / 2;
+          const y = top + plotH - barHeight;
+          if (barHeight > 0) {
+            const isPeak = value === max;
+            const title = ('0' + hour).slice(-2) + ':00–' + ('0' + ((hour + 1) % 24)).slice(-2) + ':00 Uhr: ' + usageCount(value) + ' Fotos';
+            svg += '<rect class="usage-chart__bar ' + (isPeak ? 'usage-chart__bar--peak' : 'usage-chart__bar--muted') + '" x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + barW.toFixed(1) + '" height="' + barHeight.toFixed(1) + '" rx="3"><title>' + title + '</title></rect>';
+            if (isPeak) {
+              svg += '<text class="usage-chart__value" x="' + (x + barW / 2).toFixed(1) + '" y="' + (y - 6).toFixed(1) + '" text-anchor="middle">' + value + '</text>';
+            }
+          }
+          if (hour % 3 === 0 || hour === 23) {
+            const labelX = left + slot * hour + slot / 2;
+            svg += '<line class="usage-chart__tick" x1="' + labelX.toFixed(1) + '" y1="' + (top + plotH) + '" x2="' + labelX.toFixed(1) + '" y2="' + (top + plotH + 4) + '"></line>';
+            svg += '<text class="usage-chart__axis" x="' + labelX.toFixed(1) + '" y="' + (height - 32) + '" text-anchor="middle">' + ('0' + hour).slice(-2) + '</text>';
+          }
+        });
+        svg += '<text class="usage-chart__axis-title" x="' + (left + plotW / 2) + '" y="' + (height - 8) + '" text-anchor="middle">Uhrzeit (Stunden)</text>';
+        svg += '</svg>';
+        $usageHoursChart.innerHTML = svg;
+        $usageHoursChart.setAttribute('aria-label', 'Aufnahmezeiten über 24 Stunden, Y-Achse: Anzahl Fotos, X-Achse: Uhrzeit. Meiste Aufnahmen zwischen ' + busiestHour + ' und ' + ((busiestHour + 1) % 24) + ' Uhr mit ' + usageCount(max) + ' Fotos.');
+      }
+
+      function renderUsageActions(actions) {
+        const definitions = [
+          ['qr', 'QR-Code'],
+          ['print', 'Drucken'],
+          ['share', 'Teilen'],
+          ['download', 'Download']
+        ];
+        const values = definitions.map(([key]) => Math.max(0, Number(actions[key]) || 0));
+        const total = values.reduce((sum, value) => sum + value, 0);
+        $usageActionsMeta.textContent = total > 0 ? 'Dieser Server · ' + usageCount(total) + ' Aktionen' : 'Dieser Server · keine Aktionen';
+        if (total === 0) {
+          $usageActions.innerHTML = '<p class="usage-empty">Noch keine Klicks auf QR-Code, Drucken, Teilen oder Download seit diesem Update.</p>';
+          return;
+        }
+        const max = Math.max(...values);
+        $usageActions.innerHTML = '<ul class="usage-actions">' + definitions.map(([, label], index) => {
+          const value = values[index];
+          const width = max > 0 && value > 0 ? Math.max(4, (value / max) * 100) : 0;
+          return '<li class="usage-action">'
+            + '<span class="usage-action__label">' + label + '</span>'
+            + '<span class="usage-action__track" aria-hidden="true"><span class="usage-action__fill" style="width:' + width.toFixed(1) + '%"></span></span>'
+            + '<span class="usage-action__value">' + usageCount(value) + '</span>'
+            + '</li>';
+        }).join('') + '</ul>';
+      }
+
+      function renderUsageStats(data) {
+        const kpis = data.kpis || {};
+        $usageTotalPhotos.textContent = usageCount(kpis.totalPhotos);
+        $usageCaptures.textContent = usageCount(kpis.capturesInRange);
+        $usageCapturesSub.textContent = Number.isFinite(kpis.photosToday)
+          ? 'Alle Boxen · ' + usageCount(kpis.photosToday) + ' heute · inkl. Papierkorb'
+          : 'Alle Boxen am selben Speicher · inkl. Papierkorb';
+        const daily = Array.isArray(data.daily) ? data.daily : [];
+        renderUsageDailyChart(daily);
+        renderUsageHoursChart(
+          Array.isArray(data.hours) && data.hours.length === 24 ? data.hours : Array(24).fill(0),
+          data.busiestHour
+        );
+        renderUsageActions(data.actions || {});
+
+        if (data.trackingSince) {
+          $usageTrackingNote.textContent = 'Fotos und Aufnahmezeiten umfassen alle Boxen am gemeinsamen Supabase-Speicher. Aktionen am Ende zählt ausschließlich dieser Server lokal seit '
+            + new Date(data.trackingSince).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + '.';
+        }
+        if (data.storageError) {
+          $usageError.hidden = false;
+          $usageErrorText.textContent = 'Fotos aus dem Speicher konnten nicht gelesen werden. Aktionen am Ende werden weiterhin angezeigt.';
+        }
+      }
+
+      async function loadUsageStats() {
+        if (usageLoading) return;
+        usageLoading = true;
+        $usageRefresh.disabled = true;
+        $usageSection.setAttribute('aria-busy', 'true');
+        $usageError.hidden = true;
+        $usageStatus.textContent = 'Statistik wird geladen…';
+        try {
+          const res = await fetch('/api/stats?days=' + usageRangeDays, { cache: 'no-store' });
+          if (!res.ok) throw new Error('HTTP ' + res.status);
+          const data = await res.json();
+          renderUsageStats(data);
+          if (!data.storageError) $usageError.hidden = true;
+          $usageStatus.textContent = 'Aktualisiert um '
+            + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr.';
+        } catch (err) {
+          console.warn('Usage statistics could not be loaded:', err);
+          $usageStatus.textContent = 'Statistik konnte nicht geladen werden.';
+          $usageError.hidden = false;
+          $usageErrorText.textContent = 'Die Nutzungsdaten sind gerade nicht erreichbar. Bitte Verbindung prüfen und erneut versuchen.';
+        } finally {
+          usageLoading = false;
+          $usageRefresh.disabled = false;
+          $usageSection.removeAttribute('aria-busy');
+          // Während des Ladens kann der Zeitraum gewechselt worden sein. Dann
+          // die zuletzt gewählte Auswahl nachladen, statt alte Daten mit
+          // falscher Hervorhebung stehen zu lassen.
+          if (usagePendingReload) {
+            usagePendingReload = false;
+            loadUsageStats();
+          }
+        }
+      }
+
+      $usageRefresh.addEventListener('click', loadUsageStats);
+      $usageRetry.addEventListener('click', loadUsageStats);
+      $usageDaysButtons.forEach((button) => {
+        button.addEventListener('click', () => {
+          const days = Number(button.dataset.usageDays);
+          if (![7, 14, 30].includes(days) || days === usageRangeDays) return;
+          usageRangeDays = days;
+          $usageDaysButtons.forEach((item) => item.setAttribute('aria-pressed', String(item === button)));
+          try { localStorage.setItem('snapbox_usage_days', String(days)); } catch (e) {}
+          if (usageLoading) {
+            usagePendingReload = true;
+            return;
+          }
+          loadUsageStats();
+        });
+      });
+
       async function loadAdminSession() {
         try {
           const res = await fetch('/api/admin/session', { cache: 'no-store' });
@@ -2672,6 +4252,9 @@
 
       loadAdminSession();
       loadSettings();
+      loadUsageStats();
+      loadAdminGallery({ reset: true });
+      loadAdminTrash({ reset: true });
       scheduleIdle();
     })();
   </script>

@@ -11,12 +11,16 @@
   "filtersEnabled": true,
   "stickersEnabled": true,
   "overlaysEnabled": true,
-  "cameraFacingMode": "environment",
+  "cameraFacingMode": "user",
   "galleryPageSize": 12,
   "accentColor": "#ffd700",
   "secondaryColor": "#00e0d6",
   "backgroundColor": "#0d0d0d",
   "brandName": "SnapBox",
   "qrTtlHours": 47,
+  "challengeEnabled": true,
+  "challengeLocation": "lcc",
+  "challengeAppUrl": "https://site-6e612acb7a47490692d7da5a7b9d9292.freebuff.page",
+  "challengeMonthlyGoal": 42,
   "updatedAt": "2026-11-03T22:17:49.550Z"
 }

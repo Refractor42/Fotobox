@@ -80,9 +80,33 @@ const I18N = {
     challengeDaysOne: 'noch 1 Tag',
     challengeDays: 'noch {n} Tage',
     challengeLastDay: 'letzter Tag',
+    themeJan: 'Neuer Start',
+    themeFeb: 'Liebe & Winter',
+    themeMar: 'Frühlingswachen',
+    themeApr: 'Bunt & Verrückt',
+    themeMay: 'Blütenpracht',
+    themeJun: 'Sommer-Vibes',
+    themeJul: 'Strand & Sonne',
+    themeAug: 'Heiße Nächte',
+    themeSep: 'Goldener Herbst',
+    themeOct: 'Halloween & Laub',
+    themeNov: 'Gemütlichkeit',
+    themeDec: 'Winterzauber',
     themeHalloween: 'Halloween Motive',
     themeWinter: 'Winterzauber',
     themeDefault: 'Monatsmotiv',
+    endChallengeKicker: 'MONATS-CHALLENGE',
+    endChallengeQuestion: 'Foto für {location} einreichen?',
+    endChallengeHint: 'Dein Foto erscheint in der Web-App. Jeder Like bringt dem Team Extrapunkte.',
+    endChallengeYes: 'Ja, mitmachen',
+    endChallengeNo: 'Nein, danke',
+    endChallengeSubmitting: 'Wird eingereicht…',
+    endChallengeSubmitted: 'Dabei! Dein Foto steht jetzt in der Challenge-Galerie.',
+    endChallengeDeclined: 'Nicht eingereicht. Vielleicht beim nächsten Foto.',
+    endChallengeError: 'Einreichung hat nicht geklappt. Bitte noch einmal tippen.',
+    endChallengeQrLabel: 'Web-App',
+    endChallengeQrHint: 'Scannen & liken',
+    endChallengeQrAria: 'QR-Code zur Web-App mit Leaderboard und Challenge-Galerie',
     captionMode: 'MODUS',
     modeGroupAria: 'Aufnahmemodus',
     modeSingle: 'Einzelfoto',
@@ -147,6 +171,10 @@ const I18N = {
     filterVintage: 'Vintage',
     toastDownloaded: 'Foto heruntergeladen.',
     toastPrintBlocked: 'Druckfenster wurde blockiert — bitte Pop-ups erlauben.',
+    toastNoPrinter: 'Kein Drucker eingerichtet — bitte in Windows einen Drucker als Standard festlegen.',
+    toastVirtualPrinter: '„{name}“ ist ein PDF-Drucker. Bitte einen echten Drucker als Standard festlegen.',
+    toastPrinterOffline: 'Der Drucker „{name}“ ist offline.',
+    toastPrinterUnknown: 'Druckerstatus konnte nicht geprüft werden.',
     toastFullscreenOn: 'Vollbild an — Shift+F zum Verlassen',
     toastFullscreenError: 'Vollbild konnte nicht geöffnet werden.',
     processing: 'Foto wird erfasst \u2026',
@@ -189,22 +217,21 @@ const I18N = {
     stickerKroneAria: 'Krone hinzufügen',
     stickerBrilleAria: 'Sonnenbrille hinzufügen',
     stickerHutAria: 'Partyhut hinzufügen',
+    stickerDate: 'Datum',
+    stickerTime: 'Uhrzeit',
+    stickerDateAria: 'Datum als Sticker hinzufügen',
+    stickerTimeAria: 'Uhrzeit als Sticker hinzufügen',
+    stickerTextGroup: 'Datum & Uhrzeit',
     stickerSmaller: 'Sticker verkleinern',
     stickerBigger: 'Sticker vergrößern',
     stickerRemove: 'Sticker entfernen',
     stickerClearAll: 'Alle Sticker löschen',
     galleryBtn: 'Galerie',
     galleryOpenAria: 'Galerie öffnen',
-    galleryBack: 'Zurück',
     galleryTitle: 'Deine Fotos',
     galleryLoadMore: 'Mehr laden',
     galleryLoading: 'Wird geladen…',
-    galleryTrash: 'Papierkorb',
-    trashBackShort: 'Fotos',
-    trashBackToPhotos: 'Zurück zu deinen Fotos',
     galleryEmpty: 'Noch keine Fotos — mach dein erstes Foto!',
-    trashRetentionText: 'Neu gelöschte Fotos werden nach {n} Tagen endgültig gelöscht.',
-    trashEmpty: 'Der Papierkorb ist leer.',
     confirmTitle: 'Endgültig löschen?',
     confirmText: 'Das Foto wird für immer gelöscht und kann nicht wiederhergestellt werden.',
     confirmCancel: 'Abbrechen',
@@ -217,7 +244,10 @@ const I18N = {
     qrCloseAria: 'QR-Dialog schließen',
     qrLoading: 'Link wird erstellt…',
     qrHint: 'QR-Code mit der Handy-Kamera scannen — das Foto öffnet sich im Browser.',
-    qrTtl: 'Link ist 24 Stunden gültig.',
+    qrTtlHours: 'Link ist {n} Stunden gültig.',
+    qrTtlHour: 'Link ist 1 Stunde gültig.',
+    qrTtlDays: 'Link ist {n} Tage gültig.',
+    qrTtlDay: 'Link ist 1 Tag gültig.',
     qrRetry: 'Erneut versuchen',
     qrCopy: 'Link kopieren',
     qrCopied: 'Link kopiert.',
@@ -231,21 +261,11 @@ const I18N = {
     toastEditError: 'Änderungen konnten nicht gespeichert werden.',
     toastEditErrorKeep: 'Änderungen konnten nicht gespeichert werden — Foto bleibt unverändert.',
     toastEditedSaveError: 'Bearbeitetes Foto konnte nicht gespeichert werden — Original bleibt erhalten.',
-    toastTrashed: 'Foto in den Papierkorb verschoben.',
-    toastUndo: 'Rückgängig',
     toastDeleteError: 'Foto konnte nicht gelöscht werden — Verbindung prüfen.',
-    toastRestored: 'Foto wiederhergestellt.',
-    toastRestoreError: 'Wiederherstellen fehlgeschlagen — das Foto bleibt im Papierkorb.',
-    toastRestoreError2: 'Foto konnte nicht wiederhergestellt werden.',
+    toastDeleteSessionOnly: 'Fotos lassen sich nur während einer laufenden Sitzung löschen.',
+    toastDeleted: 'Foto gelöscht.',
+    toastEditAction: 'Wiederherstellen und zurück zum Bearbeiten',
     toastLoadError: 'Gespeicherte Fotos konnten nicht geladen werden.',
-    trashLoadError: 'Papierkorb konnte nicht geladen werden.',
-    toastPurged: 'Foto endgültig gelöscht.',
-    toastPurgeError: 'Foto konnte nicht endgültig gelöscht werden.',
-    trashRestoreBtn: 'Wiederherstellen',
-    trashPurgeBtn: 'Endgültig löschen',
-    trashDaysLeftOne: 'noch 1 Tag',
-    trashDaysLeftMany: 'noch {n} Tage',
-    trashImgAlt: 'Gelöschtes Foto',
     capturedPhotoAlt: 'Aufgenommenes Foto',
     photoPreviewAlt: 'Foto-Vorschau',
     deletePhotoAria: 'Foto löschen',
@@ -309,9 +329,33 @@ const I18N = {
     challengeDaysOne: '1 day left',
     challengeDays: '{n} days left',
     challengeLastDay: 'last day',
+    themeJan: 'Fresh start',
+    themeFeb: 'Love & winter',
+    themeMar: 'Spring awakening',
+    themeApr: 'Colorful & wild',
+    themeMay: 'Blossom time',
+    themeJun: 'Summer vibes',
+    themeJul: 'Beach & sun',
+    themeAug: 'Hot nights',
+    themeSep: 'Golden autumn',
+    themeOct: 'Halloween & leaves',
+    themeNov: 'Cozy season',
+    themeDec: 'Winter magic',
     themeHalloween: 'Halloween motifs',
     themeWinter: 'Winter magic',
     themeDefault: 'Theme of the month',
+    endChallengeKicker: 'MONTHLY CHALLENGE',
+    endChallengeQuestion: 'Submit this photo for {location}?',
+    endChallengeHint: 'Your photo appears in the web app. Every like adds extra points for the team.',
+    endChallengeYes: 'Yes, join in',
+    endChallengeNo: 'No, thanks',
+    endChallengeSubmitting: 'Submitting…',
+    endChallengeSubmitted: 'You are in! Your photo is now in the challenge gallery.',
+    endChallengeDeclined: 'Not submitted. Maybe the next photo.',
+    endChallengeError: 'Submission failed. Please tap again.',
+    endChallengeQrLabel: 'Web app',
+    endChallengeQrHint: 'Scan & like',
+    endChallengeQrAria: 'QR code for the web app with leaderboard and challenge gallery',
     captionMode: 'MODE',
     modeGroupAria: 'Capture mode',
     modeSingle: 'Single photo',
@@ -376,6 +420,10 @@ const I18N = {
     filterVintage: 'Vintage',
     toastDownloaded: 'Photo downloaded.',
     toastPrintBlocked: 'Print window was blocked — please allow pop-ups.',
+    toastNoPrinter: 'No printer set up — please set a printer as default in Windows.',
+    toastVirtualPrinter: '“{name}” is a PDF printer. Please set a real printer as default.',
+    toastPrinterOffline: 'The printer “{name}” is offline.',
+    toastPrinterUnknown: 'Could not check the printer status.',
     toastFullscreenOn: 'Fullscreen on — Shift+F to exit',
     toastFullscreenError: 'Fullscreen could not be opened.',
     processing: 'Capturing photo \u2026',
@@ -418,22 +466,21 @@ const I18N = {
     stickerKroneAria: 'Add crown',
     stickerBrilleAria: 'Add sunglasses',
     stickerHutAria: 'Add party hat',
+    stickerDate: 'Date',
+    stickerTime: 'Time',
+    stickerDateAria: 'Add date sticker',
+    stickerTimeAria: 'Add time sticker',
+    stickerTextGroup: 'Date & time',
     stickerSmaller: 'Shrink sticker',
     stickerBigger: 'Enlarge sticker',
     stickerRemove: 'Remove sticker',
     stickerClearAll: 'Delete all stickers',
     galleryBtn: 'Gallery',
     galleryOpenAria: 'Open gallery',
-    galleryBack: 'Back',
     galleryTitle: 'Your Photos',
     galleryLoadMore: 'Load more',
     galleryLoading: 'Loading…',
-    galleryTrash: 'Trash',
-    trashBackShort: 'Photos',
-    trashBackToPhotos: 'Back to your photos',
     galleryEmpty: 'No photos yet. Capture your first memory!',
-    trashRetentionText: 'Newly deleted photos are permanently removed after {n} days.',
-    trashEmpty: 'The trash is empty.',
     confirmTitle: 'Delete permanently?',
     confirmText: 'This photo will be deleted forever and cannot be recovered.',
     confirmCancel: 'Cancel',
@@ -446,7 +493,10 @@ const I18N = {
     qrCloseAria: 'Close QR dialog',
     qrLoading: 'Creating link…',
     qrHint: 'Scan the QR code with your phone camera — the photo opens in your browser.',
-    qrTtl: 'Link is valid for 24 hours.',
+    qrTtlHours: 'Link is valid for {n} hours.',
+    qrTtlHour: 'Link is valid for 1 hour.',
+    qrTtlDays: 'Link is valid for {n} days.',
+    qrTtlDay: 'Link is valid for 1 day.',
     qrRetry: 'Try again',
     qrCopy: 'Copy link',
     qrCopied: 'Link copied.',
@@ -460,21 +510,11 @@ const I18N = {
     toastEditError: 'Changes could not be saved.',
     toastEditErrorKeep: 'Changes could not be saved — the photo stays unchanged.',
     toastEditedSaveError: 'Edited photo could not be saved — the original is kept.',
-    toastTrashed: 'Photo moved to trash.',
-    toastUndo: 'Undo',
     toastDeleteError: 'Photo could not be deleted — check the connection.',
-    toastRestored: 'Photo restored.',
-    toastRestoreError: 'Restore failed — the photo stays in the trash.',
-    toastRestoreError2: 'Photo could not be restored.',
+    toastDeleteSessionOnly: 'Photos can only be deleted during an active session.',
+    toastDeleted: 'Photo deleted.',
+    toastEditAction: 'Restore and return to editing',
     toastLoadError: 'Saved photos could not be loaded.',
-    trashLoadError: 'Trash could not be loaded.',
-    toastPurged: 'Photo deleted permanently.',
-    toastPurgeError: 'Photo could not be deleted permanently.',
-    trashRestoreBtn: 'Restore',
-    trashPurgeBtn: 'Delete permanently',
-    trashDaysLeftOne: '1 day left',
-    trashDaysLeftMany: '{n} days left',
-    trashImgAlt: 'Deleted photo',
     capturedPhotoAlt: 'Captured photo',
     photoPreviewAlt: 'Photo preview',
     deletePhotoAria: 'Delete photo',
@@ -567,7 +607,6 @@ function applyLanguage(lang) {
   // Ein laufender Kamera-Versuch behält seine Beschriftung beim Sprachwechsel.
   const permissionBtn = $permission && $permission.querySelector('[data-action="retry-camera"]');
   if (permissionBtn) permissionBtn.textContent = t(permissionBtn.disabled ? 'permissionOpening' : 'permissionBtn');
-  renderTrashRetention(); // dynamische Aufbewahrungsdauer (Serverwert)
   // Beschriftungen der Gesichtsfilter-Chips in der aktiven Sprache nachziehen
   if ($filterBar && window.SnapBoxFilters) {
     $filterBar.querySelectorAll('.timer__chip').forEach((chip) => {
@@ -588,7 +627,6 @@ function applyLanguage(lang) {
     updateChallengeCard();
     setSideMenuOpen($sideMenu.classList.contains('is-open'));
   }
-  syncGalleryContext();
 }
 
 document.querySelectorAll('.lang-switch__btn').forEach((btn) => {
@@ -610,7 +648,6 @@ document.querySelectorAll('.lang-switch__label').forEach((label) => {
 // ============================================================
 const SETTINGS_CACHE_KEY = 'snapbox_settings_cache';
 const APP_SETTINGS_DEFAULTS = Object.freeze({
-  orientation: 'portrait',
   defaultLanguage: 'de',
   trashRetentionDays: 7,
   idleEndSeconds: 40,
@@ -628,9 +665,44 @@ const APP_SETTINGS_DEFAULTS = Object.freeze({
   secondaryColor: '#00e0d6',
   backgroundColor: '#0d0d0d',
   brandName: 'SnapBox',
-  qrTtlHours: 24
+  qrTtlHours: 24,
+  challengeEnabled: false,
+  challengeLocation: 'lcc',
+  challengeAppUrl: '',
+  challengeMonthlyGoal: 42,
+  // Nur ein Status-Flag, nie der Schlüssel selbst. Damit kann der Endscreen
+  // auch dann einen QR zeigen, wenn die Zusammenfassung gerade nicht lädt.
+  challengeApiKeySet: false
 });
 let appSettings = { ...APP_SETTINGS_DEFAULTS };
+
+// Letzter bekannter Stand der öffentlichen Challenge. Die Karte auf dem
+// Startbildschirm zeigt nur eingereichte Fotos, nicht den gesamten Bestand.
+let challengeStatus = {
+  enabled: false,
+  configured: false,
+  online: false,
+  entries: 0,
+  votes: 0,
+  goal: APP_SETTINGS_DEFAULTS.challengeMonthlyGoal,
+  location: APP_SETTINGS_DEFAULTS.challengeLocation,
+  appUrl: '',
+  month: ''
+};
+let challengeSettingsSignature = '';
+
+function normalizeChallengeUrl(value) {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return '';
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' && url.protocol !== 'http:') return '';
+    if (url.username || url.password || url.search || url.hash) return '';
+    return (url.origin + url.pathname).replace(/\/+$/, '');
+  } catch (err) {
+    return '';
+  }
+}
 
 function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
   const raw = data && typeof data === 'object' ? data : {};
@@ -650,7 +722,6 @@ function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
   const countdown = Number(merged.defaultCountdownSeconds);
 
   const next = {
-    orientation: merged.orientation === 'landscape' ? 'landscape' : 'portrait',
     defaultLanguage: merged.defaultLanguage === 'en' ? 'en' : 'de',
     trashRetentionDays: [7, 14, 30].includes(retention) ? retention : APP_SETTINGS_DEFAULTS.trashRetentionDays,
     idleEndSeconds: intInRange(merged.idleEndSeconds, APP_SETTINGS_DEFAULTS.idleEndSeconds, 15, 180),
@@ -668,7 +739,17 @@ function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
     secondaryColor: color(merged.secondaryColor, APP_SETTINGS_DEFAULTS.secondaryColor),
     backgroundColor: color(merged.backgroundColor, APP_SETTINGS_DEFAULTS.backgroundColor),
     brandName: brand || APP_SETTINGS_DEFAULTS.brandName,
-    qrTtlHours: intInRange(merged.qrTtlHours, APP_SETTINGS_DEFAULTS.qrTtlHours, 1, 168)
+    qrTtlHours: intInRange(merged.qrTtlHours, APP_SETTINGS_DEFAULTS.qrTtlHours, 1, 168),
+    challengeEnabled: merged.challengeEnabled === true,
+    challengeLocation: merged.challengeLocation === 'coburg' ? 'coburg' : 'lcc',
+    challengeAppUrl: normalizeChallengeUrl(merged.challengeAppUrl),
+    challengeMonthlyGoal: intInRange(
+      merged.challengeMonthlyGoal,
+      APP_SETTINGS_DEFAULTS.challengeMonthlyGoal,
+      1,
+      9999
+    ),
+    challengeApiKeySet: merged.challengeApiKeySet === true
   };
   next.idleWarnSeconds = Math.max(5, Math.min(
     next.idleWarnSeconds,
@@ -1101,32 +1182,13 @@ if ($cvdOptions) {
 }
 
 // ============================================================
-//  ORIENTATION SYNC (Hochformat / Querformat — Admin Panel)
+//  ORIENTATION (fest Querformat)
 // ============================================================
-let currentOrientation = appSettings.orientation;
-try {
-  const saved = localStorage.getItem('snapbox_orientation');
-  if (saved === 'landscape' || saved === 'portrait') currentOrientation = saved;
-} catch (e) {}
-
-function applyOrientation(orientation) {
-  if (orientation !== 'landscape' && orientation !== 'portrait') {
-    orientation = 'portrait';
-  }
-  currentOrientation = orientation;
-  const isLandscape = orientation === 'landscape';
-  document.body.classList.toggle('orientation-landscape', isLandscape);
-  try {
-    localStorage.setItem('snapbox_orientation', orientation);
-  } catch (e) {}
-}
-
-// Aufbewahrungsdauer aus den Server-Einstellungen (Admin-geschützt).
-let serverRetentionDays = appSettings.trashRetentionDays;
-
-function renderTrashRetention() {
-  const el = document.getElementById('trashRetentionText');
-  if (el) el.textContent = t('trashRetentionText', { n: serverRetentionDays });
+// Die Kiosk-Oberfläche gibt es nur noch im Querformat. Eine früher im
+// localStorage gespeicherte Hochformat-Einstellung wird ignoriert und entfernt.
+function applyOrientation() {
+  document.body.classList.add('orientation-landscape');
+  try { localStorage.removeItem('snapbox_orientation'); } catch (e) {}
 }
 
 function applyAppSettings(data) {
@@ -1135,24 +1197,31 @@ function applyAppSettings(data) {
   applyBrandSettings(appSettings.brandName);
   applyFeatureAvailability();
 
-  if (appSettings.orientation !== currentOrientation) {
-    applyOrientation(appSettings.orientation);
+  // Nur bei geänderter Challenge-Konfiguration neu laden, nicht bei jedem
+  // 2,5-Sekunden-Sync.
+  const signature = [
+    appSettings.challengeEnabled,
+    appSettings.challengeLocation,
+    appSettings.challengeAppUrl,
+    appSettings.challengeMonthlyGoal,
+    appSettings.challengeApiKeySet
+  ].join('|');
+  if (signature !== challengeSettingsSignature) {
+    challengeSettingsSignature = signature;
+    refreshChallengeSummary();
   }
+
+  applyOrientation();
   if (appSettings.defaultLanguage !== defaultLang) {
     defaultLang = appSettings.defaultLanguage;
     try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
     if (currentState === 'splash') applyLanguage(defaultLang);
   }
-  if (appSettings.trashRetentionDays !== serverRetentionDays) {
-    serverRetentionDays = appSettings.trashRetentionDays;
-    renderTrashRetention();
-  }
   cacheAppSettings(appSettings);
 }
 
 // Sofort initial anwenden
-applyOrientation(currentOrientation);
-renderTrashRetention();
+applyOrientation();
 
 // Synchronisation zwischen Tabs über BroadcastChannel
 if ('BroadcastChannel' in window) {
@@ -1163,20 +1232,10 @@ if ('BroadcastChannel' in window) {
       if (event.data.type === 'settings_change' && event.data.settings) {
         applyAppSettings(event.data.settings);
       }
-      if (event.data.type === 'orientation_change') {
-        applyOrientation(event.data.orientation);
-      }
       if (event.data.type === 'default_language_change') {
         defaultLang = event.data.defaultLanguage === 'en' ? 'en' : 'de';
         try { localStorage.setItem('snapbox_default_language', defaultLang); } catch (e) {}
         applyLanguage(defaultLang);
-      }
-      if (event.data.type === 'retention_change') {
-        const retention = Number(event.data.trashRetentionDays);
-        if ([7, 14, 30].includes(retention)) {
-          serverRetentionDays = retention;
-          renderTrashRetention();
-        }
       }
     };
   } catch (e) {}
@@ -1184,9 +1243,6 @@ if ('BroadcastChannel' in window) {
 
 // Synchronisation bei storage Events
 window.addEventListener('storage', (e) => {
-  if (e.key === 'snapbox_orientation' && (e.newValue === 'landscape' || e.newValue === 'portrait')) {
-    applyOrientation(e.newValue);
-  }
   if (e.key === 'snapbox_default_language' && (e.newValue === 'de' || e.newValue === 'en')) {
     defaultLang = e.newValue;
     applyLanguage(defaultLang);
@@ -1485,6 +1541,7 @@ function animateSplashIn() {
 // Swipe-up, vom Start-Button sowie von Leertaste und PageUp/PageDown aufgerufen.
 function startSession() {
   if (currentState === 'camera') return;
+  beginPhotoSession();
   unlockAudio(); // create the AudioContext inside the user gesture
   playUiSound('cancel.mp3', true);
   playUiSound('switch.mp3', true);
@@ -1649,9 +1706,7 @@ function resetGuestCaptureSettings(options = {}) {
   hideFilterRemoveHint();
   filterRemoveHintShown = false;
   // Scroll-Demonstrationen gelten je Gast-Sitzung und Menü genau einmal.
-  filterScrollDemoShown = false;
-  stampScrollDemoShown = false;
-  frameScrollDemoShown = false;
+  resetListScrollHints();
   document.querySelectorAll('.option-cycle.is-used').forEach(button => button.classList.remove('is-used'));
   captureMode = appSettings.defaultCaptureMode;
   countdownSeconds = appSettings.defaultCountdownSeconds;
@@ -1980,8 +2035,8 @@ function closeReviewTools() {
 $stickerToggle.addEventListener('click', () => setReviewTool('stickers'));
 $filterToggle.addEventListener('click', () => setReviewTool('filters'));
 
-// Wirft das aktuell angezeigte Foto weg (in den Papierkorb, mit Undo-Toast)
-// und setzt die Kameraansicht zurück — vom Review-„Neu aufnehmen" genutzt.
+// Wirft das aktuell angezeigte Foto endgültig weg und setzt die Kameraansicht
+// zurück — vom Review-„Neu aufnehmen" genutzt.
 function discardCurrentPhoto() {
   if (!hasPhoto) return;
   const viewfinder = $camera.querySelector('.viewfinder');
@@ -2077,11 +2132,11 @@ function discardCurrentPhoto() {
 }
 
 // Home-Abbruch vor „Annehmen“: Die Aufnahme wurde nie bestätigt und wird
-// deshalb endgültig verworfen statt in den Papierkorb zu wandern.
+// deshalb endgültig verworfen.
 function discardUnacceptedPhoto() {
   if (!hasPhoto) return;
   if (lastPhoto) {
-    deletePhoto(lastPhoto.card, lastPhoto.id, { permanent: true });
+    deletePhoto(lastPhoto.card, lastPhoto.id);
     lastPhoto = null;
   }
 }
@@ -2182,6 +2237,18 @@ function showErrorInQrFrame() {
   $qrFrame.appendChild(wrap);
 }
 
+// Die Gültigkeit kommt vom Server (ttl in Sekunden) und entspricht damit
+// genau der im Admin-Panel gesetzten Stundenzahl. Ab 24 Stunden in Tagen.
+function qrTtlLabel(seconds) {
+  const fallback = (appSettings.qrTtlHours || 24) * 3600;
+  const hours = Math.max(1, Math.round((Number(seconds) || fallback) / 3600));
+  if (hours % 24 === 0) {
+    const days = hours / 24;
+    return days === 1 ? t('qrTtlDay') : t('qrTtlDays').replace('{n}', String(days));
+  }
+  return hours === 1 ? t('qrTtlHour') : t('qrTtlHours').replace('{n}', String(hours));
+}
+
 function renderQrInto(frame, url) {
   frame.innerHTML = '';
   if (typeof qrcode === 'function') {
@@ -2238,7 +2305,7 @@ async function showQrDialog(photoId) {
     const data = await res.json();
     if ($qrModal.hidden || lastQrPhotoId !== photoId) return; // inzwischen geschlossen
     renderQrInto($qrFrame, data.url);
-    $qrTtl.textContent = t('qrTtl');
+    $qrTtl.textContent = qrTtlLabel(data.ttl);
   } catch (err) {
     console.warn('QR link could not be created:', err);
     if (!$qrModal.hidden) showErrorInQrFrame();
@@ -2503,7 +2570,60 @@ function enablePlacedStickerDrag(st) {
   });
 }
 
+function textStickerSpec(kind) {
+  return TEXT_STICKERS.find((item) => item.kind === kind) || null;
+}
+
+// Datum und Uhrzeit beziehen sich auf den Moment der Aufnahme, nicht auf
+// den Zeitpunkt, an dem der Sticker aus dem Menü gezogen wird.
+function stickerStampDate() {
+  const capturedAt = lastPhoto && lastPhoto.capturedAt ? lastPhoto.capturedAt : Date.now();
+  return new Date(capturedAt);
+}
+
+function stickerStampValue(kind) {
+  const date = stickerStampDate();
+  const locale = currentLang === 'en' ? 'en-GB' : 'de-DE';
+  try {
+    if (kind === 'date') {
+      return new Intl.DateTimeFormat(locale, {
+        day: '2-digit', month: '2-digit', year: 'numeric'
+      }).format(date);
+    }
+    if (kind === 'time') {
+      return new Intl.DateTimeFormat(locale, {
+        hour: '2-digit', minute: '2-digit', hourCycle: 'h23'
+      }).format(date);
+    }
+  } catch (e) {}
+  return kind === 'date' ? date.toLocaleDateString() : date.toTimeString().slice(0, 5);
+}
+
+function escapeXmlText(value) {
+  return String(value).replace(/[&<>"']/g, (ch) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
+  })[ch]);
+}
+
+// Text-Sticker werden als SVG gerendert. Dadurch laufen Vorschau und
+// exportiertes Foto durch dieselbe Sticker-Pipeline wie Formen und Emojis.
+function textStickerSvg(kind) {
+  const spec = textStickerSpec(kind);
+  if (!spec) return '';
+  const text = escapeXmlText(stickerStampValue(kind));
+  const width = spec.svgWidth;
+  const height = spec.svgHeight;
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' + width + ' ' + height + '" width="' + width + '" height="' + height + '">'
+    + '<rect x="2" y="2" width="' + (width - 4) + '" height="' + (height - 4) + '" rx="' + ((height - 4) / 2) + '" fill="#090a0e" fill-opacity="0.78" stroke="#ffffff" stroke-opacity="0.55" stroke-width="2"/>'
+    + '<text x="' + (width / 2) + '" y="' + (height / 2) + '" text-anchor="middle" dominant-baseline="central" font-family="Segoe UI, Arial, sans-serif" font-size="' + spec.fontSize + '" font-weight="700" letter-spacing="2" fill="#ffffff">' + text + '</text>'
+    + '</svg>';
+}
+
 function stickerSvgUrl(kind) {
+  const textSvg = textStickerSvg(kind);
+  if (textSvg) {
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(textSvg);
+  }
   const svg = $stickerPalette.querySelector('[data-sticker="' + kind + '"] svg').cloneNode(true);
   svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   // width/height für verlässliche naturalWidth beim Canvas-Rendering
@@ -2523,7 +2643,10 @@ function addSticker(kind) {
   img.alt = '';
   el.appendChild(img);
 
-  const st = { el, x: 50, y: 35, w: 26 };
+  const textSpec = textStickerSpec(kind);
+  const st = textSpec
+    ? { el, x: textSpec.x, y: textSpec.y, w: textSpec.w }
+    : { el, x: 50, y: 35, w: 26 };
   $camera.querySelector('.viewfinder').appendChild(el);
   activeStickers.push(st);
   positionSticker(st);
@@ -2568,8 +2691,8 @@ function stickerSafeRect() {
   return photoStageRect();
 }
 
-// Die +/−/×-Leiste sitzt normalerweise über dem Sticker. Ist dort kein
-// Platz, klappt sie unter den Sticker und wird an den Fotorändern gehalten.
+// Die +/−/Mülleimer-Leiste sitzt normalerweise über dem Sticker. Ist dort
+// kein Platz, klappt sie unter den Sticker und wird an den Fotorändern gehalten.
 function positionStickerControls(st) {
   const ctrl = st.el.querySelector('.sticker__ctrl');
   if (!ctrl || !ctrl.isConnected) return;
@@ -2650,7 +2773,11 @@ function selectSticker(st) {
   };
   ctrl.appendChild(mk('−', t('stickerSmaller'), () => scaleSticker(st, 0.85)));
   ctrl.appendChild(mk('+', t('stickerBigger'), () => scaleSticker(st, 1.18)));
-  ctrl.appendChild(mk('×', t('stickerRemove'), () => removeSticker(st)));
+  const remove = mk('', t('stickerRemove'), () => removeSticker(st));
+  // Derselbe Papierkorb wie an den Galerie-Fotos, damit dieselbe Aktion
+  // überall gleich aussieht.
+  remove.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>';
+  ctrl.appendChild(remove);
   st.el.appendChild(ctrl);
   requestAnimationFrame(() => positionStickerControls(st));
 }
@@ -2798,7 +2925,7 @@ async function saveEditedPhoto(options = {}) {
     if (photo.id) payload.id = photo.id;
     const res = await fetch('/api/photos', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', ...photoSessionHeaders() },
       body: JSON.stringify(payload)
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -3315,6 +3442,10 @@ function resetCameraView() {
   $camera.classList.remove('is-reviewing', 'is-stamping', 'is-ended', 'is-finishing', 'is-capture-result');
   const endScreen = document.getElementById('endScreen');
   if (endScreen) endScreen.hidden = true;
+  document.body.classList.remove('challenge-end-active');
+  if ($challengeEnd) $challengeEnd.hidden = true;
+  challengeEndPhotoId = null;
+  challengeEndChoice = null;
   const reviewActions = document.getElementById('reviewActions');
   if (reviewActions) reviewActions.hidden = true;
   if (isKioskLayout()) {
@@ -3359,7 +3490,7 @@ const pendingOps = new Set();
 function savePhotoToServer(photoUrl) {
   return fetch('/api/photos', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...photoSessionHeaders() },
     body: JSON.stringify({ image: photoUrl })
   }).then((res) => {
     if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -3375,43 +3506,118 @@ function savePhotoToServer(photoUrl) {
     });
 }
 
-// Moves a photo to the trash (Papierkorb) on the server, removes its card and
-// offers an undo toast. With options.permanent the object is deleted for good
-// (unaccepted captures aborted via the Home button). Without a server id the
-// photo was never saved, so only the card is removed.
-async function deletePhoto(card, photoId, options = {}) {
-  const permanent = options.permanent === true;
+// ============================================================
+//  GÄSTE-SITZUNG
+//  Löschen ist nur zwischen Startbildschirm und Zurückspringen erlaubt.
+//  Gäste löschen endgültig und haben keinen Papierkorb; dieser existiert nur
+//  noch im Admin-Panel.
+// ============================================================
+const PHOTO_SESSION_HEADER = 'X-Photo-Session';
+let photoSessionToken = null;
+// Nur diese IDs wurden in der laufenden Sitzung aufgenommen. Die Galerie
+// zeigt weiterhin alle Fotos, Löschbuttons bekommen aber nur diese Karten.
+const sessionPhotoIds = new Set();
+
+function clearSessionDeleteButtons() {
+  document.querySelectorAll('.gallery__delete').forEach((btn) => btn.remove());
+}
+
+function photoSessionHeaders(extra = {}) {
+  return photoSessionToken
+    ? { ...extra, [PHOTO_SESSION_HEADER]: photoSessionToken }
+    : extra;
+}
+
+// Leichtgewichtige Nutzungszählung für das Admin-Dashboard. Fehler dürfen den
+// Gast-Flow nie beeinflussen; deshalb fire-and-forget ohne Rückmeldung.
+function trackUsageEvent(event) {
+  try {
+    fetch('/api/stats/event', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event }),
+      keepalive: true
+    }).catch(() => {});
+  } catch (e) { /* Statistik ist optional */ }
+}
+
+async function beginPhotoSession() {
+  if (photoSessionToken) return photoSessionToken;
+  try {
+    const res = await fetch('/api/photo-session', { method: 'POST', cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    if (!data || !data.token) throw new Error('Missing token');
+    // Falls inzwischen schon wieder zum Startbildschirm zurückgesprungen
+    // wurde, gehört diese Antwort zu keiner aktiven Sitzung mehr.
+    if (currentState === 'splash') {
+      fetch('/api/photo-session', {
+        method: 'DELETE',
+        headers: { [PHOTO_SESSION_HEADER]: data.token },
+        keepalive: true
+      }).catch(() => {});
+      return null;
+    }
+    photoSessionToken = data.token;
+    sessionPhotoIds.clear();
+    clearSessionDeleteButtons();
+    document.body.classList.add('photo-session-active');
+    return photoSessionToken;
+  } catch (err) {
+    console.warn('Guest session could not be started:', err);
+    return null;
+  }
+}
+
+function endPhotoSession() {
+  document.body.classList.remove('photo-session-active');
+  const token = photoSessionToken;
+  photoSessionToken = null;
+  sessionPhotoIds.clear();
+  clearSessionDeleteButtons();
+  if (token) {
+    fetch('/api/photo-session', {
+      method: 'DELETE',
+      headers: { [PHOTO_SESSION_HEADER]: token },
+      keepalive: true
+    }).catch(() => {});
+  }
+}
+
+// Gäste löschen endgültig — es gibt für sie keinen Papierkorb. Die Toast-
+// Aktion öffnet das Foto stattdessen wieder im Sticker-/Overlay-Editor.
+// Without a server id the photo was never saved, so only the card is removed.
+async function deletePhoto(card, photoId) {
+  if (!photoSessionToken) {
+    showToast(t('toastDeleteSessionOnly'), { error: true });
+    return;
+  }
   if (!photoId) {
-    // Noch kein Server-Objekt: Die ID kommt ggf. erst nach dem Upload. Merken,
-    // damit der Save-Callback die Datei dann endgültig löscht.
-    if (permanent && card) card.dataset.discardPermanent = '1';
+    // Noch kein Server-Objekt: Die ID kommt ggf. erst nach dem Upload. Der
+    // Save-Callback löscht die Datei dann, sobald sie existiert.
     removeCard(card);
     return;
   }
-  const key = (permanent ? 'purge:' : 'trash:') + photoId;
+  const key = 'delete:' + photoId;
   if (pendingOps.has(key)) return;
   pendingOps.add(key);
-  const image = card.querySelector('img') ? card.querySelector('img').src : null;
+  const image = card && card.querySelector('img') ? card.querySelector('img').src : null;
   try {
-    // Die Aufbewahrungsdauer setzt der Server aus den Admin-Einstellungen.
-    const query = 'id=' + encodeURIComponent(photoId) + (permanent ? '&purge=1' : '');
+    const query = 'id=' + encodeURIComponent(photoId) + '&purge=1';
     const res = await fetch('/api/photos?' + query, {
-      method: 'DELETE'
+      method: 'DELETE',
+      headers: photoSessionHeaders()
     });
-    // 404 = bereits gelöscht/verschoben (Doppelklick-Race) — gilt als Erfolg
+    // 404 = bereits gelöscht (Doppelklick-Race) — gilt als Erfolg
     if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
-    const data = res.status === 404 ? {} : await res.json();
     removeCard(card);
-    // Verworfene, nie angenommene Fotos landen nicht im Papierkorb.
-    if (permanent) return;
-    refreshTrashCount();
-    if (data.trashId) {
-      showToast(t('toastTrashed'), {
-        actionLabel: t('toastUndo'),
-        onAction: () => restoreFromTrash(data.trashId, image)
+    if (image) {
+      showToast(t('toastDeleted'), {
+        actionLabel: t('toastEditAction'),
+        onAction: () => openPhotoInReview(image)
       });
     } else {
-      showToast(t('toastTrashed'));
+      showToast(t('toastDeleted'));
     }
   } catch (err) {
     console.warn('Photo could not be deleted:', err);
@@ -3421,25 +3627,54 @@ async function deletePhoto(card, photoId, options = {}) {
   }
 }
 
-// Undo path: moves the object back on the server and re-adds the card locally.
-async function restoreFromTrash(trashId, image) {
-  const key = 'restore:' + trashId;
-  if (pendingOps.has(key)) return;
-  pendingOps.add(key);
-  try {
-    const res = await fetch('/api/trash?id=' + encodeURIComponent(trashId), { method: 'POST' });
-    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
-    const data = res.status === 404 ? {} : await res.json().catch(() => ({}));
-    if (image && data.id) addToGallery(image, false, data.id);
-    else loadPhotosFromServer(); // 404-Fall: Zustand vom Server nachladen
-    refreshTrashCount();
-    showToast(t('toastRestored'));
-  } catch (err) {
-    console.warn('Photo could not be restored:', err);
-    showToast(t('toastRestoreError'), { error: true });
-  } finally {
-    pendingOps.delete(key);
-  }
+// Öffnet ein gelöschtes Foto erneut im Sticker-/Overlay-Screen. Es wird als
+// neue Aufnahme angelegt; erst „Annehmen“ übernimmt es wieder in die Galerie.
+function openPhotoInReview(imageUrl) {
+  if (!imageUrl || isCapturing || !photoSessionToken) return;
+  if (lightbox) { lightbox.remove(); lightbox = null; }
+
+  $gallery.style.display = 'none';
+  $camera.style.display = 'block';
+  $camera.style.opacity = '1';
+  if ($endScreen) $endScreen.hidden = true;
+  document.body.classList.remove('challenge-end-active');
+  if ($challengeEnd) $challengeEnd.hidden = true;
+  challengeEndPhotoId = null;
+  challengeEndChoice = null;
+  currentState = 'camera';
+  $camera.classList.remove('is-ended', 'is-reviewing', 'is-stamping', 'is-finishing');
+  setSideMenuOpen(false);
+  setBarMenuOpen(false);
+  setStampMenuOpen(false);
+  setCaptureOptionsOpen(false);
+  setControlsLocked(true);
+  setHomeMode('default');
+  syncCancelHome();
+
+  const existing = $camera.querySelector('.viewfinder img.stage-photo');
+  if (existing) existing.remove();
+  clearStickers();
+  currentOverlay = null;
+  lastStripLayout = null;
+  renderOverlayPreview();
+  currentFilter = 'standard';
+  applyFilterSelection();
+
+  // Neue Karte anlegen, damit Annehmen/Neu aufnehmen wie nach einer echten
+  // Aufnahme funktioniert. Der Upload läuft bereits im Hintergrund.
+  addToGallery(imageUrl);
+
+  const img = document.createElement('img');
+  img.className = 'stage-photo';
+  img.src = imageUrl;
+  img.style.cssText = `
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; background: #000; opacity: 1; border-radius: 0;
+    filter: grayscale(0%) contrast(1);
+  `;
+  $camera.querySelector('.viewfinder').appendChild(img);
+  hasPhoto = true;
+  showReview();
 }
 
 function removeCard(card) {
@@ -3462,20 +3697,49 @@ function removeCard(card) {
   renderSplashChain();
 }
 
-// Adds a delete button to a gallery card.
+// Der Mülleimer gehört an die sichtbare Bildecke, nicht an die Ecke der
+// 16:9-Kachel. Bei object-fit: contain liegen sonst schwarze Balken zwischen
+// Foto und Button, wodurch er planlos im Kartenrand zu schweben scheint.
+function positionGalleryDelete(card) {
+  const btn = card.querySelector('.gallery__delete');
+  const img = card.querySelector('img');
+  if (!btn || !img) return;
+  const cw = card.clientWidth;
+  const ch = card.clientHeight;
+  if (!cw || !ch || !img.naturalWidth || !img.naturalHeight) return;
+
+  const scale = Math.min(cw / img.naturalWidth, ch / img.naturalHeight);
+  const shownW = img.naturalWidth * scale;
+  const shownH = img.naturalHeight * scale;
+  const left = (cw - shownW) / 2;
+  const top = (ch - shownH) / 2;
+
+  // 10 px Abstand zur Bildkante, aber immer mindestens 8 px zur Kachel.
+  btn.style.top = Math.max(8, top + 10) + 'px';
+  btn.style.right = Math.max(8, left + 10) + 'px';
+}
+
+// Adds a delete button only to photos captured in the current session.
 function attachDelete(card, photoId) {
+  if (!photoSessionToken || !sessionPhotoIds.has(photoId)) return;
+  if (card.querySelector('.gallery__delete')) return;
   const btn = document.createElement('button');
   btn.className = 'gallery__delete';
   btn.type = 'button';
   btn.setAttribute('aria-label', t('deletePhotoAria'));
   btn.title = t('deletePhotoAria');
-  // Papierkorb statt ×: Die Aktion löscht, sie schließt nichts.
+  // Mülleimer statt ×: Die Aktion löscht das Foto endgültig.
   btn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"></path></svg>';
   btn.addEventListener('click', (e) => {
     e.stopPropagation();
     deletePhoto(card, photoId);
   });
   card.appendChild(btn);
+  positionGalleryDelete(card);
+  const img = card.querySelector('img');
+  if (img && !img.complete) {
+    img.addEventListener('load', () => positionGalleryDelete(card), { once: true });
+  }
 }
 
 // Galerie-Seitengröße kommt aus den Admin-Einstellungen (6/12/24).
@@ -3498,8 +3762,7 @@ function setLoadMoreBusy(busy) {
 function updateGalleryLoadMore() {
   if (!$galleryLoadMoreWrap || !$galleryLoadMore) return;
   const hasCards = !!$galleryGrid.querySelector('.gallery__card');
-  $galleryLoadMoreWrap.hidden = trashOpen
-    || !hasCards
+  $galleryLoadMoreWrap.hidden = !hasCards
     || (!photoHasMore && !photoPageLoading);
   $galleryLoadMore.disabled = photoPageLoading;
 }
@@ -3513,7 +3776,7 @@ function resetGalleryFeed() {
   photoHasMore = false;
   photoPageLoading = false;
   setPhotoCount(0);
-  $galleryEmpty.style.display = trashOpen ? 'none' : '';
+  $galleryEmpty.style.display = '';
   setLoadMoreBusy(false);
   updateGalleryLoadMore();
   updateChallengeCard();
@@ -3585,19 +3848,23 @@ function addToGallery(photoUrl, save = true, photoId = null, options = {}) {
   // Neue Aufnahmen kommen oben dazu; ältere Server-Seiten werden angehängt.
   const prepend = options.prepend === true || (options.prepend !== false && save);
   const countNew = options.count !== false;
+  const sessionForSave = photoSessionToken;
   let savePromise = null;
   if (save) {
     savePromise = savePhotoToServer(photoUrl).then((id) => {
       if (!id) return;
       card.dataset.id = id;
+      // Ein spät fertiger Upload darf nicht in eine neuere Sitzung rutschen.
+      if (sessionForSave && photoSessionToken === sessionForSave) {
+        sessionPhotoIds.add(id);
+      }
       if (card.isConnected) {
         attachDelete(card, id);
         // Keine Bestätigung hier: Der Gast entscheidet erst im Review
         // zwischen „Neu aufnehmen“ und „Speichern“.
       } else {
-        // Vor dem Speichern verworfen: endgültig löschen, wenn es ein
-        // Home-Abbruch war; sonst wie bisher in den Papierkorb.
-        deletePhoto(card, id, { permanent: card.dataset.discardPermanent === '1' });
+        // Vor dem Speichern verworfen: Gäste löschen endgültig.
+        deletePhoto(card, id);
       }
       if (lastPhoto && lastPhoto.card === card) lastPhoto.id = id;
       record.id = id;
@@ -3643,7 +3910,7 @@ function addToGallery(photoUrl, save = true, photoId = null, options = {}) {
   if (prepend) photoRecords.unshift(record);
   else photoRecords.push(record);
   card._photoRecord = record;
-  if (save) lastPhoto = { card, id: null, savePromise };
+  if (save) lastPhoto = { card, id: null, savePromise, capturedAt: Date.now() };
 
   if (countNew) {
     if (photoId) addPhotoIndexId(photoId);
@@ -3657,6 +3924,7 @@ function addToGallery(photoUrl, save = true, photoId = null, options = {}) {
       scale: [1, 1.08, 1], duration: 0.5, ease: 'elastic.out(1, 0.6)'
     });
   });
+  return card;
 }
 
 function openLightbox(photoUrl, photoId = null) {
@@ -3707,6 +3975,15 @@ function openLightbox(photoUrl, photoId = null) {
 // ============================================================
 //  STATE NAVIGATION
 // ============================================================
+let galleryDeleteRaf = 0;
+window.addEventListener('resize', () => {
+  if (galleryDeleteRaf) return;
+  galleryDeleteRaf = requestAnimationFrame(() => {
+    galleryDeleteRaf = 0;
+    $galleryGrid.querySelectorAll('.gallery__card').forEach(positionGalleryDelete);
+  });
+});
+
 function goTo(sectionName) {
   const sections = { splash: $splash, camera: $camera, gallery: $gallery };
   const target = sections[sectionName];
@@ -3724,6 +4001,15 @@ function goTo(sectionName) {
 
   currentState = sectionName;
   syncCancelHome();
+
+  if (sectionName === 'gallery') {
+    // Beim Öffnen ist die Galerie erst jetzt sichtbar geworden; vorher hatten
+    // die Kacheln keine Breite und der Mülleimer konnte nicht ausgerichtet
+    // werden.
+    requestAnimationFrame(() => {
+      $galleryGrid.querySelectorAll('.gallery__card').forEach(positionGalleryDelete);
+    });
+  }
 
   // Der Splash-Schalter (fest unten rechts) gehört zum Startbildschirm und
   // verschwindet danach — in der Kameraansicht sitzt der zweite Schalter in
@@ -3763,20 +4049,14 @@ function openGallery(source = null) {
     onComplete: () => {
       origin.style.display = 'none';
       goTo('gallery');
-      refreshTrashCount();
-      if ($galleryBack) $galleryBack.focus({ preventScroll: true });
     }
   });
 }
 
-// Zurück führt eine Ebene zurück: Papierkorb -> Galerie und Galerie -> der
-// Screen, von dem sie geöffnet wurde. Der Endscreen bleibt dabei erhalten.
+// Zurück führt die Galerie zu dem Screen, von dem sie geöffnet wurde.
+// Der Endscreen bleibt dabei erhalten.
 function closeGallery() {
   if (currentState !== 'gallery') return;
-  if (trashOpen) {
-    toggleTrash(false);
-    return;
-  }
 
   const backTo = galleryReturnState;
   gsap.to($gallery, {
@@ -3902,195 +4182,6 @@ function closeConfirm(result) {
 $confirmOk.addEventListener('click', () => closeConfirm(true));
 $confirmCancel.addEventListener('click', () => closeConfirm(false));
 $confirmModal.addEventListener('click', (e) => { if (e.target === $confirmModal) closeConfirm(false); });
-
-// ============================================================
-//  PAPIERKORB (trash view)
-// ============================================================
-const $trashToggle = document.getElementById('trashToggle');
-const $galleryBack = document.querySelector('.gallery__back');
-const $trashBadge = document.getElementById('trashBadge');
-const $trashView = document.getElementById('trashView');
-const $trashGrid = document.getElementById('trashGrid');
-const $trashEmpty = document.getElementById('trashEmpty');
-
-let trashOpen = false;
-let trashItems = []; // { id, image, expiresAt }
-let trashVersion = 0; // lokale Änderungen invalidieren noch laufende loadTrash-Antworten
-
-// Der Papierkorb ist eine eigene Ansicht: Titel und Rückweg müssen ihn
-// benennen, sonst bleibt oben weiter „Deine Fotos“ stehen.
-function syncGalleryContext() {
-  const title = document.getElementById('galleryTitle');
-  const back = document.getElementById('galleryBackLabel');
-  const toggle = document.getElementById('trashToggle');
-  if (title) title.textContent = t(trashOpen ? 'galleryTrash' : 'galleryTitle');
-  if (back) {
-    back.textContent = t(trashOpen ? 'trashBackShort' : 'galleryBack');
-    const btn = back.closest('button');
-    if (btn) btn.setAttribute('aria-label', t(trashOpen ? 'trashBackToPhotos' : 'galleryBack'));
-  }
-  // Im Papierkorb ist der Umschalter doppelt; der Zurück-Weg übernimmt.
-  if (toggle) toggle.hidden = trashOpen;
-}
-
-// Mülleimer-Zähler am Galerie-Header — erst ab 1 sichtbar (0 = Rauschen).
-// Zählt serverseitig ohne die Bilder selbst zu laden.
-function refreshTrashCount() {
-  fetch('/api/trash/count', { cache: 'no-store' })
-    .then((res) => {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-    .then((data) => {
-      $trashBadge.hidden = data.count < 1;
-      $trashBadge.textContent = String(data.count);
-    })
-    .catch(() => { /* Zähler ist optional — still ignorieren */ });
-}
-
-function toggleTrash(force = !trashOpen) {
-  // Der Umschalter verschwindet im Papierkorb. Tastaturfokus auf den
-  // sichtbaren Zurück-Weg legen, damit er nicht ins Leere fällt.
-  const moveFocus = !!force && document.activeElement === $trashToggle;
-  trashOpen = force;
-  $trashToggle.classList.toggle('active', trashOpen);
-  $trashView.hidden = !trashOpen;
-  $galleryGrid.style.display = trashOpen ? 'none' : '';
-  $galleryEmpty.style.display = trashOpen
-    ? 'none'
-    : ($galleryGrid.querySelector('.gallery__card') ? 'none' : '');
-  updateGalleryLoadMore();
-  syncGalleryContext();
-  if (moveFocus && $galleryBack) $galleryBack.focus({ preventScroll: true });
-  if (trashOpen) loadTrash();
-}
-
-function loadTrash() {
-  const version = trashVersion;
-  fetch('/api/trash', { cache: 'no-store' })
-    .then((res) => {
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      return res.json();
-    })
-    .then((items) => {
-      // Antwort veraltet? Zwischenzeitlich wurde lokal gelöscht/wiederhergestellt —
-      // sonst würde sie den aktuelleren Zustand überschreiben.
-      if (version !== trashVersion) return;
-      trashItems = items;
-      renderTrash();
-    })
-    .catch((err) => {
-      console.warn('Trash could not be loaded:', err);
-      showToast(t('trashLoadError'), { error: true });
-    });
-}
-
-function renderTrash() {
-  $trashGrid.innerHTML = '';
-  trashItems.forEach((item) => $trashGrid.appendChild(buildTrashCard(item)));
-  $trashEmpty.style.display = trashItems.length ? 'none' : '';
-}
-
-function trashDaysLeftLabel(expiresAt) {
-  if (!expiresAt) return '';
-  const daysLeft = Math.max(0, Math.ceil((expiresAt * 1000 - Date.now()) / 86400000));
-  return daysLeft === 1 ? t('trashDaysLeftOne') : t('trashDaysLeftMany', { n: daysLeft });
-}
-
-function buildTrashCard(item) {
-  const card = document.createElement('div');
-  card.className = 'trash__card';
-
-  const img = document.createElement('img');
-  img.src = item.image;
-  img.alt = t('trashImgAlt');
-  img.loading = 'lazy';
-  card.appendChild(img);
-
-  const meta = document.createElement('div');
-  meta.className = 'trash__meta';
-
-  const days = document.createElement('span');
-  days.className = 'trash__days';
-  days.textContent = trashDaysLeftLabel(item.expiresAt);
-  meta.appendChild(days);
-
-  const actions = document.createElement('div');
-  actions.className = 'trash__actions';
-
-  const restoreBtn = document.createElement('button');
-  restoreBtn.className = 'trash__btn trash__btn--restore';
-  restoreBtn.type = 'button';
-  restoreBtn.textContent = t('trashRestoreBtn');
-  restoreBtn.addEventListener('click', () => restoreTrashedPhoto(item));
-  actions.appendChild(restoreBtn);
-
-  const purgeBtn = document.createElement('button');
-  purgeBtn.className = 'trash__btn trash__btn--purge';
-  purgeBtn.type = 'button';
-  purgeBtn.textContent = t('trashPurgeBtn');
-  // Nur die wirklich zerstörerische Aktion fragt nach — das Trash-Löschen
-  // selbst bleibt ohne Dialog und über den Toast rückgängig machbar.
-  purgeBtn.addEventListener('click', async () => {
-    if (await askConfirm({ warningSound: true })) purgeTrashedPhoto(item);
-  });
-  actions.appendChild(purgeBtn);
-
-  meta.appendChild(actions);
-  card.appendChild(meta);
-  return card;
-}
-
-async function restoreTrashedPhoto(item) {
-  const key = 'restore:' + item.id;
-  if (pendingOps.has(key)) return;
-  pendingOps.add(key);
-  // Karte sofort entfernen (optimistisch) — verhindert auch Doppelklick-Racen
-  trashVersion++;
-  trashItems = trashItems.filter((t) => t.id !== item.id);
-  renderTrash();
-  try {
-    const res = await fetch('/api/trash?id=' + encodeURIComponent(item.id), { method: 'POST' });
-    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
-    const data = res.status === 404 ? {} : await res.json().catch(() => ({}));
-    if (data.id) addToGallery(item.image, false, data.id);
-    else loadPhotosFromServer(); // 404-Fall: Zustand vom Server nachladen
-    refreshTrashCount();
-    showToast(t('toastRestored'));
-  } catch (err) {
-    trashVersion++;
-    trashItems.push(item); // optimistic removal zurückrollen
-    renderTrash();
-    console.warn('Photo could not be restored:', err);
-    showToast(t('toastRestoreError2'), { error: true });
-  } finally {
-    pendingOps.delete(key);
-  }
-}
-
-async function purgeTrashedPhoto(item) {
-  const key = 'purge:' + item.id;
-  if (pendingOps.has(key)) return;
-  pendingOps.add(key);
-  trashVersion++;
-  trashItems = trashItems.filter((t) => t.id !== item.id);
-  renderTrash();
-  try {
-    const res = await fetch('/api/trash?id=' + encodeURIComponent(item.id), { method: 'DELETE' });
-    // 404 = bereits endgültig gelöscht — gilt ebenfalls als Erfolg
-    if (!res.ok && res.status !== 404) throw new Error('HTTP ' + res.status);
-    refreshTrashCount();
-    showToast(t('toastPurged'));
-  } catch (err) {
-    trashVersion++;
-    trashItems.push(item); // optimistic removal zurückrollen
-    renderTrash();
-    console.warn('Photo could not be purged:', err);
-    showToast(t('toastPurgeError'), { error: true });
-  } finally {
-    pendingOps.delete(key);
-  }
-}
 
 // ============================================================
 //  SOUND
@@ -4629,12 +4720,7 @@ document.querySelectorAll('[data-action]').forEach((el) => {
         openGallery(el.dataset.gallerySource || null);
         break;
       case 'back-camera':
-        // Back kehrt genau EINE Ebene zurück: Papierkorb -> Galerie -> Ursprung.
-        // Ein Sprung über zwei Ebenen verstößt gegen das gelernte Back-Modell.
         closeGallery();
-        break;
-      case 'toggle-trash':
-        if (currentState === 'gallery') toggleTrash();
         break;
       case 'retry-camera':
         initCamera({ retry: true });
@@ -4662,6 +4748,16 @@ const $captureOptionsToggle = document.getElementById('captureOptionsToggle');
 const $sideRail = document.getElementById('sideRail');
 const $endScreen = document.getElementById('endScreen');
 const $cancelHome = document.getElementById('cancelHome');
+const $challengeEnd = document.getElementById('challengeEnd');
+const $challengeEndTheme = document.getElementById('challengeEndTheme');
+const $challengeEndQuestion = document.getElementById('challengeEndQuestion');
+const $challengeEndStatus = document.getElementById('challengeEndStatus');
+const $challengeEndChoices = document.getElementById('challengeEndChoices');
+const $challengeEndQrWrap = document.getElementById('challengeEndQrWrap');
+const $challengeEndQr = document.getElementById('challengeEndQr');
+let challengeEndPhotoId = null;
+let challengeEndChoice = null;
+let challengeEndBusy = false;
 
 // Der Home-Button wird nach Aufnahmeaktionen programmatisch fokussiert.
 // Nur bei Tastaturbedienung soll daraus ein sichtbarer Fokusring werden;
@@ -4781,6 +4877,7 @@ function renderStampPanel() {
       btn.setAttribute('aria-label', t(sticker.ariaKey));
       const source = $stickerPalette.querySelector('[data-sticker="' + sticker.kind + '"] svg');
       if (source) btn.appendChild(source.cloneNode(true));
+      else if (sticker.icon) btn.insertAdjacentHTML('beforeend', sticker.icon);
       btn.addEventListener('click', () => {
         if (btn.dataset.dragged === '1') { delete btn.dataset.dragged; return; }
         addSticker(sticker.kind);
@@ -4834,10 +4931,8 @@ function setStampMenuOpen(open) {
     if (list) list.scrollLeft = list.scrollWidth - list.clientWidth;
     stampScrollHintTimer = window.setTimeout(() => {
       stampScrollHintTimer = 0;
-      if (!stampMenuIsOpen() || stampScrollDemoShown) return;
-      if (hintListScroll(stampListEl(), 70, 40)) {
-        stampScrollDemoShown = true;
-        playListScrollHint(stampListEl(), swipeHint, false, -1);
+      if (playListScrollHint(stampListEl(), swipeHint, 'stamp', -1)) {
+        hintListScroll(stampListEl());
       }
     }, 460);
   }
@@ -4968,6 +5063,11 @@ function beginMenuDrag(btn, payload, ev) {
       span.className = 'bar-tile__glyph';
       span.textContent = payload.glyph;
       ghost.appendChild(span);
+    } else if (textStickerSpec(payload.sticker)) {
+      const img = document.createElement('img');
+      img.src = stickerSvgUrl(payload.sticker);
+      img.alt = '';
+      ghost.appendChild(img);
     } else {
       const source = $stickerPalette.querySelector('[data-sticker="' + payload.sticker + '"] svg');
       if (source) ghost.appendChild(source.cloneNode(true));
@@ -5339,9 +5439,9 @@ function syncBarToggleLabel() {
 // Rand neu sichtbare Bereich wird nicht fertig gezeichnet (rechts).
 var filterScrollHintTimer = 0;
 var stampScrollHintTimer = 0;
-var filterScrollDemoShown = false;
-var stampScrollDemoShown = false;
-var frameScrollDemoShown = false;
+// Der Wisch-Hinweis ist eine einmalige Orientierungshilfe: Filter, Rahmen
+// und Sticker zeigen ihn pro Gast-Erlebnis nur beim ersten Öffnen.
+var listScrollHintsShown = { filter: false, overlay: false, stamp: false };
 var filterScrollPulse = 0;
 var filterScrollPulseCleanup = null;
 
@@ -5414,20 +5514,41 @@ function hideListScrollHint(hint) {
   if (hint) hint.classList.remove('is-playing');
 }
 
-function playListScrollHint(list, hint, always = false, direction = 1) {
-  if (!list || !hint) return;
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-  if (!always && list.scrollWidth <= list.clientWidth + 2) return;
+// Beim nächsten Gast-Erlebnis dürfen die Hinweise wieder einmal erscheinen.
+function resetListScrollHints() {
+  listScrollHintsShown.filter = false;
+  listScrollHintsShown.overlay = false;
+  listScrollHintsShown.stamp = false;
+  if (filterScrollHintTimer) {
+    window.clearTimeout(filterScrollHintTimer);
+    filterScrollHintTimer = 0;
+  }
+  if (stampScrollHintTimer) {
+    window.clearTimeout(stampScrollHintTimer);
+    stampScrollHintTimer = 0;
+  }
+  hideListScrollHint(document.getElementById('barSwipeHint'));
+  hideListScrollHint(document.getElementById('stampSwipeHint'));
+  endFilterScrollPulse();
+}
+
+function playListScrollHint(list, hint, onceKey, direction = 1) {
+  if (!list || !hint) return false;
+  if (onceKey && listScrollHintsShown[onceKey]) return false;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  if (list.scrollWidth <= list.clientWidth + 2) return false;
   // Weg an der Bandbreite ausrichten: je breiter die Pille, desto weiter
   // fährt der Finger, aber gedeckelt, damit er in der Pille bleibt.
   const travel = Math.round(Math.max(120, Math.min(300, list.clientWidth * 0.42)));
   hint.style.setProperty('--hint-travel', travel * direction + 'px');
   hint.classList.remove('is-playing');
-  // Reflow erzwingen, damit die Animation bei jedem Öffnen neu startet.
+  // Reflow erzwingen, damit die Animation beim ersten Anzeigen startet.
   void hint.offsetWidth;
   hint.classList.add('is-playing');
+  if (onceKey) listScrollHintsShown[onceKey] = true;
   window.clearTimeout(filterHintHideTimer);
   filterHintHideTimer = window.setTimeout(() => hideListScrollHint(hint), 2250);
+  return true;
 }
 
 // Menü und Optionen sind Geschwister: Es ist immer nur eines offen.
@@ -5472,21 +5593,19 @@ function setBarMenuOpen(open) {
   }
   if (next) {
     updateBarMenuSelection();
+    // Filter und Rahmen teilen sich das Band, zählen für den einmaligen
+    // Hinweis aber getrennt.
+    const hintKey = barMenuShowsOverlays() ? 'overlay' : 'filter';
     // Erst nach dem Aufklappen messen: während die Pille wächst, ist die
     // sichtbare Breite des Bandes noch nicht die endgültige.
-    filterScrollHintTimer = window.setTimeout(() => {
-      filterScrollHintTimer = 0;
-      if (!barMenuIsOpen()) return;
-      updateFrameScrollEdges();
-      const isFrameMenu = barMenuShowsOverlays();
-      const alreadyShown = isFrameMenu ? frameScrollDemoShown : filterScrollDemoShown;
-      if (alreadyShown) return;
-      if (hintListScroll(barMenuListEl())) {
-        if (isFrameMenu) frameScrollDemoShown = true;
-        else filterScrollDemoShown = true;
-        playListScrollHint(barMenuListEl(), filterHint);
-      }
-    }, 460);
+    if (!listScrollHintsShown[hintKey]) {
+      filterScrollHintTimer = window.setTimeout(() => {
+        filterScrollHintTimer = 0;
+        if (playListScrollHint(barMenuListEl(), filterHint, hintKey)) {
+          hintListScroll(barMenuListEl());
+        }
+      }, 460);
+    }
   }
 }
 
@@ -5549,6 +5668,32 @@ const SHAPE_STICKERS = [
   { kind: 'krone', labelKey: 'stickerKrone', ariaKey: 'stickerKroneAria' },
   { kind: 'brille', labelKey: 'stickerBrille', ariaKey: 'stickerBrilleAria' },
   { kind: 'hut', labelKey: 'stickerHut', ariaKey: 'stickerHutAria' }
+];
+const TEXT_STICKERS = [
+  {
+    kind: 'date',
+    labelKey: 'stickerDate',
+    ariaKey: 'stickerDateAria',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"></rect><path d="M8 3v4M16 3v4M3 10h18"></path><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01"></path></svg>',
+    w: 30,
+    x: 28,
+    y: 82,
+    svgWidth: 430,
+    svgHeight: 104,
+    fontSize: 52
+  },
+  {
+    kind: 'time',
+    labelKey: 'stickerTime',
+    ariaKey: 'stickerTimeAria',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"></circle><path d="M12 7v5l3.5 2"></path></svg>',
+    w: 18,
+    x: 72,
+    y: 82,
+    svgWidth: 250,
+    svgHeight: 104,
+    fontSize: 58
+  }
 ];
 
 function sideTabElementId(context) {
@@ -5706,7 +5851,7 @@ const STAMPS = {
 const STICKER_CATEGORIES = [
   { id: 'reactions', label: 'Reactions', items: STAMPS.emoji.slice(0, 3) },
   { id: 'accessories', label: 'Accessoires', items: SHAPE_STICKERS },
-  { id: 'stamps', label: 'Stempel', items: [] }
+  { id: 'stamps', label: 'Stempel', items: TEXT_STICKERS }
 ];
 
 function photoTimestamp(id) {
@@ -5738,25 +5883,52 @@ function removePhotoIndexId(id) {
   if (index !== -1) photoIndexIds.splice(index, 1);
 }
 
-function themeKeyForNow() {
-  const month = new Date().getMonth();
-  if (month === 9) return 'themeHalloween';
-  if (month === 11) return 'themeWinter';
-  return 'themeDefault';
+const MONTH_THEME_KEYS = [
+  'themeJan', 'themeFeb', 'themeMar', 'themeApr', 'themeMay', 'themeJun',
+  'themeJul', 'themeAug', 'themeSep', 'themeOct', 'themeNov', 'themeDec'
+];
+
+function themeKeyForNow(month = new Date().getMonth()) {
+  return MONTH_THEME_KEYS[month] || 'themeDefault';
+}
+
+async function refreshChallengeSummary() {
+  try {
+    const res = await fetch('/api/challenge/summary', { cache: 'no-store' });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const data = await res.json();
+    challengeStatus = {
+      enabled: data.enabled === true,
+      configured: data.configured === true,
+      online: data.online === true,
+      entries: Math.max(0, Number(data.entries) || 0),
+      votes: Math.max(0, Number(data.votes) || 0),
+      goal: Number(data.goal) || appSettings.challengeMonthlyGoal,
+      location: data.location === 'coburg' ? 'coburg' : 'lcc',
+      appUrl: normalizeChallengeUrl(data.appUrl),
+      month: typeof data.month === 'string' ? data.month : ''
+    };
+  } catch (err) {
+    // Die Karte bleibt sichtbar, zeigt aber keinen erfundenen Zähler an.
+    challengeStatus.online = false;
+  }
+  updateChallengeCard();
 }
 
 function updateChallengeCard() {
   const countEl = document.getElementById('challengeCount');
   if (!countEl) return;
+  const configured = challengeStatus.configured
+    || (appSettings.challengeAppUrl && appSettings.challengeApiKeySet);
+  const active = appSettings.challengeEnabled && configured;
+  document.body.classList.toggle('challenge-active', active);
+  if (!active) return;
+
   const now = new Date();
-  const ids = photoIndexIds.length
-    ? photoIndexIds
-    : photoRecords.map((record) => record.id).filter(Boolean);
-  const count = ids.filter(photoIsCurrentMonth).length;
   const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
-  countEl.textContent = String(count);
+  countEl.textContent = challengeStatus.online ? String(challengeStatus.entries) : '—';
   const goal = document.getElementById('challengeGoal');
-  if (goal) goal.textContent = '42';
+  if (goal) goal.textContent = String(challengeStatus.goal || appSettings.challengeMonthlyGoal || 42);
   const unit = document.getElementById('challengePhotos');
   if (unit) unit.textContent = t('challengePhotos');
   const days = document.getElementById('challengeDays');
@@ -5991,6 +6163,24 @@ function renderSideMenu() {
     if (!hasPhoto) {
       appendSideEmpty('stickersNeedPhoto');
     } else {
+      appendSideGroup('sticker-text', 'stickerTextGroup', (group) => {
+        TEXT_STICKERS.forEach((sticker) => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'side-menu__item side-menu__item--textstamp';
+          btn.setAttribute('aria-label', t(sticker.ariaKey));
+          const glyph = document.createElement('span');
+          glyph.className = 'side-menu__glyph';
+          glyph.innerHTML = sticker.icon;
+          btn.appendChild(glyph);
+          const label = document.createElement('span');
+          label.className = 'side-menu__label';
+          label.textContent = t(sticker.labelKey);
+          btn.appendChild(label);
+          btn.addEventListener('click', () => addSticker(sticker.kind));
+          group.appendChild(btn);
+        });
+      });
       appendSideGroup('sticker-shapes', 'stickerShapes', (group) => {
         SHAPE_STICKERS.forEach((sticker) => {
           const btn = document.createElement('button');
@@ -6244,12 +6434,119 @@ function closeStampMode(options = {}) {
   syncBarToggleLabel();
 }
 
+function challengeLocationLabel() {
+  const location = challengeStatus.location || appSettings.challengeLocation;
+  return location === 'coburg' ? 'Coburg' : 'LCC';
+}
+
+// Baut die Challenge-Karte am Endscreen für das gerade bestätigte Foto auf.
+// Die Entscheidung gilt pro Foto; ein neues Foto bekommt wieder Ja/Nein.
+function setupChallengeEnd() {
+  const panel = $challengeEnd;
+  if (!panel) return;
+  const photoId = lastPhoto && lastPhoto.id ? lastPhoto.id : null;
+  const configured = challengeStatus.configured
+    || (appSettings.challengeAppUrl && appSettings.challengeApiKeySet);
+  const active = appSettings.challengeEnabled && configured && !!photoId;
+  challengeEndPhotoId = photoId;
+  challengeEndChoice = null;
+  challengeEndBusy = false;
+  panel.classList.remove('is-submitted', 'is-declined', 'is-submitting');
+  panel.hidden = !active;
+  document.body.classList.toggle('challenge-end-active', active);
+  if (!active) return;
+
+  if ($challengeEndChoices) $challengeEndChoices.hidden = false;
+  panel.querySelectorAll('[data-challenge-choice]').forEach((btn) => { btn.disabled = false; });
+  if ($challengeEndTheme) $challengeEndTheme.textContent = t(themeKeyForNow());
+  if ($challengeEndQuestion) {
+    $challengeEndQuestion.textContent = t('endChallengeQuestion', { location: challengeLocationLabel() });
+  }
+  if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeHint');
+
+  const qrUrl = challengeStatus.appUrl || appSettings.challengeAppUrl;
+  if ($challengeEndQrWrap && $challengeEndQr) {
+    $challengeEndQrWrap.hidden = !qrUrl;
+    if (qrUrl) {
+      renderQrInto($challengeEndQr, qrUrl);
+      const svg = $challengeEndQr.querySelector('svg');
+      if (svg) svg.setAttribute('aria-label', t('endChallengeQrAria'));
+    }
+  }
+}
+
+async function submitChallengeEnd() {
+  if (challengeEndBusy || challengeEndChoice || !challengeEndPhotoId) return;
+  if (!appSettings.challengeEnabled || !appSettings.challengeApiKeySet) return;
+  challengeEndBusy = true;
+  challengeEndChoice = 'yes';
+  const panel = $challengeEnd;
+  if (panel) {
+    panel.classList.add('is-submitting');
+    panel.querySelectorAll('[data-challenge-choice]').forEach((btn) => { btn.disabled = true; });
+  }
+  if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeSubmitting');
+
+  try {
+    const res = await fetch('/api/challenge/entries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...photoSessionHeaders() },
+      body: JSON.stringify({ photoId: challengeEndPhotoId })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+
+    challengeEndChoice = 'submitted';
+    challengeEndBusy = false;
+    if (panel) {
+      panel.classList.remove('is-submitting');
+      panel.classList.add('is-submitted');
+    }
+    if ($challengeEndChoices) $challengeEndChoices.hidden = true;
+    if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeSubmitted');
+    if (data.duplicate !== true) {
+      challengeStatus.entries += 1;
+      challengeStatus.online = true;
+      updateChallengeCard();
+    }
+    refreshChallengeSummary();
+  } catch (err) {
+    console.warn('Challenge submission failed:', err);
+    challengeEndChoice = null;
+    challengeEndBusy = false;
+    if (panel) {
+      panel.classList.remove('is-submitting');
+      panel.querySelectorAll('[data-challenge-choice]').forEach((btn) => { btn.disabled = false; });
+    }
+    if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeError');
+    showToast(t('endChallengeError'), { error: true });
+  }
+}
+
+function declineChallengeEnd() {
+  if (challengeEndBusy || challengeEndChoice) return;
+  challengeEndChoice = 'no';
+  if ($challengeEndChoices) $challengeEndChoices.hidden = true;
+  if ($challengeEnd) $challengeEnd.classList.add('is-declined');
+  if ($challengeEndStatus) $challengeEndStatus.textContent = t('endChallengeDeclined');
+}
+
+document.querySelectorAll('[data-challenge-choice]').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.challengeChoice === 'yes') submitChallengeEnd();
+    else declineChallengeEnd();
+  });
+});
+
 function showEndScreen(url) {
   // Wurde in der Zwischenzeit zum Start zurückgekehrt (oder die Galerie
   // geöffnet), darf der alte Endscreen nicht mehr auftauchen.
   $camera.classList.remove('is-finishing');
   if (currentState !== 'camera') return;
   endPhotoUrl = url;
+  // Druckerstatus schon vorwärmen, damit der Druck-Button später schnell
+  // reagiert (die PowerShell-Abfrage wird serverseitig 30 s gecacht).
+  fetch('/api/printer', { cache: 'no-store' }).catch(() => {});
   const wrap = document.getElementById('endPhoto');
   if (wrap) {
     wrap.innerHTML = '';
@@ -6259,6 +6556,7 @@ function showEndScreen(url) {
     wrap.appendChild(img);
   }
   if ($endScreen) $endScreen.hidden = false;
+  setupChallengeEnd();
   setSideMenuOpen(false);
   setBarMenuOpen(false);
   setStampMenuOpen(false);
@@ -6270,6 +6568,14 @@ function showEndScreen(url) {
 }
 
 function returnToIdle(options = {}) {
+  endPhotoSession();
+  document.body.classList.remove('challenge-end-active');
+  if ($challengeEnd) $challengeEnd.hidden = true;
+  challengeEndPhotoId = null;
+  challengeEndChoice = null;
+  // Der Startbildschirm beginnt ein neues Gast-Erlebnis: Beim nächsten
+  // Öffnen zeigen Filter, Rahmen und Sticker ihren Hinweis wieder einmal.
+  resetListScrollHints();
   resetGuestCaptureSettings({ ...options, preserveSound: true });
   galleryReturnState = 'camera';
   if ($endScreen) $endScreen.hidden = true;
@@ -6295,6 +6601,7 @@ function returnToIdle(options = {}) {
   if ($splashLang) $splashLang.hidden = false;
   applyLanguage(defaultLang);
   updateChallengeCard();
+  refreshChallengeSummary();
   renderSplashChain();
 }
 
@@ -6305,6 +6612,7 @@ async function shareEndPhoto() {
     const file = new File([blob], brandFileBase() + '.jpg', { type: blob.type || 'image/jpeg' });
     if (navigator.canShare && navigator.canShare({ files: [file] })) {
       await navigator.share({ files: [file], title: appSettings.brandName });
+      trackUsageEvent('share');
       return;
     }
   } catch (err) {
@@ -6316,22 +6624,130 @@ async function shareEndPhoto() {
   document.body.appendChild(link);
   link.click();
   link.remove();
+  trackUsageEvent('download');
   showToast(t('toastDownloaded'));
 }
 
+// Druckt über einen unsichtbaren iframe. So öffnet sich weder ein neuer Tab
+// noch ein sichtbares Fenster. Den System-Druckdialog kann eine Webseite
+// nicht selbst unterdrücken; im Kioskmodus erledigt das der Browserstart mit
+// --kiosk-printing (siehe Fotobox-Kiosk.cmd).
 function printEndPhoto() {
   if (!endPhotoUrl) return;
-  const win = window.open('', '_blank');
-  if (!win) {
-    showToast(t('toastPrintBlocked'), { error: true });
-    return;
-  }
-  win.document.write('<!doctype html><html><head><title>' + appSettings.brandName + '</title><style>'
+
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.setAttribute('tabindex', '-1');
+  // Nicht display:none, sonst druckt Chrome gelegentlich eine leere Seite.
+  // Deshalb nur außerhalb des sichtbaren Bereichs platzieren.
+  frame.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;height:1123px;'
+    + 'border:0;pointer-events:none;';
+  document.body.appendChild(frame);
+
+  let cleanupTimer = null;
+  let loadTimer = null;
+  let started = false;
+  const cleanup = () => {
+    if (cleanupTimer) window.clearTimeout(cleanupTimer);
+    if (loadTimer) window.clearTimeout(loadTimer);
+    if (frame.parentNode) frame.parentNode.removeChild(frame);
+  };
+
+  const doc = frame.contentWindow.document;
+  doc.open();
+  doc.write('<!doctype html><html><head><title>' + appSettings.brandName + '</title><style>'
+    + '@page{margin:0}'
     + 'html,body{margin:0;height:100%;background:#fff}'
     + 'body{display:flex;align-items:center;justify-content:center}'
     + 'img{max-width:100%;max-height:100vh;object-fit:contain}'
-    + '</style></head><body><img src="' + endPhotoUrl + '" onload="window.print()"></body></html>');
-  win.document.close();
+    + '</style></head><body><img alt="" src="' + endPhotoUrl + '"></body></html>');
+  doc.close();
+
+  const img = doc.querySelector('img');
+  const startPrint = () => {
+    if (started) return;
+    started = true;
+    if (loadTimer) window.clearTimeout(loadTimer);
+    // Kurz warten, damit das Bild fertig layoutet ist, bevor gedruckt wird.
+    window.setTimeout(() => {
+      // Nach dem Druck aufräumen; der Fallback greift, falls afterprint
+      // im Kioskmodus nicht ausgelöst wird.
+      try {
+        frame.contentWindow.addEventListener('afterprint', () => window.setTimeout(cleanup, 150));
+      } catch (err) {
+        /* ignore */
+      }
+      try {
+        frame.contentWindow.print();
+      } catch (err) {
+        /* Druck nicht verfügbar */
+      }
+      cleanupTimer = window.setTimeout(cleanup, 60000);
+    }, 60);
+  };
+
+  // Ein kaputtes Bild ist laut complete=true ebenfalls "fertig" — dann darf
+  // nicht gedruckt werden, sonst käme eine leere Seite aus dem Drucker.
+  if (img && img.complete && img.naturalWidth > 0) {
+    startPrint();
+  } else if (img) {
+    img.addEventListener('load', startPrint, { once: true });
+    img.addEventListener('error', cleanup, { once: true });
+    // Falls das Laden hängt, den unsichtbaren iframe wieder entfernen.
+    loadTimer = window.setTimeout(cleanup, 15000);
+  } else {
+    cleanup();
+  }
+
+  trackUsageEvent('print');
+}
+
+// Prüft vor dem Druck, ob überhaupt ein echter Drucker als Standard gesetzt
+// ist. Ein virtueller PDF-Drucker würde sonst den Windows-Speicherdialog
+// öffnen — dann lieber gar nicht drucken und klar Bescheid sagen.
+let printCheckInFlight = false;
+
+async function startPrintFlow() {
+  if (!endPhotoUrl || printCheckInFlight) return;
+  printCheckInFlight = true;
+
+  let info = null;
+  try {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 5000);
+    const res = await fetch('/api/printer', { cache: 'no-store', signal: controller.signal });
+    window.clearTimeout(timer);
+    if (res.ok) info = await res.json();
+  } catch (err) {
+    /* unten als unbekannter Status behandelt */
+  } finally {
+    printCheckInFlight = false;
+  }
+
+  if (!info || info.error) {
+    showToast(t('toastPrinterUnknown'), { error: true, duration: 6000 });
+    return;
+  }
+  // Auf Nicht-Windows-Servern gibt es keine Druckerabfrage — dort wie bisher
+  // den Browser drucken lassen, statt das Drucken pauschal zu blockieren.
+  if (info.supported === false) {
+    printEndPhoto();
+    return;
+  }
+  if (!info.printer) {
+    showToast(t('toastNoPrinter'), { error: true, duration: 6000 });
+    return;
+  }
+  if (info.virtual) {
+    showToast(t('toastVirtualPrinter').replace('{name}', info.printer), { error: true, duration: 6000 });
+    return;
+  }
+  if (info.offline) {
+    showToast(t('toastPrinterOffline').replace('{name}', info.printer), { error: true, duration: 6000 });
+    return;
+  }
+
+  printEndPhoto();
 }
 
 async function completePhotoSession() {
@@ -6457,7 +6873,7 @@ document.querySelectorAll('.endscreen__action').forEach((btn) => {
     } else if (btn.dataset.end === 'insta') {
       shareEndPhoto();
     } else if (btn.dataset.end === 'print') {
-      printEndPhoto();
+      startPrintFlow();
     } else if (btn.dataset.end === 'gallery') {
       openGallery('end');
     }
@@ -6574,6 +6990,7 @@ window.addEventListener('load', async () => {
   loadPhotosFromServer();
   loadStreak();
   updateChallengeCard();
+  refreshChallengeSummary();
   renderSplashChain();
   if (isKioskLayout()) openSideMenu('filter');
 
@@ -6692,7 +7109,6 @@ window.addEventListener('load', async () => {
       if (!$confirmModal.hidden) { closeConfirm(false); return; }
       if (!$endScreen.hidden) { returnToIdle(); return; }
       if ($camera.classList.contains('is-reviewing')) { retakePhoto(); return; }
-      if (trashOpen) { toggleTrash(false); return; }
       if (lightbox) { lightbox.remove(); lightbox = null; }
       if (currentState === 'gallery') {
         closeGallery();
@@ -6796,7 +7212,6 @@ function currentIdleStateKey() {
   if ($qrModal && !$qrModal.hidden) return 'qr';
   if ($confirmModal && !$confirmModal.hidden) return 'confirm';
   if (lightbox) return 'lightbox';
-  if (trashOpen) return 'trash';
   if (currentState === 'gallery') return 'gallery';
   if ($endScreen && !$endScreen.hidden) return 'end';
   if ($camera.classList.contains('is-reviewing') || $camera.classList.contains('is-stamping')) return 'review';

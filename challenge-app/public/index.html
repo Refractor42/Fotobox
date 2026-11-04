@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#0d0d0d" />
+  <meta name="description" content="SnapBox Monats-Challenge: LCC gegen Coburg. Fotos ansehen, liken und den Pokal verfolgen." />
+  <title>SnapBox Challenge — LCC vs. Coburg</title>
+  <link rel="stylesheet" href="/app.css" />
+</head>
+<body>
+  <a class="skip-link" href="#gallery">Zur Galerie springen</a>
+
+  <header class="hero">
+    <div class="hero__top">
+      <p class="brand"><span class="brand__mark" aria-hidden="true">S</span> SnapBox</p>
+      <p class="eyebrow">Monats-Challenge</p>
+    </div>
+    <h1 class="hero__title">LCC <span>vs.</span> Coburg</h1>
+    <p class="hero__theme" id="theme">&nbsp;</p>
+    <p class="hero__month" id="monthLabel">&nbsp;</p>
+  </header>
+
+  <main class="shell">
+    <section class="scoreboard" aria-labelledby="scoreTitle">
+      <div class="section-heading">
+        <div>
+          <h2 id="scoreTitle">Punktestand</h2>
+          <p class="section-sub">Punkte = Challenge-Fotos + Likes</p>
+        </div>
+        <span class="live-badge" id="liveBadge">Live</span>
+      </div>
+
+      <div class="duel">
+        <article class="location-card location-card--lcc" id="cardLcc">
+          <div class="location-card__head">
+            <span class="location-dot" aria-hidden="true"></span>
+            <h3>LCC</h3>
+            <span class="lead-badge" id="leadLcc" hidden>Führt</span>
+          </div>
+          <p class="location-card__score"><span id="scoreLcc">0</span><small>Punkte</small></p>
+          <dl class="location-card__stats">
+            <div><dt>Fotos</dt><dd id="entriesLcc">0</dd></div>
+            <div><dt>Likes</dt><dd id="likesLcc">0</dd></div>
+          </dl>
+          <div class="bar" aria-hidden="true"><span id="barLcc"></span></div>
+        </article>
+
+        <p class="duel__vs" aria-hidden="true">VS</p>
+
+        <article class="location-card location-card--coburg" id="cardCoburg">
+          <div class="location-card__head">
+            <span class="location-dot" aria-hidden="true"></span>
+            <h3>Coburg</h3>
+            <span class="lead-badge" id="leadCoburg" hidden>Führt</span>
+          </div>
+          <p class="location-card__score"><span id="scoreCoburg">0</span><small>Punkte</small></p>
+          <dl class="location-card__stats">
+            <div><dt>Fotos</dt><dd id="entriesCoburg">0</dd></div>
+            <div><dt>Likes</dt><dd id="likesCoburg">0</dd></div>
+          </dl>
+          <div class="bar" aria-hidden="true"><span id="barCoburg"></span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="gallery-section" id="gallery" aria-labelledby="galleryTitle">
+      <div class="section-heading section-heading--wrap">
+        <div>
+          <h2 id="galleryTitle">Challenge-Galerie</h2>
+          <p class="section-sub" id="gallerySub">Ein Like pro Foto und Gerät.</p>
+        </div>
+        <div class="gallery-tools">
+          <label class="month-field" for="monthSelect">Monat</label>
+          <select id="monthSelect" class="month-select" aria-label="Monat wählen"></select>
+          <button class="icon-button" id="refreshBtn" type="button" aria-label="Galerie aktualisieren" title="Aktualisieren">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"></path>
+              <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <div class="gallery-state" id="galleryState" role="status" aria-live="polite">
+        <span class="spinner" aria-hidden="true"></span>
+        <p>Galerie wird geladen…</p>
+      </div>
+      <div class="gallery" id="galleryGrid"></div>
+    </section>
+
+    <section class="trophies" aria-labelledby="trophiesTitle">
+      <div class="section-heading">
+        <div>
+          <h2 id="trophiesTitle">Wall of Trophies</h2>
+          <p class="section-sub">Jeder gewonnene Monat bleibt für immer.</p>
+        </div>
+        <span class="trophy-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"></path>
+            <path d="M8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3"></path>
+            <path d="M12 13v4M9 21h6M10 17h4"></path>
+          </svg>
+        </span>
+      </div>
+      <div class="trophy-grid" id="trophyGrid"></div>
+    </section>
+
+    <footer class="footer">
+      <p>Hier erscheinen nur Fotos, die auf der Fotobox ausdrücklich für die Challenge freigegeben wurden.</p>
+      <p>Kein Login nötig. Deine Likes werden nur auf diesem Gerät gezählt.</p>
+    </footer>
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
