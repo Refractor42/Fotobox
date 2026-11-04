@@ -1997,7 +1997,7 @@
         <div class="setting-row">
           <div class="setting-row__copy">
             <span class="setting-row__title">Filter anzeigen</span>
-            <p class="setting-row__desc" id="filtersEnabledDesc">Gesichtsfilter, Farbfilter und die Filter-Werkzeuge werden Gästen angezeigt.</p>
+            <p class="setting-row__desc">Gesichtsfilter, Farbfilter und die Filter-Werkzeuge werden Gästen angezeigt.</p>
           </div>
           <div class="setting-control">
             <button class="switch" id="filtersEnabledToggle" type="button" role="switch" aria-checked="true">
@@ -2010,7 +2010,7 @@
         <div class="setting-row">
           <div class="setting-row__copy">
             <span class="setting-row__title">Sticker anzeigen</span>
-            <p class="setting-row__desc" id="stickersEnabledDesc">Sticker-Auswahl und Sticker-Werkzeuge werden Gästen angezeigt.</p>
+            <p class="setting-row__desc">Sticker-Auswahl und Sticker-Werkzeuge werden Gästen angezeigt.</p>
           </div>
           <div class="setting-control">
             <button class="switch" id="stickersEnabledToggle" type="button" role="switch" aria-checked="true">
@@ -2023,7 +2023,7 @@
         <div class="setting-row">
           <div class="setting-row__copy">
             <span class="setting-row__title">Overlays anzeigen</span>
-            <p class="setting-row__desc" id="overlaysEnabledDesc">Rahmen und Bild-Overlays werden Gästen angezeigt. Bereits gewählte Overlays bleiben erhalten.</p>
+            <p class="setting-row__desc">Rahmen und Bild-Overlays werden Gästen angezeigt. Bereits gewählte Overlays bleiben erhalten.</p>
           </div>
           <div class="setting-control">
             <button class="switch" id="overlaysEnabledToggle" type="button" role="switch" aria-checked="true">
@@ -2618,9 +2618,6 @@
       const $stickersEnabledText = document.getElementById('stickersEnabledText');
       const $overlaysEnabledToggle = document.getElementById('overlaysEnabledToggle');
       const $overlaysEnabledText = document.getElementById('overlaysEnabledText');
-      const $filtersEnabledDesc = document.getElementById('filtersEnabledDesc');
-      const $stickersEnabledDesc = document.getElementById('stickersEnabledDesc');
-      const $overlaysEnabledDesc = document.getElementById('overlaysEnabledDesc');
       const $cameraFacingMode = document.getElementById('cameraFacingMode');
       const $brandName = document.getElementById('brandName');
       const $themePreview = document.getElementById('themePreview');
@@ -2849,15 +2846,6 @@
         $stickersEnabledText.textContent = currentSettings.stickersEnabled ? 'Ein' : 'Aus';
         $overlaysEnabledToggle.setAttribute('aria-checked', String(currentSettings.overlaysEnabled));
         $overlaysEnabledText.textContent = currentSettings.overlaysEnabled ? 'Ein' : 'Aus';
-        $filtersEnabledDesc.textContent = currentSettings.filtersEnabled
-          ? 'Gesichtsfilter, Farbfilter und die Filter-Werkzeuge werden Gästen angezeigt.'
-          : 'Gesichtsfilter, Farbfilter und die Filter-Werkzeuge werden Gästen ausgeblendet.';
-        $stickersEnabledDesc.textContent = currentSettings.stickersEnabled
-          ? 'Sticker-Auswahl und Sticker-Werkzeuge werden Gästen angezeigt.'
-          : 'Sticker-Auswahl und Sticker-Werkzeuge werden Gästen ausgeblendet.';
-        $overlaysEnabledDesc.textContent = currentSettings.overlaysEnabled
-          ? 'Rahmen und Bild-Overlays werden Gästen angezeigt. Bereits gewählte Overlays bleiben erhalten.'
-          : 'Rahmen und Bild-Overlays werden Gästen ausgeblendet. Bereits gewählte Overlays werden entfernt.';
         $cameraFacingMode.value = currentSettings.cameraFacingMode;
         $brandName.value = currentSettings.brandName;
         $accentColorPicker.value = currentSettings.accentColor;
