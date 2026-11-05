@@ -281,6 +281,16 @@ const I18N = {
     settingsOpenLabel: 'Barrierefreiheit',
     settingsTitle: 'Barrierefreiheit',
     settingsOpenAria: 'Barrierefreiheit öffnen',
+    remoteLabel: 'Fernbedienung',
+    remoteOpenAria: 'Fernbedienung: Tastenübersicht öffnen',
+    remoteTitle: 'Fernbedienung',
+    remoteIntro: 'Mit diesen Tasten steuerst du die SnapBox auch ohne Bildschirmberührung.',
+    remotePhotoTitle: 'Pfeil nach links',
+    remotePhotoDesc: 'Nimmt ein Einzelfoto auf.',
+    remoteModeTitle: 'Pfeil nach rechts',
+    remoteModeDesc: 'Nimmt eine Fotocollage auf.',
+    remoteCancelTitle: 'Taste unten rechts',
+    remoteCancelDesc: 'Bricht ab und kehrt zum Startbildschirm zurück.',
     accessibilityButtons: 'Buttongröße',
     accessibilityButtonsNormal: 'Normal',
     accessibilityButtonsLarge: 'Groß',
@@ -540,6 +550,16 @@ const I18N = {
     settingsOpenLabel: 'Accessibility',
     settingsTitle: 'Accessibility',
     settingsOpenAria: 'Open accessibility settings',
+    remoteLabel: 'Remote',
+    remoteOpenAria: 'Remote control: open button overview',
+    remoteTitle: 'Remote control',
+    remoteIntro: 'These buttons control the SnapBox without touching the screen.',
+    remotePhotoTitle: 'Left arrow',
+    remotePhotoDesc: 'Takes a single photo.',
+    remoteModeTitle: 'Right arrow',
+    remoteModeDesc: 'Takes a photo strip.',
+    remoteCancelTitle: 'Bottom-right button',
+    remoteCancelDesc: 'Cancels and returns to the start screen.',
     accessibilityButtons: 'Button size',
     accessibilityButtonsNormal: 'Normal',
     accessibilityButtonsLarge: 'Large',
@@ -1098,6 +1118,7 @@ function syncAccessibilityIdle() {
   const onStart = currentState === 'splash'
     && (!$settingsModal || $settingsModal.hidden)
     && (!$creditsModal || $creditsModal.hidden)
+    && (!$remoteModal || $remoteModal.hidden)
     && !sessionCompletion;
   if (!onStart) cancelAccessibilityResetAnimation();
   if (onStart === accessibilityOnStart) return;
@@ -1203,6 +1224,49 @@ if ($creditsModal) {
     if (e.key !== 'Tab') return;
     const controls = Array.from($creditsModal.querySelectorAll('button, a[href], summary'))
       .filter(el => el.getClientRects().length);
+    const first = controls[0];
+    const last = controls[controls.length - 1];
+    if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+  });
+}
+
+const $remoteModal = document.getElementById('remoteModal');
+const $remoteClose = document.getElementById('remoteClose');
+const $splashRemote = document.getElementById('splashRemote');
+let remoteReturnFocus = null;
+let remoteInertScreens = [];
+
+function openRemote() {
+  if (!$remoteModal || !$remoteModal.hidden || currentState !== 'splash') return;
+  remoteReturnFocus = document.activeElement;
+  remoteInertScreens = [$splash, $camera, $gallery, $sideRail, $splashLang].filter(Boolean)
+    .map(el => ({ el, inert: el.inert }));
+  remoteInertScreens.forEach(({ el }) => { el.inert = true; });
+  $remoteModal.hidden = false;
+  syncAccessibilityIdle();
+  $remoteModal.querySelector('.settings-modal__body').scrollTop = 0;
+  if ($remoteClose) $remoteClose.focus({ preventScroll: true });
+}
+
+function closeRemote() {
+  if (!$remoteModal || $remoteModal.hidden) return;
+  $remoteModal.hidden = true;
+  syncAccessibilityIdle();
+  remoteInertScreens.forEach(({ el, inert }) => { el.inert = inert; });
+  remoteInertScreens = [];
+  if (remoteReturnFocus && remoteReturnFocus.isConnected) remoteReturnFocus.focus({ preventScroll: true });
+  remoteReturnFocus = null;
+}
+
+if ($splashRemote) $splashRemote.addEventListener('click', openRemote);
+if ($remoteClose) $remoteClose.addEventListener('click', closeRemote);
+if ($remoteModal) {
+  $remoteModal.addEventListener('click', (e) => { if (e.target === $remoteModal) closeRemote(); });
+  $remoteModal.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab') return;
+    const controls = Array.from($remoteModal.querySelectorAll('button, a[href], input, select, textarea, summary'))
+      .filter(el => el.getClientRects().length && !el.disabled);
     const first = controls[0];
     const last = controls[controls.length - 1];
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
@@ -1617,7 +1681,8 @@ function startSession() {
 
   const tl = timeline();
   tl.to(['.splash__content--portrait', '.splash__content--kiosk', '.lang-switch--splash',
-    '.splash__brand', '.challenge-card', '.splash__sound', '.splash__gallery', '.splash__settings'], {
+    '.splash__brand', '.challenge-card', '.splash__sound', '.splash__gallery', '.splash__settings',
+    '.splash__remote'], {
     y: -24, opacity: 0, duration: 0.45, ease: 'power2.in'
   }).to($splash, {
     opacity: 0, duration: 0.01
@@ -1734,14 +1799,19 @@ function applyModeSelection() {
 }
 applyModeSelection();
 
+// Gemeinsamer Wechsel für Menü-Toggle und Fernbedienung.
+function toggleCaptureMode() {
+  captureMode = captureMode === 'single' ? 'strip' : 'single';
+  try { localStorage.setItem('snapbox_capture_mode', captureMode); } catch (err) {}
+  applyModeSelection();
+}
+
 document.addEventListener('click', (e) => {
   const btn = e.target.closest('[data-cycle="mode"]');
   if (!btn || btn.disabled) return;
   playUiSound('switch.mp3');
-  captureMode = captureMode === 'single' ? 'strip' : 'single';
+  toggleCaptureMode();
   btn.classList.add('is-used');
-  try { localStorage.setItem('snapbox_capture_mode', captureMode); } catch (err) {}
-  applyModeSelection();
 });
 
 function syncFaceFilterSelection() {
@@ -6679,7 +6749,7 @@ function returnToIdle(options = {}) {
   $splash.style.display = 'flex';
   // Beim Start wurden Brand, Challenge-Karte und Ton-Button ausgeblendet;
   // für den nächsten Gast müssen sie wieder sichtbar sein.
-  gsap.set(['.splash__brand', '.challenge-card', '.splash__sound', '.splash__content--kiosk', '.splash__gallery', '.splash__settings'], { clearProps: 'all' });
+  gsap.set(['.splash__brand', '.challenge-card', '.splash__sound', '.splash__content--kiosk', '.splash__gallery', '.splash__settings', '.splash__remote'], { clearProps: 'all' });
   if (options.animate !== false) {
     gsap.fromTo($splash, { opacity: 0 }, { opacity: 1, duration: 0.4, ease: 'power2.out' });
     gsap.fromTo('.splash__content--kiosk', { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.6, ease: 'power2.out', delay: 0.1, clearProps: 'all' });
@@ -7081,6 +7151,10 @@ window.addEventListener('load', async () => {
     // Der Punkt auf Kiosk-Fernbedienungen ist Abbrechen/Home.
     const dotKey = e.key === '.' || e.key === 'Decimal'
       || e.code === 'Period' || e.code === 'NumpadDecimal';
+    if ($remoteModal && !$remoteModal.hidden) {
+      if (e.key === 'Escape' || dotKey) { e.preventDefault(); closeRemote(); }
+      return;
+    }
     if ($creditsModal && !$creditsModal.hidden) {
       if (e.key === 'Escape' || dotKey) { e.preventDefault(); closeCredits(); }
       return;
@@ -7129,6 +7203,32 @@ window.addEventListener('load', async () => {
         && !$camera.classList.contains('is-ended')
         && $qrModal.hidden && $confirmModal.hidden) {
         captureMode = pageMode;
+        applyModeSelection();
+        e.preventDefault();
+        unlockAudio();
+        runCaptureSequence();
+        return;
+      }
+    }
+
+    // Fernbedienung: Pfeil links = Einzelfoto, Pfeil rechts = Fotocollage.
+    // Innerhalb von Tab-Leisten bleibt die Pfeilnavigation der Tabs erhalten.
+    const remoteMode = e.key === 'ArrowLeft' ? 'single' : (e.key === 'ArrowRight' ? 'strip' : null);
+    if (remoteMode && !e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey
+      && !(target && target.closest && target.closest('[role="tablist"], [role="tab"], [role="slider"]'))) {
+      if (currentState === 'splash') {
+        captureMode = remoteMode;
+        applyModeSelection();
+        e.preventDefault();
+        startSession();
+        return;
+      }
+      const remoteCameraReady = currentState === 'camera' && !isCapturing
+        && !$camera.classList.contains('is-reviewing')
+        && !$camera.classList.contains('is-ended')
+        && $qrModal.hidden && $confirmModal.hidden;
+      if (remoteCameraReady) {
+        captureMode = remoteMode;
         applyModeSelection();
         e.preventDefault();
         unlockAudio();

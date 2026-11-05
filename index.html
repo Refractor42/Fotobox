@@ -88,6 +88,19 @@
       </span>
       <span class="splash__settings-label" data-i18n="settingsOpenLabel">Barrierefreiheit</span>
     </button>
+
+    <!-- Fernbedienungs-Hilfe: erklärt die Tasten der Kiosk-Fernbedienung. -->
+    <button class="splash__remote splash__tool" id="splashRemote" type="button" aria-haspopup="dialog" aria-controls="remoteModal" aria-label="Fernbedienung: Tastenübersicht öffnen" data-i18n-aria="remoteOpenAria">
+      <span class="splash__tool-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false">
+          <rect x="7" y="2.4" width="10" height="19.2" rx="3.2"></rect>
+          <circle cx="12" cy="6.6" r="1.1"></circle>
+          <path d="M9.6 10.2h.01M14.4 10.2h.01M9.6 13.1h.01M14.4 13.1h.01"></path>
+          <circle cx="12" cy="17.4" r="1.3"></circle>
+        </svg>
+      </span>
+      <span class="splash__tool-label" data-i18n="remoteLabel">Fernbedienung</span>
+    </button>
   </section>
 
   <!-- Sprachumschaltung DE/EN (HCI: Accessibility/i18n): dezente Flaggen in
@@ -721,6 +734,79 @@
             </tbody>
           </table>
         </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tastenübersicht der Kiosk-Fernbedienung -->
+  <div class="settings-modal remote-modal" id="remoteModal" hidden>
+    <div class="settings-modal__card remote-modal__card" role="dialog" aria-modal="true" aria-labelledby="remoteTitle" aria-describedby="remoteIntro">
+      <div class="settings-modal__header">
+        <button class="settings-modal__close" id="remoteClose" type="button" aria-label="Zurück" title="Zurück" data-i18n-aria="settingsCloseAria" data-i18n-title="settingsCloseAria"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H5m7-7-7 7 7 7"/></svg></button>
+        <h2 class="settings-modal__title" id="remoteTitle" data-i18n="remoteTitle">Fernbedienung</h2>
+      </div>
+      <div class="settings-modal__body remote-modal__body">
+        <p class="remote-modal__intro" id="remoteIntro" data-i18n="remoteIntro">Mit diesen Tasten steuerst du die SnapBox auch ohne Bildschirmberührung.</p>
+        <div class="remote-modal__layout">
+          <div class="remote-modal__figure" aria-hidden="true">
+            <svg class="remote-modal__remote" viewBox="0 0 132 268" fill="none" focusable="false">
+              <rect class="remote-modal__device" x="16" y="6" width="100" height="256" rx="28"></rect>
+              <rect class="remote-modal__screen" x="32" y="24" width="68" height="30" rx="7"></rect>
+              <g class="remote-modal__idle-keys">
+                <circle cx="45" cy="76" r="3.6"></circle>
+                <circle cx="59" cy="76" r="3.6"></circle>
+                <circle cx="73" cy="76" r="3.6"></circle>
+                <circle cx="87" cy="76" r="3.6"></circle>
+                <circle cx="45" cy="92" r="3.6"></circle>
+                <circle cx="59" cy="92" r="3.6"></circle>
+                <circle cx="73" cy="92" r="3.6"></circle>
+                <circle cx="87" cy="92" r="3.6"></circle>
+                <circle cx="45" cy="108" r="3.6"></circle>
+                <circle cx="59" cy="108" r="3.6"></circle>
+                <circle cx="73" cy="108" r="3.6"></circle>
+                <circle cx="87" cy="108" r="3.6"></circle>
+              </g>
+              <circle class="remote-modal__dpad" cx="66" cy="160" r="31"></circle>
+              <path class="remote-modal__idle-arrow" d="M66 137l7 11H59z"></path>
+              <path class="remote-modal__idle-arrow" d="M66 183l7-11H59z"></path>
+              <path class="remote-modal__accent-arrow" d="M50 160l11-7v14z"></path>
+              <path class="remote-modal__accent-arrow" d="M82 160l-11-7v14z"></path>
+              <circle class="remote-modal__idle-button" cx="38" cy="222" r="15"></circle>
+              <circle class="remote-modal__glow" cx="94" cy="222" r="21"></circle>
+              <circle class="remote-modal__accent-button" cx="94" cy="222" r="15"></circle>
+              <circle class="remote-modal__accent-dot" cx="94" cy="222" r="4"></circle>
+            </svg>
+          </div>
+          <ul class="remote-modal__legend">
+            <li class="remote-modal__item">
+              <span class="remote-modal__key" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"></path></svg>
+              </span>
+              <span class="remote-modal__copy">
+                <span class="remote-modal__item-title" data-i18n="remotePhotoTitle">Pfeil nach links</span>
+                <span class="remote-modal__item-desc" data-i18n="remotePhotoDesc">Nimmt ein Einzelfoto auf.</span>
+              </span>
+            </li>
+            <li class="remote-modal__item">
+              <span class="remote-modal__key" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"></path></svg>
+              </span>
+              <span class="remote-modal__copy">
+                <span class="remote-modal__item-title" data-i18n="remoteModeTitle">Pfeil nach rechts</span>
+                <span class="remote-modal__item-desc" data-i18n="remoteModeDesc">Nimmt eine Fotocollage auf.</span>
+              </span>
+            </li>
+            <li class="remote-modal__item">
+              <span class="remote-modal__key remote-modal__key--round" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="5" fill="currentColor"></circle></svg>
+              </span>
+              <span class="remote-modal__copy">
+                <span class="remote-modal__item-title" data-i18n="remoteCancelTitle">Taste unten rechts</span>
+                <span class="remote-modal__item-desc" data-i18n="remoteCancelDesc">Bricht ab und kehrt zum Startbildschirm zurück.</span>
+              </span>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   </div>

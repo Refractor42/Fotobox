@@ -11,6 +11,7 @@
 .splash__brand,
 .challenge-card,
 .splash__sound,
+.splash__remote,
 .capture-bar,
 .review-actions,
 .side-menu,
@@ -38,7 +39,8 @@ body.orientation-landscape .splash__content--kiosk {
 /* Galerie und Audio bilden dieselbe untere Utility-Reihe: runde Icons mit
    sichtbarem Label. Beide Buttons bleiben als ganze Spalte klickbar. */
 body.orientation-landscape .splash__gallery,
-body.orientation-landscape .splash__sound {
+body.orientation-landscape .splash__sound,
+body.orientation-landscape .splash__remote {
   --splash-tool-size: calc((clamp(76px, 7.6vw, 92px)) * var(--a11y-control-scale, 1));
   display: flex;
   width: calc(var(--splash-tool-size) + 20px);
@@ -81,7 +83,8 @@ body.orientation-landscape .splash__settings-icon svg {
   height: calc((42px) * var(--a11y-control-scale, 1));
 }
 body.orientation-landscape .splash__gallery .splash__tool-icon,
-body.orientation-landscape .splash__sound .splash__tool-icon {
+body.orientation-landscape .splash__sound .splash__tool-icon,
+body.orientation-landscape .splash__remote .splash__tool-icon {
   border-color: rgba(255, 255, 255, 0.18);
   background: var(--c-control-bg, rgba(18, 19, 24, 0.72));
   -webkit-backdrop-filter: blur(16px);
@@ -89,18 +92,21 @@ body.orientation-landscape .splash__sound .splash__tool-icon {
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.38);
 }
 body.orientation-landscape .splash__gallery .splash__tool-icon svg,
-body.orientation-landscape .splash__sound .splash__tool-icon svg {
+body.orientation-landscape .splash__sound .splash__tool-icon svg,
+body.orientation-landscape .splash__remote .splash__tool-icon svg {
   width: calc((42px) * var(--a11y-control-scale, 1));
   height: calc((42px) * var(--a11y-control-scale, 1));
 }
 body.orientation-landscape .splash__gallery .splash__tool-label,
-body.orientation-landscape .splash__sound .splash__tool-label {
+body.orientation-landscape .splash__sound .splash__tool-label,
+body.orientation-landscape .splash__remote .splash__tool-label {
   font-size: calc((0.9rem) * var(--a11y-text-scale, 1));
   font-weight: 800;
   letter-spacing: 0.005em;
 }
 body.orientation-landscape .splash__gallery:hover .splash__tool-icon,
-body.orientation-landscape .splash__sound:hover .splash__tool-icon {
+body.orientation-landscape .splash__sound:hover .splash__tool-icon,
+body.orientation-landscape .splash__remote:hover .splash__tool-icon {
   background: var(--c-control-hover-bg, rgba(38, 40, 48, 0.9));
   border-color: rgb(var(--c-highlight-rgb) / 0.55);
   color: var(--c-highlight);
@@ -380,6 +386,17 @@ body.orientation-landscape .splash__sound {
   left: calc(clamp(22px, 2.6vw, 44px) + var(--splash-tool-size) + 32px);
   bottom: clamp(16px, 2.6vh, 32px);
   z-index: 5;
+  color: #fff;
+  cursor: pointer;
+}
+
+/* Fernbedienungs-Hilfe: vierte Spalte der unteren Utility-Reihe. */
+body.orientation-landscape .splash__remote {
+  position: fixed;
+  left: calc(clamp(22px, 2.6vw, 44px) + (3 * var(--splash-tool-size)) + 116px);
+  right: auto;
+  bottom: clamp(16px, 2.6vh, 32px);
+  z-index: 6;
   color: #fff;
   cursor: pointer;
 }
@@ -1378,15 +1395,26 @@ body.challenge-end-active .endscreen__photo img { max-height: 44vh; }
   body.challenge-end-active .endscreen__photo img { max-height: 40vh; }
 }
 
+/* Schmale Querformat-Displays: Die Sprachflaggen reichen bis in die vierte
+   Spalte, deshalb rückt die Fernbedienungs-Hilfe über die Einstellungen. */
+@media (max-width: 760px) {
+  body.orientation-landscape .splash__remote {
+    left: calc(clamp(22px, 2.6vw, 44px) + (2 * var(--splash-tool-size)) + 64px);
+    bottom: calc(clamp(16px, 2.6vh, 32px) + var(--splash-tool-size) + 44px);
+  }
+}
+
 @media (max-width: 460px) {
   body.orientation-landscape .splash__settings { --splash-tool-size: calc((68px) * var(--a11y-control-scale, 1)); }
   body.orientation-landscape .splash__gallery,
-  body.orientation-landscape .splash__sound {
+  body.orientation-landscape .splash__sound,
+  body.orientation-landscape .splash__remote {
     --splash-tool-size: calc((68px) * var(--a11y-control-scale, 1));
   }
   body.orientation-landscape .splash__gallery { left: 16px; }
   body.orientation-landscape .splash__sound { left: calc(48px + var(--splash-tool-size)); }
   body.orientation-landscape .splash__settings { left: calc(48px + (2 * var(--splash-tool-size)) + 32px); }
+  body.orientation-landscape .splash__remote { left: calc(48px + (2 * var(--splash-tool-size)) + 32px); }
 }
 
 @media (prefers-reduced-motion: reduce) {

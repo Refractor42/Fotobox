@@ -2707,6 +2707,66 @@ html[data-button-size="large"] .splash__start { max-width: calc(100vw - 32px); }
   .credits-modal__team li { min-height: 88px; padding: 18px; }
   .credits-modal__sounds th, .credits-modal__sounds td { padding: 12px 6px; }
 }
+/* ============================================================
+   FERNBEDIENUNG (Tastenübersicht)
+   Der Dialog zeigt eine gezeichnete Fernbedienung und markiert die
+   drei Tasten, die im Kiosk eine Aktion auslösen: links = Foto,
+   rechts = Modus, unten rechts = Abbrechen.
+   ============================================================ */
+.remote-modal__card { width: min(820px, 92vw); max-width: 100%; height: auto; max-height: 92dvh; grid-template-rows: auto minmax(0, 1fr); }
+.remote-modal__body { gap: clamp(18px, 2.4vh, 28px); max-height: calc(92dvh - 140px); }
+.remote-modal__intro { margin: 0; color: var(--c-text-2); font-size: calc(1.1rem * var(--a11y-text-scale, 1)); line-height: 1.5; }
+.remote-modal__layout { display: grid; grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.65fr); align-items: center; gap: clamp(20px, 3vw, 40px); }
+.remote-modal__figure {
+  display: grid;
+  place-items: center;
+  padding: clamp(14px, 2vh, 24px);
+  border: 1px solid rgba(255 255 255 / 0.1);
+  border-radius: 20px;
+  background: rgba(255 255 255 / 0.035);
+}
+.remote-modal__remote { width: min(150px, 100%); height: auto; }
+.remote-modal__device { fill: #16171c; stroke: rgba(255 255 255 / 0.16); stroke-width: 1.5; }
+.remote-modal__screen { fill: #0a0b0e; stroke: rgba(255 255 255 / 0.12); }
+.remote-modal__idle-keys circle { fill: rgba(255 255 255 / 0.16); }
+.remote-modal__dpad { fill: rgba(255 255 255 / 0.06); stroke: rgba(255 255 255 / 0.14); }
+.remote-modal__idle-arrow { fill: rgba(255 255 255 / 0.2); }
+.remote-modal__accent-arrow { fill: var(--c-accent); }
+.remote-modal__idle-button { fill: rgba(255 255 255 / 0.06); stroke: rgba(255 255 255 / 0.14); }
+.remote-modal__glow { fill: rgb(var(--c-accent-rgb) / 0.22); }
+.remote-modal__accent-button { fill: var(--c-accent); }
+.remote-modal__accent-dot { fill: #101116; }
+.remote-modal__legend { display: grid; gap: 14px; margin: 0; padding: 0; list-style: none; }
+.remote-modal__item {
+  display: flex;
+  align-items: center;
+  gap: calc(16px * var(--a11y-control-scale, 1));
+  padding: clamp(12px, 1.8vh, 18px) calc(16px * var(--a11y-control-scale, 1));
+  border: 1px solid rgba(255 255 255 / 0.1);
+  border-radius: 16px;
+  background: rgba(255 255 255 / 0.035);
+}
+.remote-modal__key {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: calc(52px * var(--a11y-control-scale, 1));
+  height: calc(52px * var(--a11y-control-scale, 1));
+  border-radius: 14px;
+  background: rgb(var(--c-accent-rgb) / 0.14);
+  color: var(--c-accent);
+}
+.remote-modal__key--round { border-radius: 50%; }
+.remote-modal__key svg { width: 58%; height: 58%; }
+.remote-modal__copy { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.remote-modal__item-title { font-size: calc(1.15rem * var(--a11y-text-scale, 1)); font-weight: 800; line-height: 1.25; }
+.remote-modal__item-desc { color: var(--c-text-2); font-size: calc(1rem * var(--a11y-text-scale, 1)); line-height: 1.4; }
+@media (max-width: 560px) {
+  .remote-modal__layout { grid-template-columns: minmax(0, 1fr); gap: 18px; }
+  .remote-modal__figure { padding: 12px; }
+  .remote-modal__remote { width: min(124px, 40%); }
+}
+
 .cvd-options { display: flex; flex-direction: column; gap: 12px; }
 .cvd-option {
   display: flex;
