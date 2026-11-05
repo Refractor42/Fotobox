@@ -1972,7 +1972,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 #camera.is-reviewing .capture-bar {
   /* Keep the action pair centered on the bar, independent of control scale. */
   --review-start-reserve: calc(var(--bar-edge-inset) + var(--home-size) + var(--bar-gap));
-  --review-home: 0px;
+  --review-home: var(--review-start-reserve);
   --review-accept: 0px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) max-content minmax(0, 1fr);
