@@ -22,7 +22,7 @@
   </header>
 
   <main class="shell">
-    <section class="scoreboard" aria-labelledby="scoreTitle">
+    <section class="scoreboard" id="scoreboard" aria-labelledby="scoreTitle">
       <div class="section-heading">
         <div>
           <h2 id="scoreTitle">Punktestand</h2>
@@ -68,28 +68,40 @@
       <div class="section-heading section-heading--wrap">
         <div>
           <h2 id="galleryTitle">Challenge-Galerie</h2>
-          <p class="section-sub" id="gallerySub">Ein Like pro Foto und Gerät.</p>
+          <p class="section-sub" id="gallerySub">Ein Like pro Foto und Gerät – jederzeit zurücknehmbar.</p>
         </div>
         <div class="gallery-tools">
           <label class="month-field" for="monthSelect">Monat</label>
-          <select id="monthSelect" class="month-select" aria-label="Monat wählen"></select>
-          <button class="icon-button" id="refreshBtn" type="button" aria-label="Galerie aktualisieren" title="Aktualisieren">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
-              <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"></path>
-              <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path>
-            </svg>
-          </button>
+          <select id="monthSelect" class="month-select">
+            <option value="">Lädt…</option>
+          </select>
         </div>
       </div>
 
-      <div class="gallery-state" id="galleryState" role="status" aria-live="polite">
-        <span class="spinner" aria-hidden="true"></span>
-        <p>Galerie wird geladen…</p>
+      <div class="gallery-state" id="galleryState" role="status" aria-live="polite" hidden></div>
+      <p class="sr-only" id="loadStatus" role="status" aria-live="polite"></p>
+
+      <div class="gallery" id="galleryGrid" aria-busy="true">
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-thumb"></div>
+          <div class="skeleton-line skeleton-line--short"></div>
+        </div>
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-thumb"></div>
+          <div class="skeleton-line skeleton-line--short"></div>
+        </div>
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-thumb"></div>
+          <div class="skeleton-line skeleton-line--short"></div>
+        </div>
+        <div class="skeleton-card" aria-hidden="true">
+          <div class="skeleton-thumb"></div>
+          <div class="skeleton-line skeleton-line--short"></div>
+        </div>
       </div>
-      <div class="gallery" id="galleryGrid"></div>
     </section>
 
-    <section class="trophies" aria-labelledby="trophiesTitle">
+    <section class="trophies" id="trophies" aria-labelledby="trophiesTitle">
       <div class="section-heading">
         <div>
           <h2 id="trophiesTitle">Wall of Trophies</h2>
@@ -108,11 +120,70 @@
 
     <footer class="footer">
       <p>Hier erscheinen nur Fotos, die auf der Fotobox ausdrücklich für die Challenge freigegeben wurden.</p>
-      <p>Kein Login nötig. Beim Liken bestätigst du mit Face ID, Fingerabdruck oder Geräte-PIN – es werden keine persönlichen Daten gespeichert.</p>
+      <p>Kein Login nötig. Beim Liken bestätigst du mit Face ID, Fingerabdruck oder Geräte-PIN – es werden keine persönlichen Daten gespeichert. Solange die Abstimmung läuft, kannst du dein Like wieder zurücknehmen.</p>
     </footer>
   </main>
 
-  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <button class="fab" id="refreshBtn" type="button" aria-label="Galerie aktualisieren" aria-controls="galleryGrid" title="Aktualisieren">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+      <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"></path>
+      <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path>
+    </svg>
+  </button>
+
+  <nav class="tabbar" aria-label="Bereiche">
+    <div class="tabbar__inner">
+      <button class="tab" type="button" data-target="scoreboard" aria-controls="scoreboard" aria-current="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M4 20V11M10 20V4M16 20v-6M22 20H2"></path>
+        </svg>
+        <span>Punktestand</span>
+      </button>
+      <button class="tab" type="button" data-target="gallery" aria-controls="gallery">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <rect x="3" y="4" width="18" height="16" rx="2"></rect>
+          <circle cx="8.5" cy="9.5" r="1.5"></circle>
+          <path d="m21 15-5-5L5 20"></path>
+        </svg>
+        <span>Galerie</span>
+      </button>
+      <button class="tab" type="button" data-target="trophies" aria-controls="trophies">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"></path>
+          <path d="M8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3"></path>
+          <path d="M12 13v4M9 21h6M10 17h4"></path>
+        </svg>
+        <span>Trophäen</span>
+      </button>
+    </div>
+  </nav>
+
+  <dialog class="photo-view" id="photoView" aria-labelledby="photoViewTitle">
+    <div class="photo-view__bar">
+      <button class="back-button" id="photoBack" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+          <path d="m15 18-6-6 6-6"></path>
+        </svg>
+        <span>Zurück</span>
+      </button>
+      <p class="photo-view__index" id="photoViewIndex"></p>
+    </div>
+    <figure class="photo-view__figure">
+      <img id="photoViewImage" alt="" />
+    </figure>
+    <div class="photo-view__foot">
+      <div>
+        <h2 class="photo-view__title" id="photoViewTitle">Foto</h2>
+        <p class="photo-view__meta" id="photoViewMeta"></p>
+      </div>
+      <div class="photo-view__actions" id="photoViewActions"></div>
+    </div>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden>
+    <p class="toast__text" id="toastText"></p>
+    <button class="toast__action" id="toastAction" type="button" hidden>Rückgängig</button>
+  </div>
 
   <script src="/app.js"></script>
 </body>

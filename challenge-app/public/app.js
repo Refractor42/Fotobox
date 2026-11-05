@@ -26,6 +26,20 @@ const $galleryGrid = $('galleryGrid');
 const $trophyGrid = $('trophyGrid');
 const $liveBadge = $('liveBadge');
 const $toast = $('toast');
+const $toastText = $('toastText');
+const $toastAction = $('toastAction');
+const $loadStatus = $('loadStatus');
+const $scoreboard = $('scoreboard');
+const $photoView = $('photoView');
+const $photoBack = $('photoBack');
+const $photoViewImage = $('photoViewImage');
+const $photoViewTitle = $('photoViewTitle');
+const $photoViewMeta = $('photoViewMeta');
+const $photoViewIndex = $('photoViewIndex');
+const $photoViewActions = $('photoViewActions');
+const tabs = Array.from(document.querySelectorAll('.tab[data-target]'));
+const sections = ['scoreboard', 'gallery', 'trophies'].map((id) => $(id)).filter(Boolean);
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
 // Einmalige Migration der früheren localStorage-ID in den Server-Cookie.
 let legacyVoterId = (() => {
@@ -49,10 +63,15 @@ let credentialId = (() => {
 let state = {
   month: currentMonth(),
   data: null,
-  loading: false,
+  controller: null,
   pendingVotes: new Set(),
+  openEntryId: '',
   ticker: null
 };
+let lastPhotoOpener = null;
+let activeTabId = 'scoreboard';
+let toastTimer = null;
+let toastActionHandler = null;
 
 function currentMonth() {
   return new Intl.DateTimeFormat('sv-SE', {
@@ -62,6 +81,10 @@ function currentMonth() {
   }).format(new Date());
 }
 
+function isSelectableMonth(value) {
+  return typeof value === 'string' && /^\d{4}-\d{2}$/.test(value) && value <= currentMonth();
+}
+
 function monthLabel(month) {
   const date = new Date(month + '-15T12:00:00Z');
   return new Intl.DateTimeFormat('de-DE', {
@@ -69,6 +92,21 @@ function monthLabel(month) {
     year: 'numeric',
     timeZone: 'UTC'
   }).format(date);
+}
+
+function formatDate(value) {
+  const date = new Date(value);
+  if (!value || Number.isNaN(date.getTime())) return '';
+  try {
+    return new Intl.DateTimeFormat('de-DE', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'Europe/Berlin'
+    }).format(date);
+  } catch (e) {
+    return '';
+  }
 }
 
 function locationName(location) {
@@ -110,18 +148,53 @@ async function passkeysAvailable() {
   }
 }
 
-function showToast(message) {
+function hideToast() {
+  clearTimeout(toastTimer);
+  toastTimer = null;
+  toastActionHandler = null;
+  if ($toastAction) {
+    $toastAction.hidden = true;
+    $toastAction.onclick = null;
+  }
+  if ($toast) $toast.hidden = true;
+}
+
+// Der Toast liegt normalerweise am Body. Im modalen Foto-Dialog wuerde er
+// hinter der Dialog-Ebene verschwinden; dort gehoert er in den Dialog.
+function syncToastHost(forceBody = false) {
   if (!$toast) return;
-  $toast.textContent = message;
+  const host = !forceBody && $photoView && $photoView.open ? $photoView : document.body;
+  if ($toast.parentElement !== host) host.appendChild($toast);
+}
+
+function showToast(message, { actionLabel = '', onAction = null, duration = 0 } = {}) {
+  if (!$toast || !$toastText) return;
+  syncToastHost();
+  clearTimeout(toastTimer);
+  $toastText.textContent = message;
+  toastActionHandler = typeof onAction === 'function' ? onAction : null;
+  if ($toastAction) {
+    $toastAction.hidden = !toastActionHandler;
+    $toastAction.textContent = actionLabel || 'Rückgängig';
+    $toastAction.onclick = () => {
+      const handler = toastActionHandler;
+      hideToast();
+      if (handler) handler();
+    };
+  }
   $toast.hidden = false;
-  clearTimeout(showToast.timer);
-  showToast.timer = setTimeout(() => { $toast.hidden = true; }, 4200);
+  const timeout = duration || (toastActionHandler ? 7000 : 4200);
+  toastTimer = setTimeout(hideToast, timeout);
 }
 
 function setLive(online) {
   if (!$liveBadge) return;
   $liveBadge.textContent = online ? 'Live' : 'Offline';
   $liveBadge.classList.toggle('is-offline', !online);
+}
+
+function announceStatus(message) {
+  if ($loadStatus) $loadStatus.textContent = message;
 }
 
 function showState(message, { error = false, retry = false } = {}) {
@@ -133,17 +206,12 @@ function showState(message, { error = false, retry = false } = {}) {
   if (error) {
     const strong = document.createElement('strong');
     strong.textContent = 'Galerie konnte nicht geladen werden.';
-    const p = document.createElement('p');
-    p.textContent = message || 'Bitte Verbindung prüfen und erneut versuchen.';
-    $galleryState.append(strong, p);
-  } else {
-    const spinner = document.createElement('span');
-    spinner.className = 'spinner';
-    spinner.setAttribute('aria-hidden', 'true');
-    const p = document.createElement('p');
-    p.textContent = message;
-    $galleryState.append(spinner, p);
+    $galleryState.appendChild(strong);
   }
+
+  const p = document.createElement('p');
+  p.textContent = message || (error ? 'Bitte Verbindung prüfen und erneut versuchen.' : '');
+  $galleryState.appendChild(p);
 
   if (retry) {
     const button = document.createElement('button');
@@ -158,16 +226,51 @@ function hideState() {
   if ($galleryState) $galleryState.hidden = true;
 }
 
+function skeletonCard() {
+  const card = document.createElement('div');
+  card.className = 'skeleton-card';
+  card.setAttribute('aria-hidden', 'true');
+
+  const thumb = document.createElement('div');
+  thumb.className = 'skeleton-thumb';
+
+  const line = document.createElement('div');
+  line.className = 'skeleton-line skeleton-line--short';
+
+  card.append(thumb, line);
+  return card;
+}
+
+function showSkeletons() {
+  hideState();
+  if ($galleryGrid) {
+    $galleryGrid.setAttribute('aria-busy', 'true');
+    $galleryGrid.innerHTML = '';
+    for (let i = 0; i < 6; i += 1) $galleryGrid.appendChild(skeletonCard());
+  }
+  if ($scoreboard) $scoreboard.setAttribute('aria-busy', 'true');
+  announceStatus('Galerie wird geladen…');
+}
+
+function endSkeletons() {
+  if ($galleryGrid) $galleryGrid.removeAttribute('aria-busy');
+  if ($scoreboard) $scoreboard.removeAttribute('aria-busy');
+}
+
 function populateMonths(months) {
   if (!$monthSelect) return;
+  // Während das Auswahlfeld offen ist, die Liste nicht neu aufbauen.
+  if (document.activeElement === $monthSelect) return;
+
   const values = new Set();
   const now = currentMonth();
   if (state.month > now) state.month = now;
   values.add(now);
   values.add(state.month);
 
+  // Nur laufende und vergangene Monate: niemals Optionen aus der Zukunft.
   for (const month of months || []) {
-    if (/^\d{4}-\d{2}$/.test(month) && month <= now) values.add(month);
+    if (isSelectableMonth(month)) values.add(month);
   }
 
   const [year, month] = now.split('-').map(Number);
@@ -176,7 +279,7 @@ function populateMonths(months) {
     values.add(d.toISOString().slice(0, 7));
   }
 
-  const sorted = [...values].filter((value) => value <= now).sort().reverse();
+  const sorted = [...values].filter(isSelectableMonth).sort().reverse();
   $monthSelect.innerHTML = '';
   for (const value of sorted) {
     const option = document.createElement('option');
@@ -226,27 +329,59 @@ function trophySvg() {
     + '</svg>';
 }
 
+function photoMeta(entry) {
+  const date = formatDate(entry.createdAt);
+  const likes = entry.votes === 1 ? '1 Like' : `${entry.votes} Likes`;
+  return date ? `Eingereicht am ${date} · ${likes}` : likes;
+}
+
+function updateLikeButton(button, entry) {
+  const liked = !!entry.liked;
+  const pending = state.pendingVotes.has(entry.id);
+  button.dataset.entryId = entry.id;
+  button.setAttribute('aria-pressed', String(liked));
+  button.setAttribute('aria-label', liked
+    ? `Like für Foto aus ${locationName(entry.location)} entfernen`
+    : `Foto aus ${locationName(entry.location)} liken`);
+
+  const count = button.querySelector('.like-button__count') || button.querySelector('span');
+  if (count) count.textContent = String(entry.votes);
+
+  button.disabled = !state.data || !state.data.votingOpen || pending;
+  button.classList.toggle('is-pending', pending);
+  if (pending) button.setAttribute('aria-busy', 'true');
+  else button.removeAttribute('aria-busy');
+
+  if (state.data && !state.data.votingOpen) {
+    button.title = 'Die Abstimmung für diesen Monat ist beendet.';
+  } else if (liked) {
+    button.title = 'Like wieder entfernen';
+  } else {
+    button.removeAttribute('title');
+  }
+}
+
+function syncLikeButtons(entry) {
+  for (const button of document.querySelectorAll('.like-button')) {
+    if (button.dataset.entryId === entry.id) updateLikeButton(button, entry);
+  }
+  if (state.openEntryId === entry.id && $photoViewMeta) {
+    $photoViewMeta.textContent = photoMeta(entry);
+  }
+}
+
 function makeLikeButton(entry) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'like-button';
-  button.dataset.entryId = entry.id;
   button.innerHTML = heartSvg();
-  const count = document.createElement('span');
-  count.textContent = String(entry.votes);
-  button.appendChild(count);
-  button.setAttribute('aria-label', entry.liked
-    ? `Foto aus ${locationName(entry.location)} ist bereits geliked`
-    : `Foto aus ${locationName(entry.location)} liken`);
-  button.setAttribute('aria-pressed', String(entry.liked));
-  button.disabled = !state.data.votingOpen || entry.liked;
 
-  if (!state.data.votingOpen) {
-    button.title = 'Die Abstimmung für diesen Monat ist beendet.';
-  }
-  if (state.data.votingOpen && !entry.liked) {
-    button.addEventListener('click', () => toggleLike(entry, button));
-  }
+  const count = document.createElement('span');
+  count.className = 'like-button__count';
+  button.appendChild(count);
+  updateLikeButton(button, entry);
+
+  button.addEventListener('click', () => toggleLike(entry));
   return button;
 }
 
@@ -267,12 +402,19 @@ function renderGallery() {
     const card = document.createElement('article');
     card.className = 'photo-card';
 
+    const media = document.createElement('button');
+    media.type = 'button';
+    media.className = 'photo-card__media';
+    media.dataset.openEntry = entry.id;
+    media.setAttribute('aria-label', `Foto aus ${locationName(entry.location)} vergrößern`);
+
     const img = document.createElement('img');
     img.className = 'photo-card__image';
     img.src = entry.imageUrl;
-    img.alt = `Challenge-Foto aus ${locationName(entry.location)}`;
+    img.alt = '';
     img.loading = 'lazy';
     img.decoding = 'async';
+    media.appendChild(img);
 
     const body = document.createElement('div');
     body.className = 'photo-card__body';
@@ -282,59 +424,128 @@ function renderGallery() {
     tag.textContent = locationName(entry.location);
 
     body.append(tag, makeLikeButton(entry));
-    card.append(img, body);
+    card.append(media, body);
     $galleryGrid.appendChild(card);
   }
 }
 
-function applyVoteResult(entry, data, button) {
+function fillPhotoView(entry) {
+  if (!$photoViewImage || !$photoViewActions) return;
+  const entries = (state.data && state.data.entries) || [];
+  const index = entries.findIndex((item) => item.id === entry.id);
+
+  $photoViewImage.src = entry.imageUrl;
+  $photoViewImage.alt = `Challenge-Foto aus ${locationName(entry.location)}`;
+  if ($photoViewTitle) $photoViewTitle.textContent = `Foto aus ${locationName(entry.location)}`;
+  if ($photoViewMeta) $photoViewMeta.textContent = photoMeta(entry);
+  if ($photoViewIndex) {
+    $photoViewIndex.textContent = index >= 0 ? `Foto ${index + 1} von ${entries.length}` : '';
+  }
+
+  $photoViewActions.innerHTML = '';
+  $photoViewActions.appendChild(makeLikeButton(entry));
+}
+
+function openPhotoView(entry, opener) {
+  if (!$photoView || typeof $photoView.showModal !== 'function' || !state.data) return;
+  state.openEntryId = entry.id;
+  lastPhotoOpener = opener || null;
+  fillPhotoView(entry);
+  document.body.classList.add('has-dialog');
+  try {
+    $photoView.showModal();
+  } catch (e) {
+    document.body.classList.remove('has-dialog');
+    state.openEntryId = '';
+    return;
+  }
+  // Ein bereits sichtbarer Toast (z. B. Monats-Undo) muss mit in den Dialog.
+  syncToastHost();
+  if ($photoBack) $photoBack.focus();
+}
+
+function restorePhotoFocus() {
+  const opener = lastPhotoOpener;
+  lastPhotoOpener = null;
+  if (!opener || !opener.isConnected) return;
+  const focus = () => {
+    if ($photoView && !$photoView.open && opener.isConnected) {
+      opener.focus({ preventScroll: true });
+    }
+  };
+  focus();
+  setTimeout(focus, 0);
+}
+
+function closePhotoView() {
+  if ($photoView && $photoView.open) {
+    syncToastHost(true);
+    $photoView.close();
+  }
+  document.body.classList.remove('has-dialog');
+  restorePhotoFocus();
+}
+
+function refreshOpenPhotoView() {
+  if (!state.openEntryId || !$photoView || !$photoView.open || !state.data) return;
+  const entry = state.data.entries.find((item) => item.id === state.openEntryId);
+  if (entry) fillPhotoView(entry);
+  else closePhotoView();
+}
+
+function applyVoteResult(entry, data) {
   const wasLiked = entry.liked;
   entry.votes = Number(data.votes) || 0;
   entry.liked = data.voted !== undefined
     ? !!data.voted
     : (data.liked !== undefined ? !!data.liked : true);
 
-  const location = state.data.locations[entry.location];
+  const location = state.data && state.data.locations[entry.location];
   if (location && entry.liked !== wasLiked) {
     location.votes = Math.max(0, location.votes + (entry.liked ? 1 : -1));
     location.score = location.entries + location.votes;
   }
 
-  button.setAttribute('aria-pressed', String(entry.liked));
-  button.setAttribute('aria-label', entry.liked
-    ? `Foto aus ${locationName(entry.location)} ist bereits geliked`
-    : `Foto aus ${locationName(entry.location)} liken`);
-  const count = button.querySelector('span');
-  if (count) count.textContent = String(entry.votes);
+  syncLikeButtons(entry);
   renderScoreboard();
 }
 
-async function legacyLike(entry) {
+async function legacyVote(entry, action) {
   const res = await fetch('/api/vote', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ entryId: entry.id })
+    body: JSON.stringify({ entryId: entry.id, action })
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 428) {
-    const err = new Error(data.error || 'Bitte bestätige den Like mit deinem Passkey.');
+    const err = new Error(data.error || 'Bitte bestätige die Aktion mit deinem Passkey.');
     err.passkeyRequired = true;
     throw err;
   }
-  if (!res.ok) throw new Error(data.error || 'Like konnte nicht gespeichert werden.');
+  if (!res.ok) {
+    throw new Error(data.error || (action === 'remove'
+      ? 'Like konnte nicht entfernt werden.'
+      : 'Like konnte nicht gespeichert werden.'));
+  }
   return data;
 }
 
-async function likeWithPasskey(entry) {
+async function voteWithPasskey(entry, action) {
   const optionsRes = await fetch('/api/webauthn/options', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ entryId: entry.id, credentialId: credentialId || undefined })
+    body: JSON.stringify({ entryId: entry.id, credentialId: credentialId || undefined, action })
   });
   const options = await optionsRes.json().catch(() => ({}));
   if (!optionsRes.ok) throw new Error(options.error || 'Passkey-Anfrage fehlgeschlagen.');
   if (!options || !options.publicKey || (options.mode !== 'create' && options.mode !== 'get')) {
     throw new Error('Ungültige Passkey-Antwort.');
+  }
+
+  if (action === 'remove' && options.mode === 'create') {
+    // Ohne hinterlegten Passkey wurde der Like klassisch vergeben; dann darf
+    // er auch ohne Passkey wieder entfernt werden.
+    return legacyVote(entry, action);
   }
 
   const publicKey = { ...options.publicKey };
@@ -373,6 +584,7 @@ async function likeWithPasskey(entry) {
     payload = {
       entryId: entry.id,
       credentialId: credential.id,
+      action,
       clientDataJSON: bufferToB64url(response.clientDataJSON),
       authenticatorData: bufferToB64url(response.authenticatorData),
       signature: bufferToB64url(response.signature)
@@ -385,22 +597,37 @@ async function likeWithPasskey(entry) {
     body: JSON.stringify(payload)
   });
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Like konnte nicht gespeichert werden.');
+  if (!res.ok) {
+    throw new Error(data.error || (action === 'remove'
+      ? 'Like konnte nicht entfernt werden.'
+      : 'Like konnte nicht gespeichert werden.'));
+  }
   saveCredentialId(data.credentialId || credential.id);
   return { ...data, registered: options.mode === 'create' && data.registered !== false };
 }
 
-async function toggleLike(entry, button) {
+async function toggleLike(entry) {
   if (state.pendingVotes.has(entry.id)) return;
+  const action = entry.liked ? 'remove' : 'like';
   state.pendingVotes.add(entry.id);
-  button.disabled = true;
+  syncLikeButtons(entry);
 
-  button.setAttribute('aria-busy', 'true');
   try {
     const usePasskey = await passkeysAvailable();
-    const data = usePasskey ? await likeWithPasskey(entry) : await legacyLike(entry);
-    applyVoteResult(entry, data, button);
-    if (data.registered) showToast('Passkey erstellt – dein Like ist gespeichert.');
+    const data = usePasskey ? await voteWithPasskey(entry, action) : await legacyVote(entry, action);
+    applyVoteResult(entry, data);
+    if (action === 'remove') {
+      showToast('Like entfernt.', {
+        actionLabel: 'Rückgängig',
+        onAction: () => {
+          if (!state.data) return;
+          const current = state.data.entries.find((item) => item.id === entry.id);
+          if (current && !current.liked) toggleLike(current);
+        }
+      });
+    } else if (data.registered) {
+      showToast('Passkey erstellt – dein Like ist gespeichert.');
+    }
   } catch (err) {
     if (err && err.name === 'NotAllowedError') {
       showToast('Passkey-Bestätigung abgebrochen.');
@@ -413,13 +640,14 @@ async function toggleLike(entry, button) {
     } else if (err && err.passkeyRequired) {
       showToast(err.message);
     } else {
-      showToast(err.message || 'Like konnte nicht gespeichert werden.');
+      showToast((err && err.message) || (action === 'remove'
+        ? 'Like konnte nicht entfernt werden.'
+        : 'Like konnte nicht gespeichert werden.'));
       setLive(false);
     }
   } finally {
     state.pendingVotes.delete(entry.id);
-    button.removeAttribute('aria-busy');
-    button.disabled = !state.data.votingOpen || entry.liked;
+    syncLikeButtons(entry);
   }
 }
 
@@ -461,67 +689,144 @@ function renderTrophies() {
 
 function render() {
   if (!state.data) return;
+  endSkeletons();
   const data = state.data;
+
   $theme.textContent = 'Motto: ' + (data.theme || THEMES[Number(state.month.slice(5, 7)) - 1] || 'Monatsmotiv');
   $monthLabel.textContent = monthLabel(state.month);
   populateMonths(data.months);
   renderScoreboard();
   renderGallery();
   renderTrophies();
+  refreshOpenPhotoView();
   setLive(true);
 
-  const $gallerySub = $('gallerySub');
-  if ($gallerySub) {
-    $gallerySub.textContent = data.votingOpen
-      ? 'Ein Like pro Foto und Gerät – mit Passkey, wenn verfügbar.'
+  const gallerySub = $('gallerySub');
+  if (gallerySub) {
+    gallerySub.textContent = data.votingOpen
+      ? 'Ein Like pro Foto und Gerät – jederzeit wieder zurücknehmbar.'
       : 'Die Abstimmung für diesen Monat ist beendet.';
   }
 }
 
 async function loadOverview({ silent = false } = {}) {
-  if (state.loading) return;
   if (state.month > currentMonth()) state.month = currentMonth();
-  state.loading = true;
-  $refreshBtn.classList.add('is-spinning');
+  if (!state.data) showSkeletons();
 
-  if (!silent || !state.data) {
-    if (!state.data) showState('Galerie wird geladen…');
+  const controller = new AbortController();
+  if (state.controller) state.controller.abort();
+  state.controller = controller;
+
+  if ($refreshBtn) {
+    $refreshBtn.classList.add('is-spinning');
+    $refreshBtn.setAttribute('aria-busy', 'true');
   }
 
   try {
     const query = new URLSearchParams({ month: state.month });
     if (legacyVoterId) query.set('voterId', legacyVoterId);
     if (credentialId) query.set('credentialId', credentialId);
-    const res = await fetch('/api/overview?' + query.toString(), { cache: 'no-store' });
+
+    const res = await fetch('/api/overview?' + query.toString(), {
+      cache: 'no-store',
+      signal: controller.signal
+    });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if (!data || !data.ok) throw new Error('Ungültige Antwort');
+    if (state.controller !== controller) return false;
+
     state.data = data;
     if (legacyVoterId) {
       legacyVoterId = '';
       try { localStorage.removeItem('snapboxChallengeVoter'); } catch (e) {}
     }
     render();
+
+    if (!silent) {
+      const count = data.entries.length;
+      announceStatus(`Galerie geladen: ${count} ${count === 1 ? 'Foto' : 'Fotos'} im ${monthLabel(state.month)}.`);
+    }
+    return true;
   } catch (err) {
+    if (err && err.name === 'AbortError') return false;
+    if (state.controller !== controller) return false;
+
     setLive(false);
+    endSkeletons();
     if (!state.data) {
+      if ($galleryGrid) $galleryGrid.innerHTML = '';
       showState('Bitte Verbindung prüfen und erneut versuchen.', { error: true, retry: true });
     } else if (!silent) {
       showToast('Aktualisierung fehlgeschlagen.');
     }
+    return false;
   } finally {
-    state.loading = false;
-    $refreshBtn.classList.remove('is-spinning');
+    if (state.controller === controller) {
+      if ($refreshBtn) {
+        $refreshBtn.classList.remove('is-spinning');
+        $refreshBtn.removeAttribute('aria-busy');
+      }
+    }
   }
+}
+
+async function changeMonth(next, { announce: shouldAnnounce = true } = {}) {
+  if (!isSelectableMonth(next)) {
+    showToast('Bitte einen gültigen Monat wählen.');
+    if ($monthSelect) $monthSelect.value = state.month;
+    return false;
+  }
+
+  const previous = state.month;
+  if (next === previous && state.data) return true;
+
+  if ($monthSelect) $monthSelect.value = next;
+  state.month = next;
+  state.data = null;
+  if ($galleryGrid) $galleryGrid.innerHTML = '';
+
+  const ok = await loadOverview();
+  if (ok && shouldAnnounce) {
+    showToast(`Monat: ${monthLabel(next)}`, {
+      actionLabel: 'Rückgängig',
+      onAction: () => changeMonth(previous, { announce: false })
+    });
+  }
+  return ok;
+}
+
+function setActiveTab(id) {
+  if (id === activeTabId) return;
+  activeTabId = id;
+  for (const tab of tabs) {
+    if (tab.dataset.target === id) tab.setAttribute('aria-current', 'true');
+    else tab.removeAttribute('aria-current');
+  }
+}
+
+function updateActiveTab() {
+  if (!sections.length) return;
+  let active = sections[0].id;
+  const marker = window.innerHeight * 0.4;
+  for (const section of sections) {
+    if (section.getBoundingClientRect().top <= marker) active = section.id;
+  }
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 80) {
+    active = sections[sections.length - 1].id;
+  }
+  setActiveTab(active);
 }
 
 if ($monthSelect) {
   $monthSelect.addEventListener('change', () => {
-    if (!/^\d{4}-\d{2}$/.test($monthSelect.value) || $monthSelect.value > currentMonth()) return;
-    state.month = $monthSelect.value;
-    state.data = null;
-    $galleryGrid.innerHTML = '';
-    loadOverview();
+    const value = $monthSelect.value;
+    if (!isSelectableMonth(value)) {
+      showToast('Dieser Monat ist nicht verfügbar.');
+      $monthSelect.value = state.month;
+      return;
+    }
+    changeMonth(value);
   });
 }
 
@@ -529,14 +834,70 @@ if ($refreshBtn) {
   $refreshBtn.addEventListener('click', () => loadOverview());
 }
 
+if ($galleryGrid) {
+  $galleryGrid.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element) || !state.data) return;
+    const opener = target.closest('[data-open-entry]');
+    if (!opener) return;
+    const entry = state.data.entries.find((item) => item.id === opener.dataset.openEntry);
+    if (entry) openPhotoView(entry, opener);
+  });
+}
+
+if ($photoBack) {
+  $photoBack.addEventListener('click', closePhotoView);
+}
+
+if ($photoView) {
+  $photoView.addEventListener('click', (event) => {
+    if (event.target === $photoView) closePhotoView();
+  });
+  $photoView.addEventListener('cancel', () => syncToastHost(true));
+  $photoView.addEventListener('close', () => {
+    syncToastHost();
+    document.body.classList.remove('has-dialog');
+    state.openEntryId = '';
+    restorePhotoFocus();
+  });
+}
+
+for (const tab of tabs) {
+  tab.addEventListener('click', () => {
+    const target = document.getElementById(tab.dataset.target);
+    if (!target) return;
+    setActiveTab(tab.dataset.target);
+    target.scrollIntoView({
+      behavior: reduceMotion.matches ? 'auto' : 'smooth',
+      block: 'start'
+    });
+  });
+}
+
+let scrollFrame = null;
+function onScroll() {
+  if (scrollFrame) return;
+  scrollFrame = requestAnimationFrame(() => {
+    scrollFrame = null;
+    updateActiveTab();
+  });
+}
+window.addEventListener('scroll', onScroll, { passive: true });
+window.addEventListener('resize', updateActiveTab);
+
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible') loadOverview({ silent: true });
 });
 
 state.ticker = setInterval(() => {
-  if (document.visibilityState === 'visible' && !state.pendingVotes.size) {
+  if (
+    document.visibilityState === 'visible'
+    && !state.pendingVotes.size
+    && !($photoView && $photoView.open)
+  ) {
     loadOverview({ silent: true });
   }
 }, 30000);
 
+updateActiveTab();
 loadOverview();

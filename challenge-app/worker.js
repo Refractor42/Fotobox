@@ -621,13 +621,16 @@ async function handleVote(request, env) {
   if (request.method !== 'POST') return fail('Methode nicht erlaubt.', 405);
   const body = await readJson(request, 64 * 1024);
   const entryId = typeof body.entryId === 'string' && ID_RE.test(body.entryId) ? body.entryId : null;
+  const action = body.action === 'remove' ? 'remove' : 'like';
   const voter = resolveVoter(request);
   const voterId = voter.voterId;
   const hasCredential = await env.DB.prepare(
     'SELECT 1 AS yes FROM challenge_credentials WHERE voter_id = ? LIMIT 1'
   ).bind(voterId).first();
   if (hasCredential) {
-    return fail('Bitte bestätige den Like mit deinem Passkey.', 428);
+    return fail(action === 'remove'
+      ? 'Bitte bestätige das Entfernen des Likes mit deinem Passkey.'
+      : 'Bitte bestätige den Like mit deinem Passkey.', 428);
   }
   if (!entryId) return fail('Ungültiger Eintrag.');
 
@@ -639,12 +642,23 @@ async function handleVote(request, env) {
     return fail('Die Abstimmung für diesen Monat ist beendet.', 403);
   }
 
+  if (action === 'remove') {
+    await env.DB.prepare(
+      'DELETE FROM challenge_votes WHERE entry_id = ? AND voter_id = ?'
+    ).bind(entryId, voterId).run();
+    return json(
+      { ok: true, voted: false, votes: await countVotes(env, entryId) },
+      200,
+      voter.setCookie ? { 'Set-Cookie': voter.setCookie } : {}
+    );
+  }
+
   const existing = await env.DB.prepare(
     'SELECT 1 AS yes FROM challenge_votes WHERE entry_id = ? AND voter_id = ?'
   ).bind(entryId, voterId).first();
 
-  // Ein Like ist endgültig: ein zweiter Klick oder eine doppelte Anfrage
-  // erhöht den Zähler nicht und löscht die Stimme auch nicht wieder.
+  // Ein Like bleibt pro Gerät eindeutig: Eine doppelte Like-Anfrage erhöht
+  // den Zähler nicht. Entfernt wird ausschließlich über action = "remove".
   if (existing) {
     return json(
       { ok: true, voted: true, votes: await countVotes(env, entryId) },
@@ -797,6 +811,7 @@ async function handleWebAuthnVote(request, env) {
   if (request.method !== 'POST') return fail('Methode nicht erlaubt.', 405);
   const body = (await readJson(request, 64 * 1024)) || {};
   const entryId = typeof body.entryId === 'string' && ID_RE.test(body.entryId) ? body.entryId : null;
+  const action = body.action === 'remove' ? 'remove' : 'like';
   if (!entryId) return fail('Ungültiger Eintrag.');
 
   const challenge = await readWebAuthnChallenge(request, env, 'get');
@@ -832,12 +847,20 @@ async function handleWebAuthnVote(request, env) {
     return fail('Die Abstimmung für diesen Monat ist beendet.', 403);
   }
 
-  const already = await env.DB.prepare(
-    'SELECT 1 AS yes FROM challenge_votes WHERE entry_id = ? AND voter_id = ?'
-  ).bind(entryId, challenge.voter_id).first();
-  await env.DB.prepare(
-    'INSERT OR IGNORE INTO challenge_votes (entry_id, voter_id, created_at) VALUES (?, ?, ?)'
-  ).bind(entryId, challenge.voter_id, new Date().toISOString()).run();
+  let duplicate = false;
+  if (action === 'remove') {
+    await env.DB.prepare(
+      'DELETE FROM challenge_votes WHERE entry_id = ? AND voter_id = ?'
+    ).bind(entryId, challenge.voter_id).run();
+  } else {
+    const already = await env.DB.prepare(
+      'SELECT 1 AS yes FROM challenge_votes WHERE entry_id = ? AND voter_id = ?'
+    ).bind(entryId, challenge.voter_id).first();
+    duplicate = !!already;
+    await env.DB.prepare(
+      'INSERT OR IGNORE INTO challenge_votes (entry_id, voter_id, created_at) VALUES (?, ?, ?)'
+    ).bind(entryId, challenge.voter_id, new Date().toISOString()).run();
+  }
   await env.DB.prepare(
     'UPDATE challenge_credentials SET sign_count = ?, last_used_at = ? WHERE credential_id = ?'
   ).bind(auth.signCount, new Date().toISOString(), credentialId).run();
@@ -846,9 +869,9 @@ async function handleWebAuthnVote(request, env) {
   return json(
     {
       ok: true,
-      voted: true,
+      voted: action !== 'remove',
       votes: await countVotes(env, entryId),
-      duplicate: !!already,
+      duplicate,
       credentialId
     },
     200,

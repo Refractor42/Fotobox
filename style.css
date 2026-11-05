@@ -1473,6 +1473,13 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
   justify-content: flex-end;
   gap: calc((0.5rem) * var(--a11y-control-scale, 1));
 }
+/* Der rote Button steht links neben der sicheren Aktion. Etwas schmalere
+   Innenabstände lassen beide bei normaler Skalierung in einer Zeile Platz;
+   bei großer Schrift bleibt der Umbruch als Sicherheitsnetz erhalten. */
+.modal__actions .btn {
+  padding-inline: calc((0.9rem) * var(--a11y-control-scale, 1));
+}
+.modal__actions .btn--danger { order: -1; }
 
 .btn--danger { background: var(--c-danger); color: #fff; border: 1px solid var(--c-danger); }
 .btn--danger:hover {
