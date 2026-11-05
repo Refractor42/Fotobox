@@ -1,0 +1,1 @@
+Fotobox wird mit Fotobox der Datei Fotobox-Kiosk.cmd gestartet
