@@ -102,6 +102,31 @@
       gap: 0.75rem;
     }
 
+    .admin-language {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border: 1px solid var(--c-border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--c-text);
+      font-size: 1.35rem;
+      cursor: pointer;
+    }
+
+    .admin-language svg {
+      display: block;
+      width: 26px;
+      height: 18px;
+      border-radius: 2px;
+      box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.22);
+    }
+
+    .admin-language:hover { background: var(--c-surface-hover); }
+    .admin-language:focus-visible { outline: 2px solid var(--c-accent); outline-offset: 2px; }
+
     .server-status {
       display: inline-flex;
       align-items: center;
@@ -1714,6 +1739,15 @@
       </div>
 
       <div class="header-actions">
+        <button class="admin-language" id="adminLanguageToggle" type="button" aria-label="Switch admin panel to English" title="English">
+          <svg viewBox="0 0 24 16" aria-hidden="true" focusable="false">
+            <rect width="24" height="16" fill="#012169"/>
+            <path d="M0 0 24 16M24 0 0 16" stroke="#fff" stroke-width="4.5"/>
+            <path d="M0 0 24 16M24 0 0 16" stroke="#c8102e" stroke-width="2"/>
+            <path d="M12 0v16M0 8h24" stroke="#fff" stroke-width="6"/>
+            <path d="M12 0v16M0 8h24" stroke="#c8102e" stroke-width="3"/>
+          </svg>
+        </button>
         <div class="server-status" id="serverStatusBadge">
           <span class="status-dot"></span>
           <span id="serverStatusText">Online</span>
@@ -2555,6 +2589,498 @@
     (function () {
       'use strict';
 
+      const ADMIN_LANGUAGE_KEY = 'snapbox_admin_panel_language';
+      const ADMIN_EN = {
+        'SnapBox — Admin Panel': 'SnapBox — Admin Panel',
+        'Admin': 'Admin',
+        'Online': 'Online',
+        'Abmelden': 'Log out',
+        'Fotobox öffnen': 'Open photobooth',
+        'Standard-PIN aktiv. Bitte in': 'Default PIN is active. Set a custom PIN in',
+        'einen eigenen PIN setzen.': 'to set your own PIN.',
+        'Fotobox konfigurieren': 'Configure photobooth',
+        'Sprache, Zeiten, Aufnahme-Standards, Farben und Galerie zentral steuern. Änderungen werden sofort gespeichert und an alle geöffneten Fotobox-Terminals übertragen.': 'Manage language, timers, capture defaults, colors, and gallery settings in one place. Changes are saved immediately and sent to all open photobooth terminals.',
+        'Einstellungen werden geladen…': 'Loading settings…',
+        'Sprache': 'Language',
+        'Aufbewahrung': 'Retention',
+        'Zeiten': 'Timers',
+        'Endscreen': 'End screen',
+        'Aufnahme': 'Capture',
+        'Darstellung': 'Appearance',
+        'Fotos': 'Photos',
+        'Drucken': 'Print',
+        'Teilen': 'Share',
+        'QR-Code': 'QR code',
+        'Uhrzeit (Stunden)': 'Time of day (hours)',
+        'Meiste Aufnahmen': 'Busiest time',
+        'Papierkorb': 'Trash',
+        'Galerie & Leistung': 'Gallery & performance',
+        'Challenge': 'Challenge',
+        'Nutzung': 'Usage',
+        'System': 'System',
+        'Zurücksetzen': 'Reset',
+        'Standard-Sprache': 'Default language',
+        'Wähle die Sprache, mit der die Fotobox startet und zu der sie nach jedem gespeicherten Foto automatisch zurückkehrt.': 'Choose the language the photobooth starts in and returns to after each saved photo.',
+        'Standardwerte wiederherstellen': 'Restore defaults',
+        'Wählen': 'Select',
+        'Deutsche Benutzeroberfläche mit „Fotobox starten“, „Auslöser“ und „Filter“.': 'German interface with “Start photobooth”, “Shutter”, and “Filters”.',
+        'English user interface with "Start Photobox", "Capture" and "Filters".': 'English interface with “Start photobooth”, “Capture”, and “Filters”.',
+        'Papierkorb-Aufbewahrung': 'Trash retention',
+        'Wie lange Fotos im Admin-Papierkorb bleiben, bevor sie endgültig entfernt werden. Gilt für Löschungen im Admin-Panel.': 'How long photos remain in the admin trash before they are permanently deleted. Applies to deletions in the admin panel.',
+        '7 Tage': '7 days',
+        '14 Tage': '14 days',
+        '30 Tage': '30 days',
+        'Änderungen werden sofort gespeichert. Nur mit gültiger Admin-PIN erreichbar.': 'Changes are saved immediately. Only accessible with a valid admin PIN.',
+        'Zeiten & Inaktivität': 'Timers & inactivity',
+        'Wie lange Gäste auf einem Screen bleiben dürfen, bevor die Fotobox zurückspringt. Die Warnung erscheint vor dem Reset und lässt sich per Tipp abbrechen.': 'How long guests can stay on a screen before the photobooth returns to the start. A warning appears before reset and can be dismissed with a tap.',
+        'Mitten im Ablauf': 'During a session',
+        'Kamera, Review, Galerie, Papierkorb und QR-Dialog. Mehr Zeit zum Positionieren, Requisiten holen oder Tippen.': 'Camera, review, gallery, trash, and QR dialog. Allow more time to get into position, grab props, or tap.',
+        'Warnung vor dem Reset': 'Warning before reset',
+        'Sichtbarer Countdown mit „Hier bleiben“. Muss kürzer als beide Fristen oben sein.': 'Visible countdown with “Stay here”. Must be shorter than both time limits above.',
+        'Barrierefreiheit zurücksetzen': 'Reset accessibility settings',
+        'Am Startbildschirm: So lange ohne Berührung, bis Schriftgröße, Farbmodus und Ton auf Standard springen. Jede Berührung setzt die Frist neu.': 'On the start screen: how long to wait without input before text size, color mode, and sound return to their defaults. Any touch restarts the timer.',
+        'Dauer und Aktionen auf dem Bildschirm nach einem Foto festlegen.': 'Set the duration and actions shown after taking a photo.',
+        'Anzeigedauer': 'Display duration',
+        'Wie lange der Endscreen nach dem Foto angezeigt wird, bevor die Fotobox zum Start zurückkehrt.': 'How long the end screen is shown after a photo before the photobooth returns to the start.',
+        'QR-Link gültig': 'QR link valid for',
+        'So lange bleibt der Download-Link auf dem Handy erreichbar, nachdem der QR-Code erzeugt wurde.': 'How long the download link remains available on the phone after the QR code is generated.',
+        'Stunden': 'hours',
+        'QR-Code anzeigen': 'Show QR code',
+        'QR-Code-Button auf dem Endscreen anzeigen.': 'Show the QR code button on the end screen.',
+        'Ein': 'On',
+        'Drucken anzeigen': 'Show print button',
+        'Drucken-Button auf dem Endscreen anzeigen.': 'Show the print button on the end screen.',
+        'Galerie anzeigen': 'Show gallery button',
+        'Galerie-Button auf dem Endscreen anzeigen.': 'Show the gallery button on the end screen.',
+        'Aufnahme-Standard': 'Capture defaults',
+        'Diese Werte gelten für jeden neuen Gast. Gäste können sie während ihrer Sitzung weiterhin selbst ändern; beim Zurückspringen werden sie wieder auf den Standard gesetzt. Filter, Sticker und Overlays lassen sich zusätzlich für alle Gäste ausblenden — diese Schalter wirken sofort.': 'These values apply to each new guest. Guests can still change them during their session; they reset to these defaults when returning to the start. Filters, stickers, and overlays can also be hidden for everyone — these switches take effect immediately.',
+        'Aufnahmemodus': 'Capture mode',
+        'Einzelfoto oder vierteilige Fotocollage (2×2) beim Start.': 'Start with a single photo or a four-photo collage (2×2).',
+        'Einzelfoto': 'Single photo',
+        'Fotocollage': 'Photo collage',
+        'Countdown': 'Countdown',
+        'Startwert des Selbstauslösers. Die Optionen 3, 5 und 10 Sekunden bleiben wählbar.': 'Default self-timer value. The 3, 5, and 10 second options remain available.',
+        'Ton beim Start': 'Sound on start',
+        'Auslöser- und Countdown-Töne sind für neue Gäste zunächst eingeschaltet.': 'Shutter and countdown sounds are enabled by default for new guests.',
+        'Kamera': 'Camera',
+        'Welche Kamera das Gerät verwendet. „Umgebung“ ist bei Fotoboxen üblich; „Front“ eignet sich für Selbstporträts.': 'Choose which camera the device uses. “Rear” is typical for photobooths; “Front” is suited to selfies.',
+        'Rückkamera / Umgebung': 'Rear camera',
+        'Frontkamera / Selbstporträt': 'Front camera / selfie',
+        'Filter anzeigen': 'Show filters',
+        'Gesichtsfilter, Farbfilter und die Filter-Werkzeuge werden Gästen angezeigt.': 'Show guests face filters, color filters, and filter tools.',
+        'Sticker anzeigen': 'Show stickers',
+        'Sticker-Auswahl und Sticker-Werkzeuge werden Gästen angezeigt.': 'Show guests sticker selection and sticker tools.',
+        'Overlays anzeigen': 'Show overlays',
+        'Rahmen und Bild-Overlays werden Gästen angezeigt. Bereits gewählte Overlays bleiben erhalten.': 'Show guests frames and image overlays. Existing overlay choices are preserved.',
+        'Marke und Farben der Fotobox. Die Vorschau zeigt sofort, wie Startbutton, Auslöser und Verlauf auf den Gäste-Bildschirmen aussehen.': 'Photobooth branding and colors. The preview shows how the start button, shutter, and gradient will look to guests.',
+        'Fotobox-Name': 'Photobooth name',
+        'Erscheint auf dem Startbildschirm, im Seitentitel und in der Kamera-Berechtigung.': 'Shown on the start screen, in the page title, and in the camera permission prompt.',
+        'Farbpalette': 'Color palette',
+        'Akzentfarbe für Buttons und Auslöser, zweite Farbe für den Farbverlauf, Hintergrund für alle Screens. Der Hintergrund bleibt dunkel, damit die weiße Schrift lesbar ist. Bei aktivem Farbsehschwächen-Modus im Startbildschirm hat dessen Palette Vorrang.': 'Accent color for buttons and shutter, secondary color for gradients, and background for all screens. The background stays dark for readable white text. The color-vision accessibility palette takes priority when enabled on the start screen.',
+        'Akzent': 'Accent',
+        'Verlauf': 'Gradient',
+        'Hintergrund': 'Background',
+        'Runde Buttons': 'Round buttons',
+        'Hintergrundfarbe und Transparenz der runden Buttons auf Start-, Aufnahme- und Review-Screen sowie der Countdown-/Modus-Auswahl und der runden Filterauswahl. Farbfilter-Vorschauen, der gelbe Auslöser und der grüne Bestätigen-Button bleiben unverändert. Ohne Anpassung bleibt die ursprüngliche Glasoptik der einzelnen Buttons erhalten; beim Ändern gilt die gewählte Farbe und Transparenz für alle diese Buttons.': 'Background color and opacity for round buttons on the start, capture, and review screens, as well as countdown/mode and round filter selections. Color filter previews, the yellow shutter, and green confirm button are unchanged. Without customization, each button keeps its original glass effect; a custom color and opacity apply to all these buttons.',
+        'Buttonfarbe': 'Button color',
+        'Transparenz': 'Opacity',
+        '0 % = deckend, 100 % = vollständig transparent.': '0% = opaque, 100% = fully transparent.',
+        'Knipsen. Animieren. Erinnern.': 'Capture. Animate. Remember.',
+        'Fotobox starten': 'Start photobooth',
+        'Kontrast wird geprüft…': 'Checking contrast…',
+        'Galerie und Papierkorb laden Fotos seitenweise. Eine kleinere Seite startet schneller; „Mehr laden“ bleibt für alle weiteren Fotos sichtbar.': 'The gallery and trash load photos in pages. Smaller pages load faster; “Load more” stays available for additional photos.',
+        'Fotos pro Seite': 'Photos per page',
+        'Gilt ab dem nächsten Neuladen der Fotobox. Bereits geladene Seiten bleiben unverändert.': 'Takes effect the next time the photobooth is reloaded. Already loaded pages are unchanged.',
+        'Empfehlung: 12 Fotos. Das entspricht der bisherigen Geschwindigkeit und hält den ersten Aufruf unter einer halben Megabyte.': 'Recommended: 12 photos. This maintains the current speed and keeps the initial load under half a megabyte.',
+        'Monats-Challenge': 'Monthly challenge',
+        'Verknüpft diese Fotobox mit der öffentlichen Challenge-Web-App. Standort, Adresse und API-Schlüssel werden hier hinterlegt. Der Schlüssel bleibt auf dem Server und wird nie an den Kiosk-Browser ausgeliefert.': 'Connect this photobooth to the public challenge web app. Configure the location, address, and API key here. The key stays on the server and is never sent to the kiosk browser.',
+        'Challenge aktiv': 'Enable challenge',
+        'Blendet Challenge-Karte, Einreichung und Leaderboard-QR auf der Fotobox ein. Erst einschalten, wenn Standort, Web-App-Adresse und Schlüssel stimmen.': 'Show the challenge card, submissions, and leaderboard QR code on the photobooth. Enable only after verifying the location, web app address, and key.',
+        'Aus': 'Off',
+        'Standort dieser Box': 'This photobooth’s location',
+        'Bestimmt, für welches Team die Fotos dieser Fotobox im Leaderboard zählen.': 'Determines which team this photobooth’s photos count for on the leaderboard.',
+        'Campus Coburg': 'Coburg campus',
+        'Web-App-Adresse': 'Web app address',
+        'Öffentliche Adresse der Challenge-Seite, ohne Pfad-Anhang. Daraus entsteht der QR-Code auf dem Endscreen.': 'Public address of the challenge page, without a path. This is used to create the QR code on the end screen.',
+        'API-Schlüssel': 'API key',
+        'Server-Schlüssel der Challenge-App. Wird verschlüsselt nicht angezeigt; ein neuer Wert ersetzt den bisherigen.': 'Server key for the challenge app. The saved key is hidden; a new value replaces it.',
+        'Noch kein Schlüssel gespeichert': 'No key saved yet',
+        'Schlüssel speichern': 'Save key',
+        'Noch kein API-Schlüssel gespeichert.': 'No API key saved yet.',
+        'Verbindung noch nicht geprüft.': 'Connection not tested yet.',
+        'Verbindung testen': 'Test connection',
+        'Alle Fotos der Fotobox. Wähle Fotos über die Bildfläche aus; gelöschte Fotos bleiben im Papierkorb bis zum Ablauf der Aufbewahrungszeit.': 'All photos from the photobooth. Select photos by clicking the image; deleted photos stay in the trash until the retention period expires.',
+        'Neu laden': 'Refresh',
+        'Fotos werden geladen…': 'Loading photos…',
+        'Alle sichtbaren auswählen': 'Select all visible',
+        'Auswahl aufheben': 'Clear selection',
+        'Auswahl in den Papierkorb': 'Move selection to trash',
+        'Noch keine Fotos vorhanden.': 'No photos yet.',
+        'Mehr laden': 'Load more',
+        'Fotos, die im Admin-Panel gelöscht wurden, bleiben hier bis zum Ablauf der Aufbewahrungszeit. Wähle Fotos über die Bildfläche aus, um sie gemeinsam wiederherzustellen oder endgültig zu löschen. Gäste löschen endgültig und sehen keinen Papierkorb.': 'Photos deleted in the admin panel stay here until the retention period expires. Select photos by clicking the image to restore or permanently delete them in bulk. Guest deletions are permanent and do not use the trash.',
+        'Papierkorb wird geladen…': 'Loading trash…',
+        'Auswahl wiederherstellen': 'Restore selection',
+        'Auswahl endgültig löschen': 'Permanently delete selection',
+        '0 ausgewählt': '0 selected',
+        'Der Papierkorb ist leer.': 'The trash is empty.',
+        'Nutzung & Statistik': 'Usage & statistics',
+        'Wie oft die Fotobox genutzt wird: Aufnahmen pro Tag, Tageszeiten und die Nutzung der Endbuttons. Fotos kommen aus dem gemeinsamen Supabase-Speicher; Aktionen am Ende werden nur auf diesem Server gezählt.': 'Photobooth usage: captures per day, time of day, and end-screen button usage. Photos come from shared Supabase storage; end-screen actions are counted only on this server.',
+        'Aktualisieren': 'Refresh',
+        'Statistik wird geladen…': 'Loading statistics…',
+        'Statistik konnte nicht geladen werden.': 'Could not load statistics.',
+        'Erneut versuchen': 'Try again',
+        'Fotos gesamt': 'Total photos',
+        'Gemeinsamer Supabase-Speicher': 'Shared Supabase storage',
+        'Aufnahmen im Zeitraum': 'Captures in period',
+        'Alle Boxen am selben Speicher · inkl. Papierkorb': 'All photobooths on shared storage · including trash',
+        'Fotos pro Tag': 'Photos per day',
+        'Daten als Tabelle anzeigen': 'Show data as table',
+        'Fotos pro Tag im gewählten Zeitraum': 'Photos per day in selected period',
+        'Datum': 'Date',
+        'Aufnahmezeiten': 'Capture times',
+        'Aktionen am Ende': 'End-screen actions',
+        'Zählt Klicks auf QR-Code, Drucken und Teilen auf dem letzten Bildschirm. Nicht gezählt werden Fotos, Gäste oder abgebrochene Aufnahmen; Mehrfachklicks zählen mehrfach.': 'Counts clicks on QR code, print, and share on the end screen. Photos, guests, and cancelled captures are not counted; repeated clicks count separately.',
+        'Fotos und Aufnahmezeiten werden aus dem gemeinsamen Supabase-Speicher gelesen und umfassen alle Fotoboxen, die denselben Bucket verwenden. Aktionen am Ende zählt ausschließlich dieser Server lokal seit dem ersten Start nach dem Update.': 'Photos and capture times are read from shared Supabase storage and include all photobooths using the same bucket. End-screen actions are counted locally by this server only, starting with its first launch after the update.',
+        'System & Verbindungen': 'System & connections',
+        'Netzwerk-URLs zum Aufrufen der Fotobox auf Tablets oder Gästegeräten.': 'Network URLs for opening the photobooth on tablets and guest devices.',
+        'Aktiver Modus': 'Active mode',
+        'Querformat': 'Landscape',
+        '16:9 Breitbild (Tablet/Widescreen)': '16:9 widescreen (tablet/widescreen)',
+        'Gespeicherte Fotos': 'Saved photos',
+        'In Supabase Storage': 'In Supabase Storage',
+        'Fotos im Papierkorb': 'Photos in trash',
+        'Automatische Bereinigung': 'Automatic cleanup',
+        'Tages-Streak': 'Daily streak',
+        'Knips-Serie der Box': 'Photobooth photo streak',
+        'Netzwerk-Link kopieren': 'Copy network link',
+        'Zur Fotobox wechseln': 'Go to photobooth',
+        'Fotobox zurücksetzen': 'Reset photobooth',
+        'Setzt alle gespeicherten Einstellungen dieser Fotobox auf die Standardwerte zurück.': 'Resets all saved settings for this photobooth to their defaults.',
+        'Alle Einstellungen zurücksetzen': 'Reset all settings',
+        'Sprache, Zeiten, Aufnahme-Standards, Darstellung, Galerie und Challenge-Konfiguration werden zurückgesetzt. Fotos, Papierkorb und Zugangsdaten wie der Challenge-API-Schlüssel oder die Admin-PIN bleiben erhalten. Diese Aktion kann nicht rückgängig gemacht werden.': 'Language, timers, capture defaults, appearance, gallery, and challenge settings will be reset. Photos, trash, and credentials such as the challenge API key or admin PIN are kept. This action cannot be undone.',
+        'Noch da?': 'Still there?',
+        'Die Admin-Sitzung wird in': 'Your admin session will end in',
+        'Sekunden beendet.': 'seconds.',
+        'Angemeldet bleiben': 'Stay logged in',
+        'unter': 'under',
+        'Wiederherstellen': 'Restore',
+        'Endgültig löschen': 'Delete permanently',
+        'Lädt…': 'Loading…',
+        'Gespeichert': 'Saved',
+        'Wird gespeichert…': 'Saving…',
+        'Nicht gespeichert': 'Not saved',
+        'Einstellungen konnten nicht geladen werden': 'Could not load settings',
+        'Einstellungen konnten nicht geladen werden — Verbindung prüfen.': 'Could not load settings — check your connection.',
+        'Gespeichert · ': 'Saved · ',
+        'Admin · ': 'Admin · ',
+        'Akzent auf Hintergrund: {ratio}:1 — gut lesbar. Die Schrift im Button wird automatisch passend gewählt.': 'Accent on background: {ratio}:1 — easy to read. Button text color is adjusted automatically.',
+        'Nur {ratio}:1 Kontrast zwischen Akzent und Hintergrund. Bitte eine deutlichere Akzentfarbe wählen.': 'Only {ratio}:1 contrast between the accent and background. Choose a more distinct accent color.',
+        'API-Schlüssel ist gespeichert. Ein neuer Wert ersetzt ihn; der alte wird nie angezeigt.': 'API key is saved. A new value replaces it; the previous key is never shown.',
+        'Ohne Schlüssel bleibt die Challenge auf der Fotobox aus.': 'The challenge stays disabled on the photobooth until a key is set.',
+        'Gespeichert — neuer Schlüssel zum Ersetzen': 'Saved — enter a new key to replace it',
+        'Speichern fehlgeschlagen.': 'Save failed.',
+        'Speichern fehlgeschlagen — Verbindung prüfen.': 'Save failed — check your connection.',
+        'Bitte einen Hex-Wert wie #ffd700 eingeben.': 'Enter a hex value such as #ffd700.',
+        'Der Hintergrund muss dunkel bleiben, damit die weiße Schrift lesbar ist.': 'The background must stay dark so white text remains readable.',
+        'Die Warnzeit muss kürzer als beide Inaktivitätszeiten sein.': 'The warning time must be shorter than both inactivity time limits.',
+        'QR-Links müssen zwischen 1 und 168 Stunden gültig sein.': 'QR links must be valid for 1 to 168 hours.',
+        'Bitte eine vollständige http(s)-Adresse ohne Query oder Fragment eingeben.': 'Enter a complete http(s) address without a query or fragment.',
+        'Bitte den API-Schlüssel der Challenge-App eingeben.': 'Enter the challenge app API key.',
+        'Der Schlüssel muss 20–128 Zeichen aus A–Z, a–z, 0–9, _ oder - haben.': 'The key must be 20–128 characters using A–Z, a–z, 0–9, _ or -.',
+        'Der Fotobox-Name muss 1–32 Zeichen lang sein.': 'The photobooth name must be 1–32 characters long.',
+        'Die Transparenz muss zwischen 0 und 100 % liegen.': 'Opacity must be between 0 and 100%.',
+        'Die Warnzeit muss kürzer als beide Fristen oben sein.': 'The warning time must be shorter than both time limits above.',
+        'QR-Gültigkeit gespeichert.': 'QR validity saved.',
+        'Papierkorb-Aufbewahrung: {days} Tage.': 'Trash retention: {days} days.',
+        'Challenge auf der Fotobox eingeschaltet.': 'Challenge enabled on photobooth.',
+        'Challenge auf der Fotobox ausgeschaltet.': 'Challenge disabled on photobooth.',
+        'Ton für neue Gäste eingeschaltet.': 'Sound enabled for new guests.',
+        'Ton für neue Gäste ausgeschaltet.': 'Sound disabled for new guests.',
+        'Endscreen-Button eingeschaltet.': 'End-screen button enabled.',
+        'Endscreen-Button ausgeblendet.': 'End-screen button hidden.',
+        'Filter eingeschaltet.': 'Filters enabled.',
+        'Filter ausgeschaltet.': 'Filters disabled.',
+        'Sticker eingeschaltet.': 'Stickers enabled.',
+        'Sticker ausgeschaltet.': 'Stickers disabled.',
+        'Overlays eingeschaltet.': 'Overlays enabled.',
+        'Overlays ausgeschaltet.': 'Overlays disabled.',
+        'Aufnahmemodus gespeichert.': 'Capture mode saved.',
+        'Countdown-Standard gespeichert.': 'Countdown default saved.',
+        'Kamera-Auswahl gespeichert.': 'Camera selection saved.',
+        'Fotobox-Name gespeichert.': 'Photobooth name saved.',
+        'Button-Transparenz gespeichert.': 'Button opacity saved.',
+        'Verbindung wird geprüft…': 'Checking connection…',
+        'Challenge ist ausgeschaltet. Erst einschalten, dann testen.': 'The challenge is disabled. Enable it before testing.',
+        'Noch nicht vollständig eingerichtet: Web-App-Adresse und API-Schlüssel prüfen.': 'Setup incomplete: check the web app address and API key.',
+        'Nicht erreichbar. Adresse, Schlüssel und Internetverbindung prüfen.': 'Unavailable. Check the address, key, and internet connection.',
+        'Noch kein API-Schlüssel gespeichert. Ohne Schlüssel bleibt die Challenge auf der Fotobox aus.': 'No API key saved. The challenge stays disabled on the photobooth until a key is set.',
+        'Verbunden · {location} · {entries} Fotos · {votes} Likes in diesem Monat.': 'Connected · {location} · {entries} photos · {votes} likes this month.',
+        'Standardsprache auf English gesetzt.': 'Default language set to English.',
+        'Standardsprache auf Deutsch gesetzt.': 'Default language set to German.',
+        'Link kopiert!': 'Link copied!',
+        'Netzwerk-Link kopieren': 'Copy network link',
+        'Abmelden…': 'Logging out…',
+        'Noch keine Fotos vorhanden.': 'No photos yet.',
+        'Der Papierkorb ist leer.': 'The trash is empty.',
+        'Papierkorb ist leer': 'Trash is empty',
+        'Keine Fotos vorhanden': 'No photos',
+        'Auswahl aufheben': 'Clear selection',
+        'Auswahl in den Papierkorb verschieben': 'Move selection to trash',
+        'QR-Gültigkeit gespeichert.': 'QR validity saved.',
+        'API-Schlüssel gespeichert.': 'API key saved.',
+        'Zeit gespeichert.': 'Timer saved.',
+        'Alle Einstellungen zurücksetzen?': 'Reset all settings?',
+        'Das kann nicht rückgängig gemacht werden.': 'This cannot be undone.',
+        'Fortfahren?': 'Continue?',
+        'Fotobox-Link:': 'Photobooth link:',
+        'Der API-Schlüssel bleibt gespeichert.': 'The API key will remain saved.',
+        'Diese Einstellungen': 'These settings',
+        'Einstellungen': 'Settings',
+        'Alle Einstellungen wurden auf Standardwerte zurückgesetzt.': 'All settings have been reset to their defaults.',
+        'Alle sichtbaren auswählen': 'Select all visible',
+        'Alle sichtbaren Fotos auswählen': 'Select all visible photos',
+        'Gelöschtes Foto ': 'Deleted photo ',
+        'Foto ': 'Photo ',
+        'abwählen': 'deselect',
+        'auswählen': 'select',
+        'Auswahl aller sichtbaren Fotos aufheben': 'Deselect all visible photos',
+        'Fotos konnten nicht geladen werden.': 'Could not load photos.',
+        'Papierkorb konnte nicht geladen werden.': 'Could not load trash.',
+        'Foto in den Papierkorb verschieben': 'Move photo to trash',
+        'Foto konnte nicht gelöscht werden.': 'Could not delete photo.',
+        'Foto in den Papierkorb verschoben.': 'Photo moved to trash.',
+        'Foto wiederhergestellt.': 'Photo restored.',
+        'Foto konnte nicht wiederhergestellt werden.': 'Could not restore photo.',
+        'Foto endgültig gelöscht.': 'Photo permanently deleted.',
+        'Foto konnte nicht endgültig gelöscht werden.': 'Could not permanently delete photo.',
+        'Ablaufdatum unbekannt': 'Expiration date unknown',
+        'Löscht endgültig am ': 'Permanently deleted on ',
+        'Keine Aufnahmen im Zeitraum': 'No captures in this period',
+        'Noch keine Aufnahmen im gewählten Zeitraum.': 'No captures in the selected period yet.',
+        'Noch keine Klicks auf QR-Code, Drucken oder Teilen seit diesem Update.': 'No QR code, print, or share clicks since this update.',
+        'Fotos aus dem Speicher konnten nicht gelesen werden. Aktionen am Ende werden weiterhin angezeigt.': 'Could not read photos from storage. End-screen actions are still shown.',
+        'Die Nutzungsdaten sind gerade nicht erreichbar. Bitte Verbindung prüfen und erneut versuchen.': 'Usage data is currently unavailable. Check your connection and try again.',
+        'Aktualisiert um ': 'Updated at ',
+        'Dieser Server · ': 'This server · ',
+        'keine Aktionen': 'no actions',
+        'Aktionen': 'actions',
+        'Aufnahmen': 'captures',
+        'pro Tag': 'per day',
+        'Keine Aufnahmen · ': 'No captures · ',
+        'Fotos angezeigt.': 'photos shown.',
+        'Fotos im Papierkorb.': 'photos in trash.',
+        ' von ': ' of ',
+        ' ausgewählt': ' selected',
+        ' in den Papierkorb verschoben.': ' moved to trash.',
+        ' wiederhergestellt.': ' restored.',
+        ' endgültig gelöscht.': ' permanently deleted.',
+        'Fortfahren?': 'Continue?',
+        'Alle Einstellungen der Fotobox auf Standardwerte zurücksetzen?': 'Reset all photobooth settings to their defaults?',
+        'Ausgewählte Fotos in den Papierkorb verschieben? Du kannst sie im Papierkorb wiederherstellen.': 'Move selected photos to the trash? You can restore them from the trash.',
+        'Keine Fotos im gewählten Zeitraum.': 'No photos in the selected period.',
+        'Fotos pro Tag: keine Aufnahmen im gewählten Zeitraum.': 'Photos per day: no captures in the selected period.',
+        'Aufnahmezeiten: keine Aufnahmen im gewählten Zeitraum.': 'Capture times: no captures in the selected period.'
+      };
+      const ADMIN_EN_ATTRIBUTES = {
+        'Admin-Sitzung · Beim Verlassen oder Neuladen wird abgemeldet': 'Admin session · Logging out when leaving or reloading',
+        'Öffnet die Fotobox und meldet die Admin-Sitzung ab.': 'Opens the photobooth and ends the admin session.',
+        'Admin-Bereiche': 'Admin sections',
+        'Standardwerte für die Standard-Sprache wiederherstellen': 'Restore default language settings',
+        'Standard-Sprache': 'Default language',
+        'Standardwerte für die Papierkorb-Aufbewahrung wiederherstellen': 'Restore trash retention defaults',
+        'Aufbewahrungsdauer': 'Retention period',
+        'Standardwerte für Zeiten und Inaktivität wiederherstellen': 'Restore timer and inactivity defaults',
+        'Standardwerte für den Endscreen wiederherstellen': 'Restore end screen defaults',
+        'Standardwerte für die Aufnahme wiederherstellen': 'Restore capture defaults',
+        'Standard-Aufnahmemodus': 'Default capture mode',
+        'Standard-Countdown': 'Default countdown',
+        'Standardwerte für die Darstellung wiederherstellen': 'Restore appearance defaults',
+        'Akzentfarbe wählen': 'Choose accent color',
+        'Akzentfarbe als Hex-Wert': 'Accent color as hex value',
+        'Zweite Farbe wählen': 'Choose secondary color',
+        'Zweite Farbe als Hex-Wert': 'Secondary color as hex value',
+        'Hintergrundfarbe wählen': 'Choose background color',
+        'Hintergrundfarbe als Hex-Wert': 'Background color as hex value',
+        'Buttonfarbe wählen': 'Choose button color',
+        'Buttonfarbe als Hex-Wert': 'Button color as hex value',
+        'Standardwerte für Galerie und Leistung wiederherstellen': 'Restore gallery and performance defaults',
+        'Fotos pro Galerie-Seite': 'Photos per gallery page',
+        'Standardwerte für die Challenge wiederherstellen': 'Restore challenge defaults',
+        'Mehrfachauswahl Fotos': 'Select multiple photos',
+        'Mehrfachauswahl Papierkorb': 'Select multiple trash items',
+        'Zeitraum der Nutzungsstatistik': 'Usage statistics period',
+        'Nutzungskennzahlen': 'Usage metrics',
+        'Fotos pro Tag im gewählten Zeitraum': 'Photos per day in selected period',
+        'Aufnahmezeiten über 24 Stunden': 'Capture times over 24 hours',
+        'Noch kein Schlüssel gespeichert': 'No key saved yet'
+      };
+      const adminTextOriginals = new WeakMap();
+      const adminAttributeOriginals = new WeakMap();
+      let adminLanguage = (() => {
+        try {
+          return localStorage.getItem(ADMIN_LANGUAGE_KEY) === 'en' ? 'en' : 'de';
+        } catch (e) {
+          return 'de';
+        }
+      })();
+
+      function translateAdminText(value) {
+        const normalized = value.replace(/\s+/g, ' ').trim();
+        let translated = ADMIN_EN[normalized];
+        if (!translated) {
+          translated = normalized
+            .replace(/^(\d+) von (\d+) Fotos angezeigt\.$/, '$1 of $2 photos shown.')
+            .replace(/^(\d+) von (\d+) Fotos im Papierkorb\.$/, '$1 of $2 photos in trash.')
+            .replace(/^(\d+) von (\d+) ausgewählt$/, '$1 of $2 selected')
+            .replace(/^(\d+) ausgewählt$/, '$1 selected')
+            .replace(/^(\d+) von (\d+) Fotos verschoben, (\d+) fehlgeschlagen\. Bitte erneut versuchen\.$/, '$1 of $2 photos moved, $3 failed. Please try again.')
+            .replace(/^(\d+) von (\d+) Fotos wiederhergestellt, (\d+) fehlgeschlagen\. Bitte erneut versuchen\.$/, '$1 of $2 photos restored, $3 failed. Please try again.')
+            .replace(/^(\d+) von (\d+) Fotos gelöscht, (\d+) fehlgeschlagen\. Bitte erneut versuchen\.$/, '$1 of $2 photos deleted, $3 failed. Please try again.')
+            .replace(/^(\d+) Foto(s)? endgültig löschen\? Das kann nicht rückgängig gemacht werden\.$/, (_, count, plural) => `Permanently delete ${count} ${plural ? 'photos' : 'photo'}? This cannot be undone.`)
+            .replace(/^(\d+) Foto(s)? in den Papierkorb verschieben\? Du kannst sie im Papierkorb wiederherstellen\.$/, (_, count, plural) => `Move ${count} ${plural ? 'photos' : 'photo'} to the trash? You can restore them from the trash.`)
+            .replace(/^„(.+)“ endgültig löschen\? Das kann nicht rückgängig gemacht werden\.$/, 'Permanently delete "$1"? This cannot be undone.')
+            .replace(/^(.+) endgültig löschen\? Das kann nicht rückgängig gemacht werden\.$/, 'Permanently delete $1? This cannot be undone.')
+            .replace(/^(.+) in den Papierkorb verschieben\? Du kannst sie im Papierkorb wiederherstellen\.$/, 'Move $1 to the trash? You can restore them from the trash.')
+            .replace(/^Alle Einstellungen der Fotobox auf Standardwerte zurücksetzen\? Fotos, Papierkorb und Zugangsdaten wie der Challenge-API-Schlüssel oder die Admin-PIN bleiben erhalten\. Diese Aktion kann nicht rückgängig gemacht werden\.$/, 'Reset all photobooth settings to their defaults? Photos, trash, and credentials such as the challenge API key or admin PIN will be kept. This action cannot be undone.')
+            .replace(/^(\d+) Foto in den Papierkorb verschoben\.$/, '$1 photo moved to trash.')
+            .replace(/^(\d+) Fotos in den Papierkorb verschoben\.$/, '$1 photos moved to trash.')
+            .replace(/^(\d+) Foto wiederhergestellt\.$/, '$1 photo restored.')
+            .replace(/^(\d+) Fotos wiederhergestellt\.$/, '$1 photos restored.')
+            .replace(/^(\d+) Foto endgültig gelöscht\.$/, '$1 photo permanently deleted.')
+            .replace(/^(\d+) Fotos endgültig gelöscht\.$/, '$1 photos permanently deleted.')
+            .replace(/^Verschiebe (\d+) von (\d+)…$/, 'Moving $1 of $2…')
+            .replace(/^Stelle wieder her (\d+) von (\d+)…$/, 'Restoring $1 of $2…')
+            .replace(/^Lösche (\d+) von (\d+)…$/, 'Deleting $1 of $2…')
+            .replace(/^(Gelöschtes Foto |Foto )(abwählen|auswählen): (.+)$/, (_, prefix, action, label) => `${prefix === 'Foto ' ? 'Photo ' : 'Deleted photo '}${action === 'abwählen' ? 'deselect' : 'select'}: ${label}`)
+            .replace(/^Alle (\d+) sichtbaren Fotos auswählen$/, 'Select all $1 visible photos')
+            .replace(/^(\d+) von (\d+) ausgewählt$/, '$1 of $2 selected')
+            .replace(/^(\d+) ausgewählt$/, '$1 selected')
+            .replace(/^(\d+) s$/, '$1 s')
+            .replace(/^Verbunden · (LCC|Coburg) · (\d+) Fotos · (\d+) Likes in diesem Monat\.$/, 'Connected · $1 · $2 photos · $3 likes this month.')
+            .replace(/^Löscht endgültig am (.+)$/, 'Permanently deleted on $1')
+            .replace(/^(\d+) Fotos angezeigt\.$/, '$1 photos shown.')
+            .replace(/^Gespeichert · (.+)$/, 'Saved · $1')
+            .replace(/^Papierkorb-Aufbewahrung: (\d+) Tage\.$/, 'Trash retention: $1 days.')
+            .replace(/^(\d+) Fotos pro Galerie-Seite\.$/, '$1 photos per gallery page.')
+            .replace(/^Dieser Server · (\d+) Aktionen$/, 'This server · $1 actions')
+            .replace(/^Dieser Server · keine Aktionen$/, 'This server · no actions')
+            .replace(/^Alle Boxen · (\d+) heute · inkl\. Papierkorb$/, 'All photobooths · $1 today · including trash')
+            .replace(/^Meiste Aufnahmen: (.+) Uhr$/, 'Busiest time: $1')
+            .replace(/^(.+): (\d+) Fotos$/, '$1: $2 photos')
+            .replace(/^Fotos pro Tag: keine Aufnahmen im gewählten Zeitraum\.$/, 'Photos per day: no captures in the selected period.')
+            .replace(/^Fotos pro Tag: ([\d.,]+) Aufnahmen in (\d+) Tagen, (.+)\. Y-Achse: Anzahl Fotos, X-Achse: Datum\.$/, 'Photos per day: $1 captures over $2 days, $3. Y-axis: number of photos, X-axis: date.')
+            .replace(/^Aufnahmezeiten: keine Aufnahmen im gewählten Zeitraum\.$/, 'Capture times: no captures in the selected period.')
+            .replace(/^Aufnahmezeiten über 24 Stunden, Y-Achse: Anzahl Fotos, X-Achse: Uhrzeit\. Meiste Aufnahmen zwischen (\d+) und (\d+) Uhr mit ([\d.,]+) Fotos\.$/, 'Capture times over 24 hours, Y-axis: number of photos, X-axis: time. Busiest period is between $1 and $2 with $3 photos.')
+            .replace(/^Fotos und Aufnahmezeiten umfassen alle Boxen am gemeinsamen Supabase-Speicher\. Aktionen am Ende zählt ausschließlich dieser Server lokal seit (.+)\.$/, 'Photos and capture times cover all photobooths using shared Supabase storage. End-screen actions are counted locally by this server only since $1.')
+            .replace(/^„(.+)“ auf die Standardwerte zurücksetzen\?(?: Der API-Schlüssel bleibt gespeichert\.)? Fortfahren\?$/, (_, section) => `Reset "${ADMIN_EN[section] || section}" to its defaults? Continue?`)
+            .replace(/^(.+) auf Standardwerte zurückgesetzt\.(?: Der API-Schlüssel bleibt gespeichert\.)?$/, (_, section) => `${ADMIN_EN[section] || section} reset to defaults.${section === 'Challenge' ? ' The API key remains saved.' : ''}`);
+          if (translated === normalized) return value;
+        }
+        const leading = value.match(/^\s*/)[0];
+        const trailing = value.match(/\s*$/)[0];
+        return leading + translated + trailing;
+      }
+
+      function confirmAdmin(message) {
+        return window.confirm(adminLanguage === 'en' ? translateAdminText(message) : message);
+      }
+
+      function adminFlagSvg(language) {
+        return language === 'en'
+          ? '<svg viewBox="0 0 24 16" aria-hidden="true" focusable="false"><rect width="24" height="16" fill="#012169"/><path d="M0 0 24 16M24 0 0 16" stroke="#fff" stroke-width="4.5"/><path d="M0 0 24 16M24 0 0 16" stroke="#c8102e" stroke-width="2"/><path d="M12 0v16M0 8h24" stroke="#fff" stroke-width="6"/><path d="M12 0v16M0 8h24" stroke="#c8102e" stroke-width="3"/></svg>'
+          : '<svg viewBox="0 0 24 16" aria-hidden="true" focusable="false"><rect width="24" height="5.34" fill="#000"/><rect y="5.33" width="24" height="5.34" fill="#dd0000"/><rect y="10.66" width="24" height="5.34" fill="#ffce00"/></svg>';
+      }
+
+      function applyAdminLanguage(root = document.body) {
+        document.documentElement.lang = adminLanguage;
+        if (root === document.body) {
+          const toggle = document.getElementById('adminLanguageToggle');
+          if (toggle) {
+            toggle.innerHTML = adminFlagSvg(adminLanguage === 'de' ? 'en' : 'de');
+            toggle.setAttribute('aria-label', adminLanguage === 'de' ? 'Switch admin panel to English' : 'Admin-Oberfläche auf Deutsch umstellen');
+            toggle.title = adminLanguage === 'de' ? 'English' : 'Deutsch';
+          }
+        }
+
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+          if (!adminTextOriginals.has(node)) adminTextOriginals.set(node, node.data);
+          const original = adminTextOriginals.get(node);
+          const next = adminLanguage === 'en' ? translateAdminText(original) : original;
+          if (node.data !== next) node.data = next;
+        }
+        const elements = root.querySelectorAll ? [root, ...root.querySelectorAll('*')] : [];
+        for (const element of elements) {
+          if (element.id === 'adminLanguageToggle') continue;
+          for (const attribute of ['title', 'aria-label', 'placeholder']) {
+            if (!element.hasAttribute(attribute)) continue;
+            let originals = adminAttributeOriginals.get(element);
+            if (!originals) {
+              originals = new Map();
+              adminAttributeOriginals.set(element, originals);
+            }
+            const current = element.getAttribute(attribute);
+            if (!originals.has(attribute)) {
+              originals.set(attribute, current);
+            } else if (adminLanguage === 'en') {
+              const original = originals.get(attribute);
+              const translated = ADMIN_EN_ATTRIBUTES[original] || translateAdminText(original);
+              if (current !== translated) originals.set(attribute, current);
+            }
+            const original = originals.get(attribute);
+            const translated = adminLanguage === 'en'
+              ? (ADMIN_EN_ATTRIBUTES[original] || translateAdminText(original))
+              : original;
+            if (element.getAttribute(attribute) !== translated) element.setAttribute(attribute, translated);
+          }
+        }
+      }
+
+      function adminLocale() {
+        return adminLanguage === 'en' ? 'en-US' : 'de-DE';
+      }
+
+      const adminLanguageObserver = new MutationObserver((mutations) => {
+        if (adminLanguage !== 'en') return;
+        for (const mutation of mutations) {
+          if (mutation.type === 'characterData') {
+            const node = mutation.target;
+            if (!adminTextOriginals.has(node)) adminTextOriginals.set(node, node.data);
+            else if (node.data !== translateAdminText(adminTextOriginals.get(node))) {
+              adminTextOriginals.set(node, node.data);
+            }
+            const translated = translateAdminText(adminTextOriginals.get(node));
+            if (node.data !== translated) node.data = translated;
+          } else {
+            for (const node of mutation.addedNodes) {
+              if (node.nodeType === Node.TEXT_NODE) {
+                if (!adminTextOriginals.has(node)) adminTextOriginals.set(node, node.data);
+                const translated = translateAdminText(adminTextOriginals.get(node));
+                if (node.data !== translated) node.data = translated;
+              } else if (node.nodeType === Node.ELEMENT_NODE) {
+                applyAdminLanguage(node);
+              }
+            }
+            if (mutation.type === 'attributes') applyAdminLanguage(mutation.target);
+          }
+        }
+      });
+
+      document.getElementById('adminLanguageToggle').addEventListener('click', () => {
+        adminLanguage = adminLanguage === 'de' ? 'en' : 'de';
+        try { localStorage.setItem(ADMIN_LANGUAGE_KEY, adminLanguage); } catch (e) {}
+        applyAdminLanguage();
+      });
+      applyAdminLanguage();
+      adminLanguageObserver.observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: ['title', 'aria-label', 'placeholder']
+      });
+
       let broadcastChannel = null;
 
       try {
@@ -2811,7 +3337,7 @@
       }
 
       function timeLabel() {
-        return new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+        return new Date().toLocaleTimeString(adminLocale(), { hour: '2-digit', minute: '2-digit' });
       }
 
       function hexToRgb(hex) {
@@ -3492,7 +4018,7 @@
           const suffix = section === 'challenge'
             ? ' Der API-Schlüssel bleibt gespeichert.'
             : '';
-          const confirmed = window.confirm(
+          const confirmed = confirmAdmin(
             `„${SECTION_RESET_LABELS[section] || 'Diese Einstellungen'}“ auf die Standardwerte zurücksetzen?\n\n` +
             (section === 'challenge' ? 'Der API-Schlüssel bleibt gespeichert.\n\n' : '') +
             'Fortfahren?'
@@ -3506,7 +4032,7 @@
       });
 
       $resetAllSettingsBtn.addEventListener('click', () => {
-        const confirmed = window.confirm(
+        const confirmed = confirmAdmin(
           'Alle Einstellungen der Fotobox auf Standardwerte zurücksetzen?\n\n' +
           'Fotos, Papierkorb und Zugangsdaten wie der Challenge-API-Schlüssel oder die Admin-PIN bleiben erhalten. Diese Aktion kann nicht rückgängig gemacht werden.'
         );
@@ -3582,10 +4108,10 @@
         // Streak abrufen
         fetch('/api/streak').then((r) => r.json()).then((data) => {
           if (data && typeof data.current_streak === 'number') {
-            $statStreak.textContent = data.current_streak + ' 🔥';
+            $statStreak.textContent = String(data.current_streak);
           }
         }).catch(() => {
-          $statStreak.textContent = '0 🔥';
+          $statStreak.textContent = '0';
         });
 
         setTimeout(scrollToRetentionHash, 250);
@@ -3597,7 +4123,7 @@
           $copyUrlText.textContent = 'Link kopiert!';
           setTimeout(() => { $copyUrlText.textContent = 'Netzwerk-Link kopieren'; }, 2000);
         } catch (e) {
-          prompt('Fotobox-Link:', networkUrl);
+          prompt(adminLanguage === 'en' ? 'Photobooth link:' : 'Fotobox-Link:', networkUrl);
         }
       });
 
@@ -3801,7 +4327,7 @@
 
       function confirmPermanentTrashDelete(count, itemLabel = '') {
         const subject = itemLabel ? `„${itemLabel}“` : photoCountLabel(count);
-        return window.confirm(
+        return confirmAdmin(
           `${subject} endgültig löschen?\n\n` +
           'Das kann nicht rückgängig gemacht werden.'
         );
@@ -3834,7 +4360,7 @@
       async function bulkDeleteAdminGallery() {
         const ids = [...mediaSelection.gallery.ids];
         if (!ids.length || mediaSelection.gallery.busy) return;
-        if (!window.confirm(photoCountLabel(ids.length) + ' in den Papierkorb verschieben? Du kannst sie im Papierkorb wiederherstellen.')) return;
+        if (!confirmAdmin(photoCountLabel(ids.length) + ' in den Papierkorb verschieben? Du kannst sie im Papierkorb wiederherstellen.')) return;
         const result = await runBulkMediaAction('gallery', ids, {
           method: 'DELETE',
           url: (id) => '/api/photos?id=' + encodeURIComponent(id),
@@ -3960,7 +4486,7 @@
           const note = document.createElement('span');
           note.className = 'media-card__note';
           note.textContent = item.expiresAt
-            ? 'Löscht endgültig am ' + new Date(item.expiresAt * 1000).toLocaleDateString('de-DE')
+            ? 'Löscht endgültig am ' + new Date(item.expiresAt * 1000).toLocaleDateString(adminLocale())
             : 'Ablaufdatum unbekannt';
           meta.appendChild(note);
 
@@ -4179,7 +4705,10 @@
       // Die Diagramme werden bewusst als leichtes SVG ohne zusätzliche
       // Bibliothek gerendert. Werte stehen zusätzlich als Text und Tabelle
       // bereit, damit Farbe nie die einzige Informationsquelle ist.
-      const WEEKDAYS_SHORT = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
+      const WEEKDAYS_SHORT = {
+        de: ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'],
+        en: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+      };
       let usageRangeDays = 14;
       let usageLoading = false;
       let usagePendingReload = false;
@@ -4192,7 +4721,7 @@
       });
 
       function usageCount(value) {
-        return Number.isFinite(value) ? new Intl.NumberFormat('de-DE').format(value) : '—';
+        return Number.isFinite(value) ? new Intl.NumberFormat(adminLocale()).format(value) : '—';
       }
 
       function usageDate(key) {
@@ -4201,13 +4730,14 @@
       }
 
       function usageFullDate(key) {
-        return usageDate(key).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
+        return usageDate(key).toLocaleDateString(adminLocale(), { weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric' });
       }
 
       function usageShortDate(key, withWeekday) {
         const date = usageDate(key);
-        const dayMonth = String(date.getDate()).padStart(2, '0') + '.' + String(date.getMonth() + 1).padStart(2, '0') + '.';
-        return withWeekday ? WEEKDAYS_SHORT[date.getDay()] + ' ' + dayMonth : dayMonth;
+        const dayMonth = date.toLocaleDateString(adminLocale(), { day: '2-digit', month: '2-digit' });
+        const weekdays = adminLanguage === 'en' ? WEEKDAYS_SHORT.en : WEEKDAYS_SHORT.de;
+        return withWeekday ? weekdays[date.getDay()] + ' ' + dayMonth : dayMonth;
       }
 
       function usageNiceMax(value) {
@@ -4236,11 +4766,11 @@
         const average = total / daily.length;
         const firstDate = usageDate(daily[0].date);
         const lastDate = usageDate(daily[daily.length - 1].date);
-        const rangeLabel = firstDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' })
-          + '–' + lastDate.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const rangeLabel = firstDate.toLocaleDateString(adminLocale(), { day: '2-digit', month: '2-digit' })
+          + '–' + lastDate.toLocaleDateString(adminLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' });
 
         $usageDailyMeta.textContent = total > 0
-          ? usageCount(total) + ' Aufnahmen · Ø ' + average.toLocaleString('de-DE', { maximumFractionDigits: 1 }) + ' pro Tag · ' + rangeLabel
+          ? usageCount(total) + ' ' + (adminLanguage === 'en' ? 'captures · avg. ' : 'Aufnahmen · Ø ') + average.toLocaleString(adminLocale(), { maximumFractionDigits: 1 }) + (adminLanguage === 'en' ? ' per day · ' : ' pro Tag · ') + rangeLabel
           : 'Keine Aufnahmen · ' + rangeLabel;
         $usageDailyTableBody.innerHTML = daily.slice().reverse().map((entry) => (
           '<tr><td>' + usageFullDate(entry.date) + '</td><td>' + usageCount(entry.photos) + '</td></tr>'
@@ -4398,7 +4928,7 @@
 
         if (data.trackingSince) {
           $usageTrackingNote.textContent = 'Fotos und Aufnahmezeiten umfassen alle Boxen am gemeinsamen Supabase-Speicher. Aktionen am Ende zählt ausschließlich dieser Server lokal seit '
-            + new Date(data.trackingSince).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) + '.';
+            + new Date(data.trackingSince).toLocaleDateString(adminLocale(), { day: '2-digit', month: '2-digit', year: 'numeric' }) + '.';
         }
         if (data.storageError) {
           $usageError.hidden = false;
@@ -4420,7 +4950,8 @@
           renderUsageStats(data);
           if (!data.storageError) $usageError.hidden = true;
           $usageStatus.textContent = 'Aktualisiert um '
-            + new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }) + ' Uhr.';
+            + new Date().toLocaleTimeString(adminLocale(), { hour: '2-digit', minute: '2-digit' })
+            + (adminLanguage === 'en' ? '.' : ' Uhr.');
         } catch (err) {
           console.warn('Usage statistics could not be loaded:', err);
           $usageStatus.textContent = 'Statistik konnte nicht geladen werden.';
