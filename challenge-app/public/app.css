@@ -100,6 +100,27 @@ a { color: var(--gold); }
   gap: 1rem;
 }
 
+.hero__controls {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.language-button {
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 1.45rem;
+  cursor: pointer;
+}
+.language-button:active { transform: scale(0.95); }
+
 .brand {
   display: inline-flex;
   align-items: center;

@@ -4,24 +4,27 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#0d0d0d" />
-  <meta name="description" content="SnapBox Monats-Challenge: LCC gegen Coburg. Fotos ansehen, liken und den Pokal verfolgen." />
+  <meta name="description" id="pageDescription" content="SnapBox Monats-Challenge: LCC gegen Coburg. Fotos ansehen, liken und den Pokal verfolgen." />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="SnapBox" />
-  <title>SnapBox Challenge — LCC vs. Coburg</title>
+  <title id="pageTitle">SnapBox Challenge — LCC gegen Coburg</title>
   <link rel="manifest" href="/app.webmanifest" />
   <link rel="icon" type="image/svg+xml" href="/icon.svg" />
   <link rel="apple-touch-icon" href="/icon-192.png" />
   <link rel="stylesheet" href="/app.css" />
 </head>
 <body>
-  <a class="skip-link" href="#gallery">Zur Galerie springen</a>
+  <a class="skip-link" href="#gallery" data-i18n="Zur Galerie springen">Zur Galerie springen</a>
 
   <header class="hero">
     <div class="hero__top">
       <p class="brand"><span class="brand__mark" aria-hidden="true">S</span> SnapBox</p>
-      <p class="eyebrow">Monats-Challenge</p>
+      <div class="hero__controls">
+        <p class="eyebrow" data-i18n="Monats-Challenge">Monats-Challenge</p>
+        <button class="language-button" id="languageToggle" type="button" aria-label="Sprache zu Englisch wechseln" title="Language: English"><span aria-hidden="true">🇬🇧</span></button>
+      </div>
     </div>
     <h1 class="hero__title">LCC <span>vs.</span> Coburg</h1>
     <p class="hero__theme" id="theme">&nbsp;</p>
@@ -32,10 +35,10 @@
     <section class="scoreboard" id="scoreboard" aria-labelledby="scoreTitle">
       <div class="section-heading">
         <div>
-          <h2 id="scoreTitle">Punktestand</h2>
-          <p class="section-sub">Punkte = Challenge-Fotos + Likes</p>
+          <h2 id="scoreTitle" data-i18n="Punktestand">Punktestand</h2>
+          <p class="section-sub" data-i18n="Punkte = Challenge-Fotos + Likes">Punkte = Challenge-Fotos + Likes</p>
         </div>
-        <span class="live-badge" id="liveBadge">Live</span>
+        <span class="live-badge" id="liveBadge" role="status" aria-live="polite" aria-atomic="true">Live</span>
       </div>
 
       <div class="duel">
@@ -43,11 +46,11 @@
           <div class="location-card__head">
             <span class="location-dot" aria-hidden="true"></span>
             <h3>LCC</h3>
-            <span class="lead-badge" id="leadLcc" hidden>Führt</span>
+            <span class="lead-badge" id="leadLcc" hidden data-i18n="Führt">Führt</span>
           </div>
-          <p class="location-card__score"><span id="scoreLcc">0</span><small>Punkte</small></p>
+          <p class="location-card__score"><span id="scoreLcc">0</span><small data-i18n="Punkte">Punkte</small></p>
           <dl class="location-card__stats">
-            <div><dt>Fotos</dt><dd id="entriesLcc">0</dd></div>
+            <div><dt data-i18n="Fotos">Fotos</dt><dd id="entriesLcc">0</dd></div>
             <div><dt>Likes</dt><dd id="likesLcc">0</dd></div>
           </dl>
           <div class="bar" aria-hidden="true"><span id="barLcc"></span></div>
@@ -59,11 +62,11 @@
           <div class="location-card__head">
             <span class="location-dot" aria-hidden="true"></span>
             <h3>Coburg</h3>
-            <span class="lead-badge" id="leadCoburg" hidden>Führt</span>
+            <span class="lead-badge" id="leadCoburg" hidden data-i18n="Führt">Führt</span>
           </div>
-          <p class="location-card__score"><span id="scoreCoburg">0</span><small>Punkte</small></p>
+          <p class="location-card__score"><span id="scoreCoburg">0</span><small data-i18n="Punkte">Punkte</small></p>
           <dl class="location-card__stats">
-            <div><dt>Fotos</dt><dd id="entriesCoburg">0</dd></div>
+            <div><dt data-i18n="Fotos">Fotos</dt><dd id="entriesCoburg">0</dd></div>
             <div><dt>Likes</dt><dd id="likesCoburg">0</dd></div>
           </dl>
           <div class="bar" aria-hidden="true"><span id="barCoburg"></span></div>
@@ -74,13 +77,13 @@
     <section class="gallery-section" id="gallery" aria-labelledby="galleryTitle">
       <div class="section-heading section-heading--wrap">
         <div>
-          <h2 id="galleryTitle">Challenge-Galerie</h2>
+          <h2 id="galleryTitle" data-i18n="Challenge-Galerie">Challenge-Galerie</h2>
           <p class="section-sub" id="gallerySub" hidden></p>
         </div>
         <div class="gallery-tools">
-          <label class="month-field" for="monthSelect">Monat</label>
+          <label class="month-field" for="monthSelect" data-i18n="Monat">Monat</label>
           <select id="monthSelect" class="month-select">
-            <option value="">Lädt…</option>
+            <option value="" data-i18n="Lädt…">Lädt…</option>
           </select>
         </div>
       </div>
@@ -111,8 +114,8 @@
     <section class="trophies" id="trophies" aria-labelledby="trophiesTitle">
       <div class="section-heading">
         <div>
-          <h2 id="trophiesTitle">Wall of Trophies</h2>
-          <p class="section-sub">Jeder gewonnene Monat bleibt für immer.</p>
+          <h2 id="trophiesTitle" data-i18n="Trophäen">Trophäen</h2>
+          <p class="section-sub" data-i18n="Jeder gewonnene Monat bleibt für immer.">Jeder gewonnene Monat bleibt für immer.</p>
         </div>
         <span class="trophy-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -126,25 +129,25 @@
     </section>
 
     <footer class="footer">
-      <p>Hier erscheinen nur Fotos, die auf der Fotobox ausdrücklich für die Challenge freigegeben wurden.</p>
-      <p>Kein Login nötig. Beim Liken bestätigst du mit Face ID, Fingerabdruck oder Geräte-PIN – es werden keine persönlichen Daten gespeichert. Solange die Abstimmung läuft, kannst du dein Like wieder zurücknehmen.</p>
+      <p data-i18n="Hier erscheinen nur Fotos, die auf der Fotobox ausdrücklich für die Challenge freigegeben wurden.">Hier erscheinen nur Fotos, die auf der Fotobox ausdrücklich für die Challenge freigegeben wurden.</p>
+      <p data-i18n="Kein Login nötig. Beim Liken bestätigst du mit Face ID, Fingerabdruck oder Geräte-PIN – es werden keine persönlichen Daten gespeichert. Solange die Abstimmung läuft, kannst du dein Like wieder zurücknehmen.">Kein Login nötig. Beim Liken bestätigst du mit Face ID, Fingerabdruck oder Geräte-PIN – es werden keine persönlichen Daten gespeichert. Solange die Abstimmung läuft, kannst du dein Like wieder zurücknehmen.</p>
     </footer>
   </main>
 
-  <button class="fab" id="refreshBtn" type="button" aria-label="Galerie aktualisieren" aria-controls="galleryGrid" title="Aktualisieren">
+  <button class="fab" id="refreshBtn" type="button" aria-label="Galerie aktualisieren" aria-controls="galleryGrid" title="Aktualisieren" data-i18n-aria-label="Galerie aktualisieren" data-i18n-title="Aktualisieren">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
       <path d="M20 11a8.1 8.1 0 0 0-15.5-2M4 4v5h5"></path>
       <path d="M4 13a8.1 8.1 0 0 0 15.5 2M20 20v-5h-5"></path>
     </svg>
   </button>
 
-  <nav class="tabbar" aria-label="Bereiche">
+  <nav class="tabbar" aria-label="Bereiche" data-i18n-aria-label="Bereiche">
     <div class="tabbar__inner">
       <button class="tab" type="button" data-target="scoreboard" aria-controls="scoreboard" aria-current="true">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
           <path d="M4 20V11M10 20V4M16 20v-6M22 20H2"></path>
         </svg>
-        <span>Punktestand</span>
+        <span data-i18n="Punktestand">Punktestand</span>
       </button>
       <button class="tab" type="button" data-target="gallery" aria-controls="gallery">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -152,7 +155,7 @@
           <circle cx="8.5" cy="9.5" r="1.5"></circle>
           <path d="m21 15-5-5L5 20"></path>
         </svg>
-        <span>Galerie</span>
+        <span data-i18n="Galerie">Galerie</span>
       </button>
       <button class="tab" type="button" data-target="trophies" aria-controls="trophies">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
@@ -160,7 +163,7 @@
           <path d="M8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3"></path>
           <path d="M12 13v4M9 21h6M10 17h4"></path>
         </svg>
-        <span>Trophäen</span>
+        <span data-i18n="Trophäen">Trophäen</span>
       </button>
     </div>
   </nav>
@@ -171,7 +174,7 @@
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
           <path d="m15 18-6-6 6-6"></path>
         </svg>
-        <span>Zurück</span>
+        <span data-i18n="Zurück">Zurück</span>
       </button>
       <p class="photo-view__index" id="photoViewIndex"></p>
     </div>
@@ -189,7 +192,7 @@
 
   <div class="toast" id="toast" role="status" aria-live="polite" hidden>
     <p class="toast__text" id="toastText"></p>
-    <button class="toast__action" id="toastAction" type="button" hidden>Rückgängig</button>
+    <button class="toast__action" id="toastAction" type="button" hidden data-i18n="Rückgängig">Rückgängig</button>
   </div>
 
   <script src="/app.js"></script>

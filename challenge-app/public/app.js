@@ -2,6 +2,150 @@
 
 const MIN_MONTH = '2026-11';
 
+const LANGUAGE_KEY = 'snapboxChallengeLanguage';
+const ENGLISH = {
+  'Zur Galerie springen': 'Skip to gallery',
+  'Monats-Challenge': 'Monthly challenge',
+  'Punktestand': 'Score',
+  'Punkte = Challenge-Fotos + Likes': 'Points = challenge photos + likes',
+  'Führt': 'Leading',
+  'Punkte': 'Points',
+  'Fotos': 'Photos',
+  'Challenge-Galerie': 'Challenge gallery',
+  'Monat': 'Month',
+  'Lädt…': 'Loading…',
+  'Wall of Trophies': 'Wall of Trophies',
+  'Jeder gewonnene Monat bleibt für immer.': 'Every winning month is remembered.',
+  'Hier erscheinen nur Fotos, die auf der Fotobox ausdrücklich für die Challenge freigegeben wurden.': 'Only photos explicitly shared for the challenge on the photobooth appear here.',
+  'Kein Login nötig. Beim Liken bestätigst du mit Face ID, Fingerabdruck oder Geräte-PIN – es werden keine persönlichen Daten gespeichert. Solange die Abstimmung läuft, kannst du dein Like wieder zurücknehmen.': 'No login required. Confirm likes with Face ID, your fingerprint, or your device PIN. No personal data is stored. You can remove your like while voting is open.',
+  'Galerie aktualisieren': 'Refresh gallery',
+  'Aktualisieren': 'Refresh',
+  'Bereiche': 'Sections',
+  'Galerie': 'Gallery',
+  'Trophäen': 'Trophies',
+  'Zurück': 'Back',
+  'Rückgängig': 'Undo',
+  'Sprache zu Englisch wechseln': 'Switch language to English',
+  'Sprache zu Deutsch wechseln': 'Switch language to German',
+  'Motto: ': 'Theme: ',
+  'Monatsmotiv': 'Monthly theme',
+  'Neuer Start': 'Fresh Start',
+  'Liebe & Winter': 'Love & Winter',
+  'Frühlingswachen': 'Spring Awakening',
+  'Bunt & Verrückt': 'Colorful & Crazy',
+  'Blütenpracht': 'Blossoms',
+  'Sommer-Vibes': 'Summer Vibes',
+  'Strand & Sonne': 'Beach & Sun',
+  'Heiße Nächte': 'Hot Nights',
+  'Goldener Herbst': 'Golden Autumn',
+  'Halloween & Laub': 'Halloween & Leaves',
+  'Gemütlichkeit': 'Cozy Season',
+  'Winterzauber': 'Winter Magic',
+  'Galerie konnte nicht geladen werden.': 'The gallery could not be loaded.',
+  'Bitte Verbindung prüfen und erneut versuchen.': 'Check your connection and try again.',
+  'Erneut versuchen': 'Try again',
+  'Galerie wird geladen…': 'Loading gallery…',
+  'Galerie wird aktualisiert': 'Refreshing gallery',
+  'Noch keine Challenge-Fotos in diesem Monat. Mach an der Fotobox ein Foto und gib es für die Challenge frei!': 'No challenge photos this month yet. Take a photo at the photobooth and share it for the challenge!',
+  'In diesem Monat wurden keine Challenge-Fotos eingereicht.': 'No challenge photos were submitted this month.',
+  'Abstimmung beendet': 'Voting closed',
+  'Like wird entfernt': 'Removing like',
+  'Like wird gespeichert': 'Saving like',
+  'Like für Foto aus {location} entfernen': 'Remove like from photo from {location}',
+  'Foto aus {location} liken': 'Like photo from {location}',
+  'Die Abstimmung für diesen Monat ist beendet.': 'Voting for this month has ended.',
+  'Like wieder entfernen': 'Remove like',
+  'Foto aus {location} vergrößern': 'Enlarge photo from {location}',
+  'Challenge-Foto aus {location}': 'Challenge photo from {location}',
+  'Foto aus {location}': 'Photo from {location}',
+  'Foto {index} von {count}': 'Photo {index} of {count}',
+  '1 Like': '1 like',
+  '{count} Likes': '{count} likes',
+  'Eingereicht am {date} · {likes}': 'Submitted on {date} · {likes}',
+  'Der erste Monatssieger wird am Monatsende gekürt.': 'The first monthly winner will be crowned at the end of the month.',
+  '{score} Punkte · {entries} Fotos · {votes} Likes': '{score} points · {entries} photos · {votes} likes',
+  'Galerie geladen: {count} {photos} im {month}.': 'Gallery loaded: {count} {photos} in {month}.',
+  'Foto aus {location}: {likes}.': 'Photo from {location}: {likes}.',
+  'Foto': 'Photo',
+  'Bitte einen gültigen Monat wählen.': 'Please choose a valid month.',
+  'Dieser Monat ist nicht verfügbar.': 'This month is not available.',
+  'Aktualisierung fehlgeschlagen.': 'Refresh failed.',
+  'Monat: {month}': 'Month: {month}',
+  'Like entfernt.': 'Like removed.',
+  'Like gespeichert.': 'Like saved.',
+  'Ungültige Antwort': 'Invalid response.',
+  'Passkey erstellt – dein Like ist gespeichert.': 'Passkey created — your like is saved.',
+  'Passkey-Bestätigung abgebrochen.': 'Passkey confirmation cancelled.',
+  'Auf diesem Gerät ist bereits ein Passkey hinterlegt. Bitte lade die Seite neu.': 'A passkey is already registered on this device. Please reload the page.',
+  'Passkeys funktionieren nur über HTTPS.': 'Passkeys only work over HTTPS.',
+  'Passkey wird auf diesem Gerät nicht unterstützt.': 'Passkeys are not supported on this device.',
+  'Bitte bestätige die Aktion mit deinem Passkey.': 'Please confirm this action with your passkey.',
+  'Like konnte nicht entfernt werden.': 'Could not remove like.',
+  'Like konnte nicht gespeichert werden.': 'Could not save like.',
+  'Passkey-Anfrage fehlgeschlagen.': 'Passkey request failed.',
+  'Ungültige Passkey-Antwort.': 'Invalid passkey response.',
+  'Passkey konnte nicht erstellt werden.': 'Could not create passkey.',
+  'Dieser Browser unterstützt Passkeys nicht vollständig.': 'This browser does not fully support passkeys.',
+  'Passkey-Schlüssel konnte nicht gelesen werden.': 'Could not read passkey key.',
+  'Passkey-Bestätigung fehlgeschlagen.': 'Passkey confirmation failed.',
+  'Ungültige Passkey-Daten.': 'Invalid passkey data.',
+  'Offline': 'Offline',
+  'Live': 'Live'
+};
+
+let language = (() => {
+  try {
+    return localStorage.getItem(LANGUAGE_KEY) === 'en' ? 'en' : 'de';
+  } catch (e) {
+    return 'de';
+  }
+})();
+
+function t(text, values = {}) {
+  const translated = language === 'en' ? (ENGLISH[text] || text) : text;
+  return translated.replace(/\{(\w+)\}/g, (match, key) => (
+    Object.prototype.hasOwnProperty.call(values, key) ? values[key] : match
+  ));
+}
+
+function applyLanguage() {
+  document.documentElement.lang = language;
+  document.title = language === 'en'
+    ? 'SnapBox Challenge — LCC vs. Coburg'
+    : 'SnapBox Challenge — LCC gegen Coburg';
+  const description = $('pageDescription');
+  if (description) {
+    description.content = language === 'en'
+      ? 'SnapBox monthly challenge: LCC vs. Coburg. Browse photos, like them, and follow the trophy race.'
+      : 'SnapBox Monats-Challenge: LCC gegen Coburg. Fotos ansehen, liken und den Pokal verfolgen.';
+  }
+
+  document.querySelectorAll('[data-i18n]').forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  document.querySelectorAll('[data-i18n-aria-label]').forEach((element) => {
+    element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel));
+  });
+  document.querySelectorAll('[data-i18n-title]').forEach((element) => {
+    element.title = t(element.dataset.i18nTitle);
+  });
+
+  const languageToggle = $('languageToggle');
+  if (languageToggle) {
+    const targetLanguage = language === 'de' ? 'en' : 'de';
+    languageToggle.innerHTML = `<span aria-hidden="true">${targetLanguage === 'en' ? '🇬🇧' : '🇩🇪'}</span>`;
+    languageToggle.setAttribute('aria-label', t(targetLanguage === 'en'
+      ? 'Sprache zu Englisch wechseln'
+      : 'Sprache zu Deutsch wechseln'));
+    languageToggle.title = targetLanguage === 'en' ? 'English' : 'Deutsch';
+  }
+  if ($refreshBtn && $refreshBtn.hasAttribute('aria-busy')) {
+    $refreshBtn.setAttribute('aria-label', t('Galerie wird aktualisiert'));
+  }
+  if ($liveBadge) {
+    $liveBadge.textContent = t($liveBadge.classList.contains('is-offline') ? 'Offline' : 'Live');
+  }
+}
 
 const THEMES = [
   'Neuer Start',
@@ -91,7 +235,7 @@ function isSelectableMonth(value) {
 
 function monthLabel(month) {
   const date = new Date(month + '-15T12:00:00Z');
-  return new Intl.DateTimeFormat('de-DE', {
+  return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'de-DE', {
     month: 'long',
     year: 'numeric',
     timeZone: 'UTC'
@@ -102,7 +246,7 @@ function formatDate(value) {
   const date = new Date(value);
   if (!value || Number.isNaN(date.getTime())) return '';
   try {
-    return new Intl.DateTimeFormat('de-DE', {
+    return new Intl.DateTimeFormat(language === 'en' ? 'en-US' : 'de-DE', {
       day: '2-digit',
       month: 'long',
       year: 'numeric',
@@ -179,7 +323,7 @@ function showToast(message, { actionLabel = '', onAction = null, duration = 0 } 
   toastActionHandler = typeof onAction === 'function' ? onAction : null;
   if ($toastAction) {
     $toastAction.hidden = !toastActionHandler;
-    $toastAction.textContent = actionLabel || 'Rückgängig';
+    $toastAction.textContent = actionLabel || t('Rückgängig');
     $toastAction.onclick = () => {
       const handler = toastActionHandler;
       hideToast();
@@ -193,7 +337,7 @@ function showToast(message, { actionLabel = '', onAction = null, duration = 0 } 
 
 function setLive(online) {
   if (!$liveBadge) return;
-  $liveBadge.textContent = online ? 'Live' : 'Offline';
+  $liveBadge.textContent = t(online ? 'Live' : 'Offline');
   $liveBadge.classList.toggle('is-offline', !online);
 }
 
@@ -209,18 +353,18 @@ function showState(message, { error = false, retry = false } = {}) {
 
   if (error) {
     const strong = document.createElement('strong');
-    strong.textContent = 'Galerie konnte nicht geladen werden.';
+    strong.textContent = t('Galerie konnte nicht geladen werden.');
     $galleryState.appendChild(strong);
   }
 
   const p = document.createElement('p');
-  p.textContent = message || (error ? 'Bitte Verbindung prüfen und erneut versuchen.' : '');
+  p.textContent = message || (error ? t('Bitte Verbindung prüfen und erneut versuchen.') : '');
   $galleryState.appendChild(p);
 
   if (retry) {
     const button = document.createElement('button');
     button.type = 'button';
-    button.textContent = 'Erneut versuchen';
+    button.textContent = t('Erneut versuchen');
     button.addEventListener('click', () => loadOverview());
     $galleryState.appendChild(button);
   }
@@ -253,7 +397,7 @@ function showSkeletons() {
     for (let i = 0; i < 6; i += 1) $galleryGrid.appendChild(skeletonCard());
   }
   if ($scoreboard) $scoreboard.setAttribute('aria-busy', 'true');
-  announceStatus('Galerie wird geladen…');
+  announceStatus(t('Galerie wird geladen…'));
 }
 
 function endSkeletons() {
@@ -345,31 +489,39 @@ function trophySvg() {
 
 function photoMeta(entry) {
   const date = formatDate(entry.createdAt);
-  const likes = entry.votes === 1 ? '1 Like' : `${entry.votes} Likes`;
-  return date ? `Eingereicht am ${date} · ${likes}` : likes;
+  const likes = entry.votes === 1 ? t('1 Like') : t('{count} Likes', { count: entry.votes });
+  return date ? t('Eingereicht am {date} · {likes}', { date, likes }) : likes;
 }
 
 function updateLikeButton(button, entry) {
   const liked = !!entry.liked;
   const pending = state.pendingVotes.has(entry.id);
+  const votingOpen = !!(state.data && state.data.votingOpen);
+  const voteCount = Math.max(0, Number(entry.votes) || 0);
+  const voteLabel = voteCount === 1 ? t('1 Like') : t('{count} Likes', { count: voteCount });
   button.dataset.entryId = entry.id;
   button.setAttribute('aria-pressed', String(liked));
-  button.setAttribute('aria-label', liked
-    ? `Like für Foto aus ${locationName(entry.location)} entfernen`
-    : `Foto aus ${locationName(entry.location)} liken`);
+  const actionLabel = !votingOpen
+    ? t('Abstimmung beendet')
+    : pending
+      ? (liked ? t('Like wird entfernt') : t('Like wird gespeichert'))
+      : (liked
+        ? t('Like für Foto aus {location} entfernen', { location: locationName(entry.location) })
+        : t('Foto aus {location} liken', { location: locationName(entry.location) }));
+  button.setAttribute('aria-label', `${actionLabel}. ${voteLabel}.`);
 
   const count = button.querySelector('.like-button__count') || button.querySelector('span');
-  if (count) count.textContent = String(entry.votes);
+  if (count) count.textContent = String(voteCount);
 
-  button.disabled = !state.data || !state.data.votingOpen || pending;
+  button.disabled = !votingOpen || pending;
   button.classList.toggle('is-pending', pending);
   if (pending) button.setAttribute('aria-busy', 'true');
   else button.removeAttribute('aria-busy');
 
   if (state.data && !state.data.votingOpen) {
-    button.title = 'Die Abstimmung für diesen Monat ist beendet.';
+    button.title = t('Die Abstimmung für diesen Monat ist beendet.');
   } else if (liked) {
-    button.title = 'Like wieder entfernen';
+    button.title = t('Like wieder entfernen');
   } else {
     button.removeAttribute('title');
   }
@@ -406,8 +558,8 @@ function renderGallery() {
 
   if (!data.entries.length) {
     showState(data.votingOpen
-      ? 'Noch keine Challenge-Fotos in diesem Monat. Mach an der Fotobox ein Foto und gib es für die Challenge frei!'
-      : 'In diesem Monat wurden keine Challenge-Fotos eingereicht.');
+      ? t('Noch keine Challenge-Fotos in diesem Monat. Mach an der Fotobox ein Foto und gib es für die Challenge frei!')
+      : t('In diesem Monat wurden keine Challenge-Fotos eingereicht.'));
     return;
   }
 
@@ -420,7 +572,7 @@ function renderGallery() {
     media.type = 'button';
     media.className = 'photo-card__media';
     media.dataset.openEntry = entry.id;
-    media.setAttribute('aria-label', `Foto aus ${locationName(entry.location)} vergrößern`);
+    media.setAttribute('aria-label', t('Foto aus {location} vergrößern', { location: locationName(entry.location) }));
 
     const img = document.createElement('img');
     img.className = 'photo-card__image';
@@ -449,11 +601,11 @@ function fillPhotoView(entry) {
   const index = entries.findIndex((item) => item.id === entry.id);
 
   $photoViewImage.src = entry.imageUrl;
-  $photoViewImage.alt = `Challenge-Foto aus ${locationName(entry.location)}`;
-  if ($photoViewTitle) $photoViewTitle.textContent = `Foto aus ${locationName(entry.location)}`;
+  $photoViewImage.alt = t('Challenge-Foto aus {location}', { location: locationName(entry.location) });
+  if ($photoViewTitle) $photoViewTitle.textContent = t('Foto aus {location}', { location: locationName(entry.location) });
   if ($photoViewMeta) $photoViewMeta.textContent = photoMeta(entry);
   if ($photoViewIndex) {
-    $photoViewIndex.textContent = index >= 0 ? `Foto ${index + 1} von ${entries.length}` : '';
+    $photoViewIndex.textContent = index >= 0 ? t('Foto {index} von {count}', { index: index + 1, count: entries.length }) : '';
   }
 
   $photoViewActions.innerHTML = '';
@@ -532,14 +684,14 @@ async function legacyVote(entry, action) {
   });
   const data = await res.json().catch(() => ({}));
   if (res.status === 428) {
-    const err = new Error(data.error || 'Bitte bestätige die Aktion mit deinem Passkey.');
+    const err = new Error(data.error || t('Bitte bestätige die Aktion mit deinem Passkey.'));
     err.passkeyRequired = true;
     throw err;
   }
   if (!res.ok) {
     throw new Error(data.error || (action === 'remove'
-      ? 'Like konnte nicht entfernt werden.'
-      : 'Like konnte nicht gespeichert werden.'));
+      ? t('Like konnte nicht entfernt werden.')
+      : t('Like konnte nicht gespeichert werden.')));
   }
   return data;
 }
@@ -551,9 +703,9 @@ async function voteWithPasskey(entry, action) {
     body: JSON.stringify({ entryId: entry.id, credentialId: credentialId || undefined, action })
   });
   const options = await optionsRes.json().catch(() => ({}));
-  if (!optionsRes.ok) throw new Error(options.error || 'Passkey-Anfrage fehlgeschlagen.');
+  if (!optionsRes.ok) throw new Error(options.error || t('Passkey-Anfrage fehlgeschlagen.'));
   if (!options || !options.publicKey || (options.mode !== 'create' && options.mode !== 'get')) {
-    throw new Error('Ungültige Passkey-Antwort.');
+    throw new Error(t('Ungültige Passkey-Antwort.'));
   }
 
   if (action === 'remove' && options.mode === 'create') {
@@ -576,13 +728,13 @@ async function voteWithPasskey(entry, action) {
   let payload;
   if (options.mode === 'create') {
     credential = await navigator.credentials.create({ publicKey });
-    if (!credential || !credential.response) throw new Error('Passkey konnte nicht erstellt werden.');
+    if (!credential || !credential.response) throw new Error(t('Passkey konnte nicht erstellt werden.'));
     const response = credential.response;
     if (typeof response.getPublicKey !== 'function' || typeof response.getPublicKeyAlgorithm !== 'function') {
-      throw new Error('Dieser Browser unterstützt Passkeys nicht vollständig.');
+      throw new Error(t('Dieser Browser unterstützt Passkeys nicht vollständig.'));
     }
     const spki = response.getPublicKey();
-    if (!spki) throw new Error('Passkey-Schlüssel konnte nicht gelesen werden.');
+    if (!spki) throw new Error(t('Passkey-Schlüssel konnte nicht gelesen werden.'));
     endpoint = '/api/webauthn/register';
     payload = {
       id: credential.id,
@@ -592,7 +744,7 @@ async function voteWithPasskey(entry, action) {
     };
   } else {
     credential = await navigator.credentials.get({ publicKey });
-    if (!credential || !credential.response) throw new Error('Passkey-Bestätigung fehlgeschlagen.');
+    if (!credential || !credential.response) throw new Error(t('Passkey-Bestätigung fehlgeschlagen.'));
     const response = credential.response;
     endpoint = '/api/webauthn/vote';
     payload = {
@@ -613,8 +765,8 @@ async function voteWithPasskey(entry, action) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(data.error || (action === 'remove'
-      ? 'Like konnte nicht entfernt werden.'
-      : 'Like konnte nicht gespeichert werden.'));
+      ? t('Like konnte nicht entfernt werden.')
+      : t('Like konnte nicht gespeichert werden.')));
   }
   saveCredentialId(data.credentialId || credential.id);
   return { ...data, registered: options.mode === 'create' && data.registered !== false };
@@ -630,9 +782,12 @@ async function toggleLike(entry) {
     const usePasskey = await passkeysAvailable();
     const data = usePasskey ? await voteWithPasskey(entry, action) : await legacyVote(entry, action);
     applyVoteResult(entry, data);
+    const voteLabel = entry.votes === 1 ? t('1 Like') : t('{count} Likes', { count: entry.votes });
+    const resultLabel = action === 'remove' ? t('Like entfernt.') : t('Like gespeichert.');
+    announceStatus(`${resultLabel} ${t('Foto aus {location}: {likes}.', { location: locationName(entry.location), likes: voteLabel })}`);
     if (action === 'remove') {
-      showToast('Like entfernt.', {
-        actionLabel: 'Rückgängig',
+      showToast(t('Like entfernt.'), {
+        actionLabel: t('Rückgängig'),
         onAction: () => {
           if (!state.data) return;
           const current = state.data.entries.find((item) => item.id === entry.id);
@@ -640,23 +795,23 @@ async function toggleLike(entry) {
         }
       });
     } else if (data.registered) {
-      showToast('Passkey erstellt – dein Like ist gespeichert.');
+      showToast(t('Passkey erstellt – dein Like ist gespeichert.'));
     }
   } catch (err) {
     if (err && err.name === 'NotAllowedError') {
-      showToast('Passkey-Bestätigung abgebrochen.');
+      showToast(t('Passkey-Bestätigung abgebrochen.'));
     } else if (err && err.name === 'InvalidStateError') {
-      showToast('Auf diesem Gerät ist bereits ein Passkey hinterlegt. Bitte lade die Seite neu.');
+      showToast(t('Auf diesem Gerät ist bereits ein Passkey hinterlegt. Bitte lade die Seite neu.'));
     } else if (err && err.name === 'SecurityError') {
-      showToast('Passkeys funktionieren nur über HTTPS.');
+      showToast(t('Passkeys funktionieren nur über HTTPS.'));
     } else if (err && (err.name === 'NotSupportedError' || err.name === 'NotReadableError')) {
-      showToast('Passkey wird auf diesem Gerät nicht unterstützt.');
+      showToast(t('Passkey wird auf diesem Gerät nicht unterstützt.'));
     } else if (err && err.passkeyRequired) {
       showToast(err.message);
     } else {
       showToast((err && err.message) || (action === 'remove'
-        ? 'Like konnte nicht entfernt werden.'
-        : 'Like konnte nicht gespeichert werden.'));
+        ? t('Like konnte nicht entfernt werden.')
+        : t('Like konnte nicht gespeichert werden.')));
       setLive(false);
     }
   } finally {
@@ -672,7 +827,7 @@ function renderTrophies() {
   if (!trophies.length) {
     const empty = document.createElement('p');
     empty.className = 'trophy-empty';
-    empty.textContent = 'Der erste Monatssieger wird am Monatsende gekürt.';
+    empty.textContent = t('Der erste Monatssieger wird am Monatsende gekürt.');
     $trophyGrid.appendChild(empty);
     return;
   }
@@ -694,7 +849,11 @@ function renderTrophies() {
 
     const score = document.createElement('p');
     score.className = 'trophy-card__score';
-    score.textContent = `${trophy.score} Punkte · ${trophy.entries} Fotos · ${trophy.votes} Likes`;
+    score.textContent = t('{score} Punkte · {entries} Fotos · {votes} Likes', {
+      score: trophy.score,
+      entries: trophy.entries,
+      votes: trophy.votes
+    });
 
     card.append(month, winner, score);
     $trophyGrid.appendChild(card);
@@ -706,7 +865,7 @@ function render() {
   endSkeletons();
   const data = state.data;
 
-  $theme.textContent = 'Motto: ' + (data.theme || THEMES[Number(state.month.slice(5, 7)) - 1] || 'Monatsmotiv');
+  $theme.textContent = t('Motto: ') + t(data.theme || THEMES[Number(state.month.slice(5, 7)) - 1] || 'Monatsmotiv');
   $monthLabel.textContent = monthLabel(state.month);
   populateMonths(data.months);
   renderScoreboard();
@@ -718,7 +877,7 @@ function render() {
   const gallerySub = $('gallerySub');
   if (gallerySub) {
     if (!data.votingOpen) {
-      gallerySub.textContent = 'Die Abstimmung für diesen Monat ist beendet.';
+      gallerySub.textContent = t('Die Abstimmung für diesen Monat ist beendet.');
       gallerySub.hidden = false;
     } else {
       gallerySub.textContent = '';
@@ -738,6 +897,7 @@ async function loadOverview({ silent = false } = {}) {
 
   if ($refreshBtn) {
     $refreshBtn.classList.add('is-spinning');
+    $refreshBtn.setAttribute('aria-label', t('Galerie wird aktualisiert'));
     $refreshBtn.setAttribute('aria-busy', 'true');
   }
 
@@ -752,7 +912,7 @@ async function loadOverview({ silent = false } = {}) {
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
-    if (!data || !data.ok) throw new Error('Ungültige Antwort');
+    if (!data || !data.ok) throw new Error(t('Ungültige Antwort'));
     if (state.controller !== controller) return false;
 
     state.data = data;
@@ -764,7 +924,11 @@ async function loadOverview({ silent = false } = {}) {
 
     if (!silent) {
       const count = data.entries.length;
-      announceStatus(`Galerie geladen: ${count} ${count === 1 ? 'Foto' : 'Fotos'} im ${monthLabel(state.month)}.`);
+      announceStatus(t('Galerie geladen: {count} {photos} im {month}.', {
+        count,
+        photos: t(count === 1 ? 'Foto' : 'Fotos'),
+        month: monthLabel(state.month)
+      }));
     }
     return true;
   } catch (err) {
@@ -775,15 +939,16 @@ async function loadOverview({ silent = false } = {}) {
     endSkeletons();
     if (!state.data) {
       if ($galleryGrid) $galleryGrid.innerHTML = '';
-      showState('Bitte Verbindung prüfen und erneut versuchen.', { error: true, retry: true });
+      showState(t('Bitte Verbindung prüfen und erneut versuchen.'), { error: true, retry: true });
     } else if (!silent) {
-      showToast('Aktualisierung fehlgeschlagen.');
+      showToast(t('Aktualisierung fehlgeschlagen.'));
     }
     return false;
   } finally {
     if (state.controller === controller) {
       if ($refreshBtn) {
         $refreshBtn.classList.remove('is-spinning');
+        $refreshBtn.setAttribute('aria-label', t('Galerie aktualisieren'));
         $refreshBtn.removeAttribute('aria-busy');
       }
     }
@@ -792,7 +957,7 @@ async function loadOverview({ silent = false } = {}) {
 
 async function changeMonth(next, { announce: shouldAnnounce = true } = {}) {
   if (!isSelectableMonth(next)) {
-    showToast('Bitte einen gültigen Monat wählen.');
+    showToast(t('Bitte einen gültigen Monat wählen.'));
     if ($monthSelect) $monthSelect.value = state.month;
     return false;
   }
@@ -807,8 +972,8 @@ async function changeMonth(next, { announce: shouldAnnounce = true } = {}) {
 
   const ok = await loadOverview();
   if (ok && shouldAnnounce) {
-    showToast(`Monat: ${monthLabel(next)}`, {
-      actionLabel: 'Rückgängig',
+    showToast(t('Monat: {month}', { month: monthLabel(next) }), {
+      actionLabel: t('Rückgängig'),
       onAction: () => changeMonth(previous, { announce: false })
     });
   }
@@ -837,11 +1002,24 @@ function updateActiveTab() {
   setActiveTab(active);
 }
 
+const $languageToggle = $('languageToggle');
+if ($languageToggle) {
+  $languageToggle.addEventListener('click', () => {
+    language = language === 'de' ? 'en' : 'de';
+    try { localStorage.setItem(LANGUAGE_KEY, language); } catch (e) {}
+    applyLanguage();
+    if (state.data) render();
+    else if (!$galleryState.hidden) {
+      showState(t('Bitte Verbindung prüfen und erneut versuchen.'), { error: true, retry: true });
+    }
+  });
+}
+
 if ($monthSelect) {
   $monthSelect.addEventListener('change', () => {
     const value = $monthSelect.value;
     if (!isSelectableMonth(value)) {
-      showToast('Dieser Monat ist nicht verfügbar.');
+      showToast(t('Dieser Monat ist nicht verfügbar.'));
       $monthSelect.value = state.month;
       return;
     }
@@ -918,6 +1096,7 @@ state.ticker = setInterval(() => {
   }
 }, 30000);
 
+applyLanguage();
 updateActiveTab();
 loadOverview();
 
