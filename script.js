@@ -309,6 +309,7 @@ const I18N = {
     streakNone: 'heute noch kein Foto',
     faceNone: 'Original',
     faceBig: 'Große Augen + Mund',
+    faceFaceswap: 'Gesichtertausch',
     faceThug: 'Thug Life',
     faceMlg: 'MLG',
     faceShades: 'Pixelbrille',
@@ -317,6 +318,10 @@ const I18N = {
     faceJoint: 'Joint',
     faceCheeky: 'Freches Grinsen',
     faceUnibrow: 'Monobraue',
+    faceCat: 'Katze',
+    faceBunny: 'Häschen',
+    faceHearts: 'Herzen',
+    faceMakeup: 'Schminke',
     faceSquish: 'Platt',
     faceMelt: 'Schmelzen',
     faceJelly: 'Gelee',
@@ -563,6 +568,7 @@ const I18N = {
     streakNone: 'no photo yet today',
     faceNone: 'Original',
     faceBig: 'Big Eyes + Mouth',
+    faceFaceswap: 'Face Swap',
     faceThug: 'Thug Life',
     faceMlg: 'MLG',
     faceShades: 'Pixel Shades',
@@ -571,6 +577,10 @@ const I18N = {
     faceJoint: 'Joint',
     faceCheeky: 'Cheeky Grin',
     faceUnibrow: 'Unibrow',
+    faceCat: 'Cat',
+    faceBunny: 'Bunny',
+    faceHearts: 'Hearts',
+    faceMakeup: 'Makeup',
     faceSquish: 'Squish',
     faceMelt: 'Meltdown',
     faceJelly: 'Jelly',
@@ -2386,9 +2396,9 @@ try {
 }
 
 const FACE_LABEL_KEYS = {
-  none: 'faceNone', thug: 'faceThug', mlg: 'faceMlg', big: 'faceBig', cheeky: 'faceCheeky',
+  none: 'faceNone', thug: 'faceThug', mlg: 'faceMlg', big: 'faceBig', faceswap: 'faceFaceswap', cheeky: 'faceCheeky',
   shades: 'faceShades', boss: 'faceBoss', bling: 'faceBling', joint: 'faceJoint',
-  unibrow: 'faceUnibrow',
+  unibrow: 'faceUnibrow', cat: 'faceCat', bunny: 'faceBunny', hearts: 'faceHearts', makeup: 'faceMakeup',
   squish: 'faceSquish', melt: 'faceMelt', jelly: 'faceJelly', clown: 'faceClown',
   dog: 'faceDog', classic: 'faceClassic'
 };

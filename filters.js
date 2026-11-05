@@ -26,8 +26,13 @@
     { id: 'bling', label: 'Bling', emoji: '💰' },
     { id: 'joint', label: 'Joint', emoji: '🚬' },
     { id: 'big', label: 'Big Eyes + Mouth', emoji: '👀' },
+    { id: 'faceswap', label: 'Face Swap', emoji: '🎭' },
     { id: 'cheeky', label: 'Cheeky Grin', emoji: '😏' },
     { id: 'unibrow', label: 'Unibrow', emoji: '🤨' },
+    { id: 'cat', label: 'Cat', emoji: '🐱' },
+    { id: 'bunny', label: 'Bunny', emoji: '🐰' },
+    { id: 'hearts', label: 'Hearts', emoji: '💖' },
+    { id: 'makeup', label: 'Makeup', emoji: '💄' },
     { id: 'squish', label: 'Squish', emoji: '🥞' },
     { id: 'melt', label: 'Meltdown', emoji: '🫠' },
     { id: 'jelly', label: 'Jelly', emoji: '🪼' },
@@ -41,7 +46,7 @@
   const SMOOTHING = 0.4;          // lower = smoother, higher = snappier
   // Groups share one frame, so the landmarker tracks several faces and every
   // face gets its own smoothing, skin sample and expression state.
-  const MAX_FACES = 4;
+  const MAX_FACES = 8;
 
   // Art props, one transparent PNG per prop (cut from the downloaded sheets).
   // A filter places a prop on the matching landmark instead of pasting a whole
@@ -107,6 +112,18 @@
     10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365,
     379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234,
     127, 162, 21, 54, 103, 67, 109
+  ];
+
+  // MediaPipe lip contours, in order around the mouth: outer edge first, then
+  // the inner edge that bounds the actual opening. Lipstick is painted from
+  // these, so it follows the real lips instead of a generic mouth shape.
+  const LIP_OUTER = [
+    61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291,
+    375, 321, 405, 314, 17, 84, 181, 91, 146
+  ];
+  const LIP_INNER = [
+    78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308,
+    324, 318, 402, 317, 14, 87, 178, 88, 95
   ];
 
   // Face Landmarker landmark indices.
@@ -185,6 +202,13 @@
         x: 1 - (px * surfaceW - rect.x) / rect.w,
         y: (py * surfaceH - rect.y) / rect.h
       };
+    }
+
+    // Deterministic 0..1 hash. The drawn props use it for hair and edge
+    // variation so they stay put from frame to frame instead of shimmering.
+    function hash01(n) {
+      const x = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+      return x - Math.floor(x);
     }
 
     function midpoint(a, b) {
@@ -301,6 +325,14 @@
         mouth,
         mouthL,
         mouthR,
+        lipTop,
+        lipBottom,
+        lipsOuter: LIP_OUTER.every((i) => points[i])
+          ? LIP_OUTER.map((i) => ({ x: points[i].x, y: points[i].y }))
+          : null,
+        lipsInner: LIP_INNER.every((i) => points[i])
+          ? LIP_INNER.map((i) => ({ x: points[i].x, y: points[i].y }))
+          : null,
         cheekA: pick(LM.cheekA, 0.3, 0.55),
         cheekB: pick(LM.cheekB, 0.7, 0.55),
         chin: pick(LM.chin, 0.5, 0.98),
@@ -334,6 +366,26 @@
         mouth: toSource(rect, surfaceW, surfaceH, centerX, centerY + 0.12),
         mouthL: toSource(rect, surfaceW, surfaceH, centerX - 0.09, centerY + 0.12),
         mouthR: toSource(rect, surfaceW, surfaceH, centerX + 0.09, centerY + 0.12),
+        lipTop: toSource(rect, surfaceW, surfaceH, centerX, centerY + 0.11),
+        lipBottom: toSource(rect, surfaceW, surfaceH, centerX, centerY + 0.13),
+        // Rough lip loops so the makeup filter still paints lips before the
+        // landmarker has loaded.
+        lipsOuter: Array.from({ length: 20 }, (_, i) => {
+          const a = (i / 20) * Math.PI * 2;
+          return toSource(
+            rect, surfaceW, surfaceH,
+            centerX + Math.cos(a) * 0.095,
+            centerY + 0.12 + Math.sin(a) * 0.022
+          );
+        }),
+        lipsInner: Array.from({ length: 20 }, (_, i) => {
+          const a = (i / 20) * Math.PI * 2;
+          return toSource(
+            rect, surfaceW, surfaceH,
+            centerX + Math.cos(a) * 0.062,
+            centerY + 0.12 + Math.sin(a) * 0.005
+          );
+        }),
         cheekA: toSource(rect, surfaceW, surfaceH, centerX - 0.13, centerY + 0.05),
         cheekB: toSource(rect, surfaceW, surfaceH, centerX + 0.13, centerY + 0.05),
         chin: toSource(rect, surfaceW, surfaceH, centerX, centerY + 0.23),
@@ -363,6 +415,16 @@
         mouth: point(prev.mouth, next.mouth),
         mouthL: point(prev.mouthL, next.mouthL),
         mouthR: point(prev.mouthR, next.mouthR),
+        lipTop: prev.lipTop && next.lipTop ? point(prev.lipTop, next.lipTop) : (next.lipTop || prev.lipTop),
+        lipBottom: prev.lipBottom && next.lipBottom ? point(prev.lipBottom, next.lipBottom) : (next.lipBottom || prev.lipBottom),
+        // Lip loops are smoothed like the face oval, otherwise the lipstick
+        // would jump at detection rate.
+        lipsOuter: next.lipsOuter && prev.lipsOuter && prev.lipsOuter.length === next.lipsOuter.length
+          ? next.lipsOuter.map((p, i) => point(prev.lipsOuter[i], p))
+          : (next.lipsOuter || prev.lipsOuter || null),
+        lipsInner: next.lipsInner && prev.lipsInner && prev.lipsInner.length === next.lipsInner.length
+          ? next.lipsInner.map((p, i) => point(prev.lipsInner[i], p))
+          : (next.lipsInner || prev.lipsInner || null),
         cheekA: point(prev.cheekA, next.cheekA),
         cheekB: point(prev.cheekB, next.cheekB),
         chin: point(prev.chin, next.chin),
@@ -592,6 +654,352 @@
       drawNose(target, nose.x, nose.y, Math.max(18, faceW * 0.26), Math.max(12, faceW * 0.17));
     }
 
+    // ---------- cute filters ----------
+    // A soft heart, used by the hearts filter and its cheek blush.
+    function drawHeart(target, x, y, size, angle, color, alpha) {
+      if (!(size > 0)) return;
+      target.save();
+      target.translate(x, y);
+      target.rotate(angle || 0);
+      target.globalAlpha = Math.max(0, Math.min(1, alpha == null ? 1 : alpha));
+      target.fillStyle = color || '#ff4d88';
+      target.beginPath();
+      target.moveTo(0, size * 0.85);
+      target.bezierCurveTo(-size * 1.15, -size * 0.05, -size * 0.62, -size * 0.95, 0, -size * 0.35);
+      target.bezierCurveTo(size * 0.62, -size * 0.95, size * 1.15, -size * 0.05, 0, size * 0.85);
+      target.closePath();
+      target.fill();
+      target.restore();
+    }
+
+    // Soft face blush, shared by the makeup and animal filters.
+    function drawBlush(target, rect, box, faceW, rgb, alpha) {
+      for (const key of ['cheekA', 'cheekB']) {
+        const cheek = toScreen(rect, box[key]);
+        const radius = Math.max(10, faceW * 0.15);
+        const blush = target.createRadialGradient(
+          cheek.x, cheek.y, radius * 0.1,
+          cheek.x, cheek.y, radius
+        );
+        blush.addColorStop(0, `rgba(${rgb}, ${alpha})`);
+        blush.addColorStop(0.65, `rgba(${rgb}, ${(alpha * 0.45).toFixed(3)})`);
+        blush.addColorStop(1, `rgba(${rgb}, 0)`);
+        target.fillStyle = blush;
+        target.beginPath();
+        target.arc(cheek.x, cheek.y, radius, 0, Math.PI * 2);
+        target.fill();
+      }
+    }
+
+    // Pointed cat ear: base at (x, y), tip straight up, `lean` tilts it out.
+    function drawPointedEar(target, x, y, w, h, lean) {
+      target.save();
+      target.translate(x, y);
+      target.rotate(lean);
+      target.fillStyle = '#4a3a45';
+      target.beginPath();
+      target.moveTo(-w * 0.5, h * 0.15);
+      target.quadraticCurveTo(-w * 0.34, -h * 0.5, -w * 0.06, -h * 0.72);
+      target.quadraticCurveTo(w * 0.22, -h * 0.55, w * 0.5, h * 0.15);
+      target.quadraticCurveTo(0, h * 0.36, -w * 0.5, h * 0.15);
+      target.closePath();
+      target.fill();
+      target.fillStyle = '#ffa9c4';
+      target.beginPath();
+      target.moveTo(-w * 0.28, h * 0.06);
+      target.quadraticCurveTo(-w * 0.16, -h * 0.32, -w * 0.03, -h * 0.46);
+      target.quadraticCurveTo(w * 0.12, -h * 0.33, w * 0.28, h * 0.06);
+      target.quadraticCurveTo(0, h * 0.2, -w * 0.28, h * 0.06);
+      target.fill();
+      target.restore();
+    }
+
+    // Long bunny ear growing out of (x, y).
+    function drawLongEar(target, x, y, w, h, lean) {
+      target.save();
+      target.translate(x, y);
+      target.rotate(lean);
+      target.fillStyle = '#f4ecef';
+      target.strokeStyle = 'rgba(92, 62, 78, 0.35)';
+      target.lineWidth = Math.max(1.2, w * 0.06);
+      target.beginPath();
+      target.ellipse(0, -h * 0.5, w * 0.5, h * 0.5, 0, 0, Math.PI * 2);
+      target.fill();
+      target.stroke();
+      target.fillStyle = '#ffb0c8';
+      target.beginPath();
+      target.ellipse(0, -h * 0.48, w * 0.26, h * 0.36, 0, 0, Math.PI * 2);
+      target.fill();
+      target.restore();
+    }
+
+    // Pink animal nose with the little "w" mouth and whiskers, shared by the
+    // cat and bunny filters.
+    function drawAnimalFace(target, rect, box, faceW, faceH, noseColor) {
+      const nose = toScreen(rect, box.nose);
+      const angle = headTilt(rect, box);
+      const noseW = Math.max(10, faceW * 0.11);
+      const noseH = Math.max(7, faceH * 0.045);
+
+      target.save();
+      target.translate(nose.x, nose.y + faceH * 0.01);
+      target.rotate(angle);
+
+      target.fillStyle = noseColor;
+      target.beginPath();
+      target.moveTo(-noseW * 0.5, -noseH * 0.25);
+      target.quadraticCurveTo(0, -noseH * 0.55, noseW * 0.5, -noseH * 0.25);
+      target.quadraticCurveTo(noseW * 0.16, noseH * 0.6, 0, noseH * 0.6);
+      target.quadraticCurveTo(-noseW * 0.16, noseH * 0.6, -noseW * 0.5, -noseH * 0.25);
+      target.closePath();
+      target.fill();
+
+      target.strokeStyle = 'rgba(58, 36, 44, 0.85)';
+      target.lineWidth = Math.max(1.4, faceW * 0.008);
+      target.lineCap = 'round';
+      target.beginPath();
+      target.moveTo(0, noseH * 0.5);
+      target.quadraticCurveTo(-noseW * 0.12, noseH * 1.25, -noseW * 0.6, noseH * 0.85);
+      target.moveTo(0, noseH * 0.5);
+      target.quadraticCurveTo(noseW * 0.12, noseH * 1.25, noseW * 0.6, noseH * 0.85);
+      target.stroke();
+
+      target.strokeStyle = 'rgba(255, 255, 255, 0.88)';
+      target.lineWidth = Math.max(1.5, faceW * 0.007);
+      for (const side of [-1, 1]) {
+        for (let i = -1; i <= 1; i++) {
+          target.beginPath();
+          target.moveTo(side * noseW * 0.75, noseH * (0.7 + i * 0.55));
+          target.quadraticCurveTo(
+            side * faceW * 0.16, noseH * (0.5 + i * 0.7),
+            side * faceW * 0.3, noseH * (0.2 + i * 0.85)
+          );
+          target.stroke();
+        }
+      }
+      target.restore();
+    }
+
+    // Cat ears, pink nose, whiskers and rosy cheeks.
+    function drawCat(target, rect, box, faceW, faceH) {
+      const angle = headTilt(rect, box);
+      const top = toScreen(rect, {
+        x: (box.left + box.right) / 2,
+        y: Math.min(box.top, box.bottom)
+      });
+      const earW = Math.max(28, faceW * 0.4);
+      const earH = Math.max(30, faceH * 0.36);
+
+      target.save();
+      target.translate(top.x, top.y + faceH * 0.04);
+      target.rotate(angle);
+      drawPointedEar(target, -faceW * 0.34, 0, earW, earH, -0.24);
+      drawPointedEar(target, faceW * 0.34, 0, earW, earH, 0.24);
+      target.restore();
+
+      drawBlush(target, rect, box, faceW, '255, 120, 160', 0.32);
+      drawAnimalFace(target, rect, box, faceW, faceH, '#ff8fb1');
+    }
+
+    // Tall bunny ears with a gentle sway, pink nose, whiskers, two front teeth.
+    function drawBunny(target, rect, box, faceW, faceH, now) {
+      const angle = headTilt(rect, box);
+      const top = toScreen(rect, {
+        x: (box.left + box.right) / 2,
+        y: Math.min(box.top, box.bottom)
+      });
+      const sway = Math.sin((now || 0) / 620) * 0.05;
+      const earW = Math.max(22, faceW * 0.28);
+      const earH = Math.max(48, faceH * 0.62);
+
+      target.save();
+      target.translate(top.x, top.y + faceH * 0.03);
+      target.rotate(angle);
+      drawLongEar(target, -faceW * 0.15, 0, earW, earH, -0.16 + sway);
+      drawLongEar(target, faceW * 0.15, 0, earW, earH, 0.16 + sway);
+      target.restore();
+
+      drawBlush(target, rect, box, faceW, '255, 130, 170', 0.28);
+
+      const nose = toScreen(rect, box.nose);
+      target.save();
+      target.translate(nose.x, nose.y + faceH * 0.06);
+      target.rotate(angle);
+      target.fillStyle = 'rgba(255, 255, 255, 0.92)';
+      const toothW = Math.max(4, faceW * 0.032);
+      const toothH = Math.max(5, faceH * 0.028);
+      roundedRect(target, -toothW, 0, toothW * 0.9, toothH, 2);
+      target.fill();
+      roundedRect(target, toothW * 0.1, 0, toothW * 0.9, toothH, 2);
+      target.fill();
+      target.restore();
+
+      drawAnimalFace(target, rect, box, faceW, faceH, '#ff9fbe');
+    }
+
+    // A cloud of hearts rising around the face, plus heart-shaped cheek blush.
+    function drawHearts(target, rect, box, faceW, faceH, now) {
+      const t = (now || 0) / 1000;
+      const center = toScreen(rect, {
+        x: (box.left + box.right) / 2,
+        y: (box.top + box.bottom) / 2
+      });
+      const colors = ['#ff2f74', '#ff6fa5', '#ff9dc0'];
+
+      for (let i = 0; i < 10; i++) {
+        const phase = (t * 0.16 + i / 10) % 1;
+        const spread = (hash01(i * 7 + 3) - 0.5) * 1.5;
+        const x = center.x + spread * faceW * 0.85 + Math.sin(t * 1.3 + i) * faceW * 0.025;
+        const y = center.y + faceH * 0.62 - phase * faceH * 1.55;
+        const size = faceW * (0.03 + 0.035 * hash01(i * 5 + 1))
+          * (0.75 + 0.35 * Math.sin(Math.PI * phase));
+        drawHeart(
+          target, x, y, size,
+          Math.sin(t * 2 + i) * 0.28,
+          colors[i % 3],
+          Math.sin(Math.PI * phase) * 0.9
+        );
+      }
+
+      for (const key of ['cheekA', 'cheekB']) {
+        const cheek = toScreen(rect, box[key]);
+        drawHeart(target, cheek.x, cheek.y, Math.max(6, faceW * 0.055), 0, '#ff7aa8', 0.35);
+      }
+    }
+
+    // Eyeliner, lashes and plum eye shadow, one pass per eye. The wing and the
+    // lashes go on the outer corner, whichever side of the face that is.
+    function drawEyeMakeup(target, rect, box, faceW, faceH) {
+      const a = toScreen(rect, box.eyeA);
+      const b = toScreen(rect, box.eyeB);
+      const angle = headTilt(rect, box);
+      const centerX = (a.x + b.x) / 2;
+
+      for (const eye of [a, b]) {
+        const outer = eye.x < centerX ? -1 : 1;
+        target.save();
+        target.translate(eye.x, eye.y - faceH * 0.045);
+        target.rotate(angle);
+
+        const shadow = target.createRadialGradient(0, 0, 1, 0, 0, faceW * 0.14);
+        shadow.addColorStop(0, 'rgba(150, 70, 160, 0.55)');
+        shadow.addColorStop(0.6, 'rgba(120, 50, 140, 0.26)');
+        shadow.addColorStop(1, 'rgba(120, 50, 140, 0)');
+        target.fillStyle = shadow;
+        target.beginPath();
+        target.ellipse(0, 0, faceW * 0.14, faceH * 0.08, 0, 0, Math.PI * 2);
+        target.fill();
+
+        target.strokeStyle = '#1c1116';
+        target.lineWidth = Math.max(1.2, faceW * 0.006);
+        target.lineCap = 'round';
+        target.beginPath();
+        target.moveTo(-faceW * 0.085, faceH * 0.005);
+        target.quadraticCurveTo(0, -faceH * 0.03, faceW * 0.082, -faceH * 0.004);
+        target.stroke();
+
+        // Wing on the outer corner.
+        target.beginPath();
+        target.moveTo(outer * faceW * 0.082, -faceH * 0.004);
+        target.lineTo(outer * faceW * 0.108, -faceH * 0.036);
+        target.stroke();
+
+        // Lashes fanning up from the outer half of the lid.
+        for (let i = 0; i < 3; i++) {
+          const x = outer * (faceW * 0.028 + i * faceW * 0.02);
+          target.beginPath();
+          target.moveTo(x, -faceH * 0.018);
+          target.lineTo(x + outer * faceW * 0.014, -faceH * 0.045 - i * faceH * 0.004);
+          target.stroke();
+        }
+        target.restore();
+      }
+    }
+
+    // Berry lipstick with a gloss, painted around the tracked mouth line.
+    // Berry lipstick painted on the tracked lip contour, so it follows the real
+    // lip shape, the head tilt and a smile or open mouth. The outer contour is
+    // filled even-odd against the inner one, which leaves the mouth opening
+    // unpainted instead of covering it with paint.
+    function drawLipstick(target, rect, box, faceW, faceH) {
+      if (!box.lipsOuter || box.lipsOuter.length < 6) return;
+      const outer = box.lipsOuter.map((p) => toScreen(rect, p));
+      const inner = box.lipsInner && box.lipsInner.length >= 6
+        ? box.lipsInner.map((p) => toScreen(rect, p))
+        : null;
+
+      let top = Infinity;
+      let bottom = -Infinity;
+      for (const p of outer) {
+        if (p.y < top) top = p.y;
+        if (p.y > bottom) bottom = p.y;
+      }
+      const lipHeight = Math.max(2, bottom - top);
+
+      const l = toScreen(rect, box.mouthL);
+      const r = toScreen(rect, box.mouthR);
+      const mouthW = Math.max(4, Math.hypot(r.x - l.x, r.y - l.y));
+      let angle = Math.atan2(r.y - l.y, r.x - l.x);
+      if (angle > Math.PI / 2) angle -= Math.PI;
+      if (angle < -Math.PI / 2) angle += Math.PI;
+
+      const traceLoop = (points) => {
+        points.forEach((p, i) => (i === 0 ? target.moveTo(p.x, p.y) : target.lineTo(p.x, p.y)));
+        target.closePath();
+      };
+
+      const paint = target.createLinearGradient(0, top, 0, bottom);
+      paint.addColorStop(0, '#d81b52');
+      paint.addColorStop(0.55, '#b60f3c');
+      paint.addColorStop(1, '#7c0726');
+
+      target.save();
+      target.beginPath();
+      traceLoop(outer);
+      if (inner) traceLoop(inner);
+      target.fillStyle = paint;
+      target.fill('evenodd');
+
+      // The lip line and the gloss stay inside the painted lips.
+      target.beginPath();
+      traceLoop(outer);
+      if (inner) traceLoop(inner);
+      target.clip('evenodd');
+
+      if (inner) {
+        target.strokeStyle = 'rgba(72, 0, 22, 0.5)';
+        target.lineWidth = Math.max(1, lipHeight * 0.08);
+        target.beginPath();
+        traceLoop(inner);
+        target.stroke();
+      }
+
+      // Gloss on the fullest part of the lower lip.
+      let bottomPoint = outer[0];
+      for (const p of outer) {
+        if (p.y > bottomPoint.y) bottomPoint = p;
+      }
+      target.save();
+      target.translate(bottomPoint.x, bottomPoint.y - lipHeight * 0.26);
+      target.rotate(angle);
+      target.fillStyle = 'rgba(255, 255, 255, 0.22)';
+      target.beginPath();
+      target.ellipse(0, 0, mouthW * 0.26, lipHeight * 0.17, 0, 0, Math.PI * 2);
+      target.fill();
+      target.restore();
+
+      target.restore();
+    }
+
+
+    // Rosy cheeks, plum eyes with liner and lashes, berry lips.
+    function drawMakeup(target, rect, box, faceW, faceH) {
+      drawBlush(target, rect, box, faceW, '226, 84, 120', 0.4);
+      drawEyeMakeup(target, rect, box, faceW, faceH);
+      drawLipstick(target, rect, box, faceW, faceH);
+    }
+
+
     // The face outline in screen space: the tracked face contour when there is
     // one, otherwise a plain oval. Painting on THIS instead of on an ellipse is
     // what stops the "egg pasted in front of the face" look.
@@ -726,8 +1134,10 @@
     }
 
     // Paints a bushy unibrow across both brows. It is an added prop, so it is
-    // drawn on top of the skin and follows the head tilt.
-    function drawUnibrow(target, rect, box, faceW, faceH) {
+    // drawn on top of the skin and follows the head tilt. The band is a proper
+    // arched brow: one soft arch over each eye, thickest where the two meet,
+    // with individual hairs over it so the edge reads as hair, not paint.
+    function drawUnibrow(target, rect, box, expr, faceW, faceH) {
       const a = toScreen(rect, box.eyeA);
       const b = toScreen(rect, box.eyeB);
       const angle = headTilt(rect, box);
@@ -740,31 +1150,157 @@
       target.translate(centerX, centerY);
       target.rotate(angle);
 
-      // Thick in the middle where the two brows meet, tapering to the ends.
+      // The solid band: an arched top over each eye, a fuller bottom edge, and
+      // tapered points at the outer ends.
       target.beginPath();
-      target.moveTo(-halfW, thick * 0.3);
-      target.quadraticCurveTo(-halfW * 0.45, -thick * 0.6, 0, -thick * 0.8);
-      target.quadraticCurveTo(halfW * 0.45, -thick * 0.6, halfW, thick * 0.3);
-      target.quadraticCurveTo(halfW * 0.5, thick, 0, thick);
-      target.quadraticCurveTo(-halfW * 0.5, thick, -halfW, thick * 0.3);
+      target.moveTo(-halfW, thick * 0.15);
+      target.bezierCurveTo(-halfW * 0.82, -thick * 0.72, -halfW * 0.3, -thick * 0.95, -halfW * 0.1, -thick * 0.62);
+      target.bezierCurveTo(-halfW * 0.02, -thick * 0.52, halfW * 0.02, -thick * 0.52, halfW * 0.1, -thick * 0.62);
+      target.bezierCurveTo(halfW * 0.3, -thick * 0.95, halfW * 0.82, -thick * 0.72, halfW, thick * 0.15);
+      target.bezierCurveTo(halfW * 0.78, thick * 0.92, halfW * 0.32, thick * 1.02, 0, thick * 0.88);
+      target.bezierCurveTo(-halfW * 0.32, thick * 1.02, -halfW * 0.78, thick * 0.92, -halfW, thick * 0.15);
       target.closePath();
 
       const hair = target.createLinearGradient(0, -thick, 0, thick);
-      hair.addColorStop(0, '#2c2018');
-      hair.addColorStop(1, '#120c08');
+      hair.addColorStop(0, '#3a2a1d');
+      hair.addColorStop(0.45, '#241811');
+      hair.addColorStop(1, '#0e0906');
       target.fillStyle = hair;
       target.fill();
 
-      // A few stray hairs so it reads as hair, not a painted stripe.
-      target.strokeStyle = 'rgba(16, 10, 7, 0.9)';
-      target.lineWidth = Math.max(1, thick * 0.16);
-      for (let i = -3; i <= 3; i++) {
-        const x = i * halfW * 0.22;
+      // Rough patches along the lower edge so the silhouette is not a stamped
+      // shape: soft nicks of darker hair, kept inside the band with a clip.
+      target.save();
+      target.clip();
+      for (let i = 0; i < 9; i++) {
+        const t = i / 8;
+        const x = -halfW * 0.85 + halfW * 1.7 * t;
+        const r = hash01(i + 3);
+        target.fillStyle = 'rgba(8, 5, 3, ' + (0.18 + r * 0.3).toFixed(3) + ')';
         target.beginPath();
-        target.moveTo(x, -thick * 0.35);
-        target.lineTo(x + halfW * 0.035, -thick * 1.0);
+        target.ellipse(
+          x, thick * (0.5 + r * 0.45),
+          halfW * (0.05 + r * 0.05), thick * (0.2 + r * 0.24),
+          0, 0, Math.PI * 2
+        );
+        target.fill();
+      }
+      target.restore();
+
+      // Individual hairs rising out of the band. Length, lean and colour come
+      // from a seeded hash, so the brow is detailed but does not shimmer.
+      const strands = 34;
+      target.lineCap = 'round';
+      for (let i = 0; i < strands; i++) {
+        const t = (i + 0.5) / strands;
+        const x = -halfW * 0.94 + halfW * 1.88 * t;
+        // Fullest over the middle, shorter strands toward the tapered ends.
+        const fullness = 0.35 + 0.65 * Math.sin(Math.PI * t);
+        const r1 = hash01(i * 3 + 1);
+        const r2 = hash01(i * 5 + 7);
+        const dir = hash01(i * 7 + 11) > 0.22 ? -1 : 1;
+        const len = thick * (0.45 + r1 * 0.85) * fullness;
+        const lean = (r2 - 0.5) * 0.9 + (t - 0.5) * 0.5;
+        const rootY = thick * (0.75 - r1 * 1.5);
+        target.beginPath();
+        target.moveTo(x, rootY);
+        target.quadraticCurveTo(
+          x + lean * len * 0.5, rootY + dir * len * 0.6,
+          x + lean * len, rootY + dir * len
+        );
+        target.strokeStyle = r2 > 0.72
+          ? 'rgba(92, 68, 46, ' + (0.3 + r1 * 0.35).toFixed(3) + ')'
+          : 'rgba(14, 9, 6, ' + (0.55 + r1 * 0.4).toFixed(3) + ')';
+        target.lineWidth = Math.max(0.8, thick * (0.07 + r1 * 0.09));
         target.stroke();
       }
+
+      // A few long strays poking past the ends, the way a real monobrow does.
+      target.strokeStyle = 'rgba(18, 12, 8, 0.7)';
+      target.lineWidth = Math.max(1, thick * 0.08);
+      for (let i = 0; i < 5; i++) {
+        const r1 = hash01(i * 11 + 5);
+        const side = i % 2 === 0 ? -1 : 1;
+        const x = side * halfW * (0.72 + r1 * 0.24);
+        target.beginPath();
+        target.moveTo(x, thick * 0.2);
+        target.lineTo(x + side * thick * (0.5 + r1 * 0.8), -thick * (0.9 + r1 * 0.8));
+        target.stroke();
+      }
+
+      target.restore();
+
+      drawBlackTeeth(target, rect, box, expr, faceH);
+    }
+
+    // Blacked-out teeth that appear while the guest smiles with their mouth
+    // open. They hang from the tracked upper lip and fill part of the actual
+    // opening, so they sit inside the mouth rather than floating over the lips,
+    // and they stay hidden whenever the lips are together.
+    function drawBlackTeeth(target, rect, box, expr, faceH) {
+      const smile = Math.max(0, Math.min(1, (expr.smile - 0.16) / 0.45));
+      if (smile < 0.05 || !box.lipTop || !box.lipBottom) return;
+
+      const upper = toScreen(rect, box.lipTop);
+      const lower = toScreen(rect, box.lipBottom);
+      // How far the lips are apart, as a share of the face height.
+      const openPx = Math.hypot(lower.x - upper.x, lower.y - upper.y);
+      const openRatio = openPx / Math.max(1, faceH);
+      const open = Math.max(0, Math.min(1, (openRatio - 0.02) / 0.1));
+      // Closed mouth: the lips meet, so there is no opening to paint on.
+      if (open < 0.08) return;
+
+      const l = toScreen(rect, box.mouthL);
+      const r = toScreen(rect, box.mouthR);
+      const mouthW = Math.max(1, Math.hypot(r.x - l.x, r.y - l.y));
+      let angle = Math.atan2(r.y - l.y, r.x - l.x);
+      // Keep the local "down" pointing down the screen on mirrored faces.
+      if (angle > Math.PI / 2) angle -= Math.PI;
+      if (angle < -Math.PI / 2) angle += Math.PI;
+      const halfMouth = mouthW / 2;
+      // A tooth can never be taller than the opening it sits in.
+      const toothH = Math.max(2, Math.min(openPx * 0.8, mouthW * 0.2));
+
+      // Local x runs along the mouth line: -1 is one corner, +1 the other.
+      const teeth = [
+        { x: -0.34, w: 0.13, h: 1, tilt: -0.14, drop: 0.05, round: 0.2 },
+        { x: 0.28, w: 0.09, h: 0.72, tilt: 0.2, drop: 0.22, round: 0.35 }
+      ];
+      // A small opening only shows the snaggle tooth; a wide grin shows both.
+      const count = open > 0.5 ? 2 : 1;
+
+      target.save();
+      target.translate(upper.x, upper.y);
+      target.rotate(angle);
+      target.globalAlpha = Math.min(1, 0.3 + 0.7 * open);
+
+      for (let i = 0; i < count; i++) {
+        const tooth = teeth[i];
+        const w = Math.max(3, mouthW * tooth.w);
+        const h = Math.max(2, toothH * tooth.h);
+        target.save();
+        target.translate(halfMouth * tooth.x, tooth.drop * toothH);
+        target.rotate(tooth.tilt);
+
+        roundedRect(target, -w / 2, -h * 0.08, w, h, w * tooth.round);
+        const fill = target.createLinearGradient(0, -h * 0.08, 0, h * 0.92);
+        fill.addColorStop(0, '#2a1f16');
+        fill.addColorStop(0.35, '#120c09');
+        fill.addColorStop(1, '#030202');
+        target.fillStyle = fill;
+        target.fill();
+        target.strokeStyle = 'rgba(0, 0, 0, 0.6)';
+        target.lineWidth = Math.max(1, w * 0.06);
+        target.stroke();
+
+        // A small gloss along the top so it reads as a tooth, not a hole.
+        target.beginPath();
+        target.ellipse(-w * 0.16, h * 0.06, w * 0.24, h * 0.1, -0.3, 0, Math.PI * 2);
+        target.fillStyle = 'rgba(255, 255, 255, 0.16)';
+        target.fill();
+        target.restore();
+      }
+
       target.restore();
     }
 
@@ -795,53 +1331,259 @@
       softWarp(target, rect, center, faceW * 0.72, faceH * 0.68, sx, sy);
     }
 
-    function drawClown(target, rect, box, expr, faceW, faceH) {
-      // The clown uses the plain mouth stretch: no painted face, otherwise the
-      // white make-up look below would paint over the real one.
-      const smile = Math.max(0, Math.min(1, (expr.smile - 0.12) / 0.68));
-      const strength = 0.5 + 0.5 * smile;
-      stretchMouth(
-        target, rect, box,
-        faceW, faceH * 0.15,
-        1 + 3.2 * strength,
-        1 + 0.9 * strength + 0.45 * Math.min(1, expr.jawOpen || 0)
-      );
+    // Painted white greasepaint that follows the face contour. The real eyes and
+    // mouth are warped back on top of it afterwards, so the make-up reads as
+    // paint with a face still behind it instead of a mask.
+    function paintWhiteFace(target, rect, box, faceW) {
+      const outline = faceOutline(rect, box);
+      let top = Infinity;
+      let bottom = -Infinity;
+      for (const p of outline) {
+        if (p.y < top) top = p.y;
+        if (p.y > bottom) bottom = p.y;
+      }
 
-      const nose = toScreen(rect, box.nose);
-      const noseR = Math.max(10, faceW * 0.11);
-      const noseGradient = target.createRadialGradient(
-        nose.x - noseR * 0.3, nose.y - noseR * 0.35, noseR * 0.15,
-        nose.x, nose.y, noseR
-      );
-      noseGradient.addColorStop(0, '#ff8a8a');
-      noseGradient.addColorStop(0.5, '#ff1f1f');
-      noseGradient.addColorStop(1, '#a30000');
       target.save();
-      target.beginPath();
-      target.arc(nose.x, nose.y, noseR, 0, Math.PI * 2);
-      target.fillStyle = noseGradient;
+      traceShape(target, outline);
+      const shade = target.createLinearGradient(0, top, 0, bottom);
+      shade.addColorStop(0, '#fdf9f2');
+      shade.addColorStop(0.62, '#f6f0e6');
+      shade.addColorStop(1, '#e3d9ca');
+      target.fillStyle = shade;
+      // A little of the guest's own skin stays visible, so it looks like paint.
+      target.globalAlpha = 0.95;
+      const canFilter = 'filter' in target;
+      if (canFilter) target.filter = `blur(${Math.max(2, faceW * 0.014).toFixed(1)}px)`;
       target.fill();
-      target.lineWidth = Math.max(1, noseR * 0.08);
-      target.strokeStyle = 'rgba(110, 0, 0, 0.45)';
-      target.stroke();
+      if (canFilter) target.filter = 'none';
       target.restore();
+      return outline;
+    }
 
+    // The big painted grin: a thick red smile around the real mouth, with curled
+    // corners, lip creases and a gloss along the lower lip.
+    function drawClownSmile(target, rect, box, expr, faceW, faceH) {
+      const smile = Math.max(0, Math.min(1, (expr.smile - 0.05) / 0.6));
+      const m = toScreen(rect, box.mouth);
+      const l = toScreen(rect, box.mouthL);
+      const r = toScreen(rect, box.mouthR);
+      const mouthW = Math.max(1, Math.hypot(r.x - l.x, r.y - l.y));
+      let angle = Math.atan2(r.y - l.y, r.x - l.x);
+      if (angle > Math.PI / 2) angle -= Math.PI;
+      if (angle < -Math.PI / 2) angle += Math.PI;
+
+      const halfW = Math.max(faceW * 0.22, mouthW * 0.95) * (0.92 + 0.14 * smile);
+      const depth = Math.max(faceH * 0.075, halfW * 0.5) * (0.85 + 0.25 * smile);
+      const lip = Math.max(5, faceH * 0.072);
+      // Point on the painted smile curve, so creases and gloss follow it.
+      const onCurve = (t) => ({
+        x: halfW * (2 * t - 1),
+        y: (1 - t) * (1 - t) * (-depth * 0.16)
+          + 2 * (1 - t) * t * (depth * 1.15)
+          + t * t * (-depth * 0.16)
+      });
+
+      target.save();
+      target.translate(m.x, m.y);
+      target.rotate(angle);
+      target.lineCap = 'round';
+      target.lineJoin = 'round';
+
+      const paint = target.createLinearGradient(0, -depth * 0.2, 0, depth);
+      paint.addColorStop(0, '#e8203c');
+      paint.addColorStop(0.55, '#c40024');
+      paint.addColorStop(1, '#7d0016');
+      target.strokeStyle = paint;
+      target.lineWidth = lip;
+      target.beginPath();
+      target.moveTo(-halfW, -depth * 0.16);
+      target.quadraticCurveTo(0, depth * 1.15, halfW, -depth * 0.16);
+      target.stroke();
+
+      // Corner curls, the little upturn a painted clown mouth always has.
+      for (const side of [-1, 1]) {
+        target.beginPath();
+        target.moveTo(side * halfW, -depth * 0.16);
+        target.quadraticCurveTo(
+          side * halfW * 1.12, -depth * 0.5,
+          side * halfW * 0.95, -depth * 0.78
+        );
+        target.stroke();
+      }
+
+      // An inner crease keeps the smile from becoming one thick red rope.
+      target.strokeStyle = 'rgba(94, 0, 18, 0.5)';
+      target.lineWidth = Math.max(1.5, faceH * 0.016);
+      target.beginPath();
+      target.moveTo(-halfW * 0.95, -depth * 0.02);
+      target.quadraticCurveTo(0, depth * 0.97, halfW * 0.95, -depth * 0.02);
+      target.stroke();
+
+      // Short lip creases across the lower lip.
+      target.strokeStyle = 'rgba(112, 0, 20, 0.45)';
+      target.lineWidth = Math.max(1, faceH * 0.008);
+      for (let i = 1; i <= 6; i++) {
+        const p = onCurve(i / 7);
+        target.beginPath();
+        target.moveTo(p.x, p.y - lip * 0.26);
+        target.lineTo(p.x + lip * 0.1, p.y + lip * 0.26);
+        target.stroke();
+      }
+
+      // Gloss along the lower lip.
+      target.strokeStyle = 'rgba(255, 255, 255, 0.26)';
+      target.lineWidth = Math.max(1.5, lip * 0.16);
+      target.beginPath();
+      for (let i = 0; i <= 12; i++) {
+        const p = onCurve(0.2 + (i / 12) * 0.4);
+        if (i === 0) target.moveTo(p.x, p.y + lip * 0.24);
+        else target.lineTo(p.x, p.y + lip * 0.24);
+      }
+      target.stroke();
+
+      target.restore();
+    }
+
+    // Glossy red clown nose with a shadow underneath so it sits on the face.
+    function drawClownNose(target, rect, box, faceW, faceH, now) {
+      const nose = toScreen(rect, box.nose);
+      const bob = Math.sin((now || 0) / 320) * faceH * 0.005;
+      const noseR = Math.max(10, faceW * 0.115);
+      const cy = nose.y + bob;
+
+      const shadow = target.createRadialGradient(
+        nose.x, cy + noseR * 0.85, noseR * 0.15,
+        nose.x, cy + noseR * 0.85, noseR * 1.15
+      );
+      shadow.addColorStop(0, 'rgba(60, 0, 10, 0.28)');
+      shadow.addColorStop(1, 'rgba(60, 0, 10, 0)');
+      target.fillStyle = shadow;
+      target.beginPath();
+      target.arc(nose.x, cy + noseR * 0.85, noseR * 1.15, 0, Math.PI * 2);
+      target.fill();
+
+      const ball = target.createRadialGradient(
+        nose.x - noseR * 0.34, cy - noseR * 0.4, noseR * 0.08,
+        nose.x, cy, noseR
+      );
+      ball.addColorStop(0, '#ff8d8d');
+      ball.addColorStop(0.42, '#ff2233');
+      ball.addColorStop(0.85, '#c00018');
+      ball.addColorStop(1, '#7d000e');
+      target.fillStyle = ball;
+      target.beginPath();
+      target.arc(nose.x, cy, noseR, 0, Math.PI * 2);
+      target.fill();
+      target.strokeStyle = 'rgba(110, 0, 14, 0.35)';
+      target.lineWidth = Math.max(1, noseR * 0.06);
+      target.stroke();
+
+      target.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      target.beginPath();
+      target.ellipse(
+        nose.x - noseR * 0.32, cy - noseR * 0.36,
+        noseR * 0.26, noseR * 0.16, -0.5, 0, Math.PI * 2
+      );
+      target.fill();
+    }
+
+    // Blue eye shadow plus high painted arches, drawn after the eye warps so the
+    // make-up stays crisp over the returned eyes.
+    function drawClownEyes(target, rect, box, faceW, faceH) {
+      const a = toScreen(rect, box.eyeA);
+      const b = toScreen(rect, box.eyeB);
+      const angle = headTilt(rect, box);
+      const eyeSpan = Math.max(faceW * 0.12, Math.hypot(b.x - a.x, b.y - a.y));
+      const shadowW = Math.max(10, eyeSpan * 0.42);
+      const shadowH = Math.max(6, faceH * 0.055);
+
+      for (const eye of [a, b]) {
+        target.save();
+        target.translate(eye.x, eye.y - shadowH * 0.45);
+        target.rotate(angle);
+        const shadow = target.createRadialGradient(0, 0, shadowW * 0.08, 0, 0, shadowW);
+        shadow.addColorStop(0, 'rgba(62, 106, 194, 0.6)');
+        shadow.addColorStop(0.68, 'rgba(62, 106, 194, 0.3)');
+        shadow.addColorStop(1, 'rgba(62, 106, 194, 0)');
+        target.fillStyle = shadow;
+        target.beginPath();
+        target.ellipse(0, 0, shadowW, shadowH * 1.3, 0, 0, Math.PI * 2);
+        target.fill();
+        target.restore();
+      }
+
+      const browW = Math.max(14, eyeSpan * 0.64);
+      const browH = Math.max(3, faceH * 0.017);
+      target.save();
+      target.lineCap = 'round';
+      for (let i = 0; i < 2; i++) {
+        const eye = i === 0 ? a : b;
+        const dir = i === 0 ? -1 : 1;
+        target.save();
+        target.translate(eye.x, eye.y - faceH * 0.1);
+        target.rotate(angle + dir * 0.12);
+        target.strokeStyle = '#231712';
+        target.lineWidth = browH;
+        target.beginPath();
+        target.moveTo(-browW / 2, browH * 0.6);
+        target.quadraticCurveTo(0, -browH * 0.9, browW / 2, browH * 0.2);
+        target.stroke();
+        target.restore();
+      }
+      target.restore();
+    }
+
+    // Rosy painted cheeks.
+    function drawClownCheeks(target, rect, box, faceW) {
       for (const key of ['cheekA', 'cheekB']) {
         const cheek = toScreen(rect, box[key]);
-        const cheekR = Math.max(10, faceW * 0.12);
+        const cheekR = Math.max(12, faceW * 0.14);
         const blush = target.createRadialGradient(
           cheek.x, cheek.y, cheekR * 0.1,
           cheek.x, cheek.y, cheekR
         );
-        blush.addColorStop(0, 'rgba(255, 70, 110, 0.42)');
-        blush.addColorStop(1, 'rgba(255, 70, 110, 0)');
-        target.save();
+        blush.addColorStop(0, 'rgba(255, 86, 120, 0.55)');
+        blush.addColorStop(0.62, 'rgba(255, 86, 120, 0.25)');
+        blush.addColorStop(1, 'rgba(255, 86, 120, 0)');
         target.fillStyle = blush;
         target.beginPath();
         target.arc(cheek.x, cheek.y, cheekR, 0, Math.PI * 2);
         target.fill();
-        target.restore();
       }
+    }
+
+    // Full clown face: white greasepaint, a big painted grin, blue eye shadow,
+    // high painted arches, rosy cheeks and a glossy red nose.
+    function drawClown(target, rect, box, expr, faceW, faceH, now) {
+      const outline = paintWhiteFace(target, rect, box, faceW);
+
+      // Everything painted on the face is clipped to the face contour.
+      target.save();
+      traceShape(target, outline);
+      target.clip();
+
+      // Bring the real eyes and mouth back through the paint, slightly enlarged,
+      // so the guest still has a face under the make-up.
+      for (const key of ['eyeA', 'eyeB']) {
+        const eye = toScreen(rect, box[key]);
+        softWarp(
+          target, rect, eye,
+          Math.max(10, faceW * 0.18), Math.max(8, faceH * 0.12),
+          1.45, 1.4
+        );
+      }
+      stretchMouth(
+        target, rect, box,
+        faceW * 0.55, faceH * 0.16,
+        1.42, 1.15 + 0.3 * Math.min(1, expr.jawOpen || 0)
+      );
+
+      drawClownSmile(target, rect, box, expr, faceW, faceH);
+      target.restore();
+
+      drawClownCheeks(target, rect, box, faceW);
+      drawClownEyes(target, rect, box, faceW, faceH);
+      drawClownNose(target, rect, box, faceW, faceH, now);
     }
 
     function drawMustache(target, x, y, w, h, angle) {
@@ -1084,14 +1826,113 @@
       return drawProp(target, prop, faceCenterX(rect, box), topY + height / 2, width, angle || 0);
     }
 
-    function drawArtJoint(target, rect, box, faceW, faceH, factor) {
-      const corner = mouthCorner(rect, box);
-      return drawPropHeld(target, ART.joint, corner.x, corner.y - faceH * 0.01, faceW * (factor || 0.66), -0.9);
+    // A soft, slightly irregular puff used as the smoke stamp, built once and
+    // reused for every puff on every face.
+    let smokeStamp = null;
+    function getSmokeStamp() {
+      if (smokeStamp) return smokeStamp;
+      if (typeof document === 'undefined') return null;
+      const size = 128;
+      const stamp = document.createElement('canvas');
+      stamp.width = size;
+      stamp.height = size;
+      const sctx = stamp.getContext('2d');
+      if (!sctx) return null;
+      // A few overlapping soft blobs keep the puff irregular instead of round.
+      const blob = (x, y, r, a) => {
+        const grad = sctx.createRadialGradient(x, y, r * 0.05, x, y, r);
+        grad.addColorStop(0, `rgba(255, 255, 255, ${a})`);
+        grad.addColorStop(0.55, `rgba(248, 248, 246, ${(a * 0.82).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(244, 244, 242, 0)');
+        sctx.fillStyle = grad;
+        sctx.beginPath();
+        sctx.arc(x, y, r, 0, Math.PI * 2);
+        sctx.fill();
+      };
+      // Dense cores with a soft rim: the smoke should read as solid, not haze.
+      blob(64, 64, 56, 0.96);
+      blob(46, 52, 40, 0.86);
+      blob(80, 74, 44, 0.84);
+      blob(64, 88, 34, 0.62);
+      smokeStamp = stamp;
+      return smokeStamp;
     }
 
-    function drawArtBlunt(target, rect, box, faceW, faceH) {
+    // Screen position of the lit end of a prop held in the mouth. Mirrors the
+    // placement in drawPropHeld, so the smoke starts at the ember rather than
+    // at the lips.
+    function heldTip(x, y, angle, prop, length) {
+      const width = length * (prop.w / Math.hypot(prop.w, prop.h));
+      const height = width * (prop.h / prop.w);
+      const lx = width * 0.81;
+      const ly = height * 0.72;
+      const cos = Math.cos(angle);
+      const sin = Math.sin(angle);
+      return { x: x + lx * cos - ly * sin, y: y + lx * sin + ly * cos };
+    }
+
+    // Animated smoke from the ember: dense puffs rise, drift and grow out of a
+    // gently pulsing glow.
+    function emitCigarSmoke(target, x, y, angle, prop, length, faceW, faceH, now) {
+      const tip = heldTip(x, y, angle, prop, length);
+      const stamp = getSmokeStamp();
+      if (!stamp) return;
+      const t = (now || 0) / 1000;
+      const base = Math.max(8, faceW * 0.075);
+      const puffs = 9;
+
+      target.save();
+      // Ember glow first, so the smoke seems to come out of it.
+      const glow = target.createRadialGradient(tip.x, tip.y, 0, tip.x, tip.y, base * 1.5);
+      glow.addColorStop(0, `rgba(255, 138, 40, ${(0.34 + 0.1 * Math.sin(t * 3.1)).toFixed(3)})`);
+      glow.addColorStop(0.5, 'rgba(255, 90, 20, 0.14)');
+      glow.addColorStop(1, 'rgba(255, 70, 10, 0)');
+      target.fillStyle = glow;
+      target.beginPath();
+      target.arc(tip.x, tip.y, base * 1.5, 0, Math.PI * 2);
+      target.fill();
+
+      // Each puff runs its own cycle from the ember upward; the growing size and
+      // the fade in/out are what make the plume read as smoke.
+      for (let i = 0; i < puffs; i++) {
+        const phase = (t * 0.2 + i / puffs) % 1;
+        const wobble = Math.sin(phase * 5.4 + i * 1.9) * faceW * 0.08 * phase;
+        const drift = Math.sin(phase * 2.2 + i * 0.8) * faceW * 0.05;
+        const px = tip.x + wobble + drift + phase * faceW * 0.02;
+        const py = tip.y - faceH * 0.015 - phase * faceH * 0.56;
+        const size = base * (0.8 + phase * 3.3);
+        const fade = Math.sin(Math.PI * Math.min(1, phase * 1.1));
+        const alpha = Math.pow(Math.max(0, fade), 0.5) * 0.92;
+        if (alpha <= 0.01) continue;
+        target.globalAlpha = alpha;
+        target.save();
+        target.translate(px, py);
+        target.rotate((phase - 0.5) * 1.1 + i * 0.5);
+        target.drawImage(stamp, -size / 2, -size / 2, size, size);
+        target.restore();
+      }
+
+      target.restore();
+    }
+
+    function drawArtJoint(target, rect, box, faceW, faceH, factor, now) {
       const corner = mouthCorner(rect, box);
-      return drawPropHeld(target, ART.blunt, corner.x, corner.y - faceH * 0.01, faceW * 0.42, -0.6);
+      const length = faceW * (factor || 0.66);
+      const painted = drawPropHeld(target, ART.joint, corner.x, corner.y - faceH * 0.01, length, -0.9);
+      if (painted) {
+        emitCigarSmoke(target, corner.x, corner.y - faceH * 0.01, -0.9, ART.joint, length, faceW, faceH, now);
+      }
+      return painted;
+    }
+
+    function drawArtBlunt(target, rect, box, faceW, faceH, now) {
+      const corner = mouthCorner(rect, box);
+      const length = faceW * 0.42;
+      const painted = drawPropHeld(target, ART.blunt, corner.x, corner.y - faceH * 0.01, length, -0.6);
+      if (painted) {
+        emitCigarSmoke(target, corner.x, corner.y - faceH * 0.01, -0.6, ART.blunt, length, faceW, faceH, now);
+      }
+      return painted;
     }
 
     function drawShades(target, rect, box, faceW, faceH) {
@@ -1102,28 +1943,113 @@
       });
     }
 
-    function drawThug(target, rect, box, faceW, faceH) {
+    function drawThug(target, rect, box, faceW, faceH, now) {
       drawShades(target, rect, box, faceW, faceH);
-      drawArtJoint(target, rect, box, faceW, faceH);
+      drawArtJoint(target, rect, box, faceW, faceH, undefined, now);
     }
 
-    // The whole outfit: cap, shades, dollar chain and a blunt.
-    function drawBoss(target, rect, box, faceW, faceH) {
+    // A gold grill that appears only while the guest smiles with their teeth
+    // showing. It is clipped to the tracked inner lip contour, so the gold sits
+    // exactly between the lips and follows the smile and head tilt.
+    function drawGoldGrill(target, rect, box, expr, faceW, now) {
+      if (!box.lipsInner || box.lipsInner.length < 6) return;
+      const smile = Math.max(0, Math.min(1, (((expr && expr.smile) || 0) - 0.18) / 0.55));
+      if (smile < 0.05) return;
+
+      const inner = box.lipsInner.map((p) => toScreen(rect, p));
+      let left = Infinity;
+      let right = -Infinity;
+      let top = Infinity;
+      let bottom = -Infinity;
+      for (const p of inner) {
+        if (p.x < left) left = p.x;
+        if (p.x > right) right = p.x;
+        if (p.y < top) top = p.y;
+        if (p.y > bottom) bottom = p.y;
+      }
+      const w = right - left;
+      const h = bottom - top;
+      if (w < 4 || h < 2) return;
+
+      // Teeth only show once the lips part; a closed-lip smile stays uncovered.
+      const open = Math.max(0, Math.min(1, (h / w - 0.05) / 0.22));
+      if (open < 0.06) return;
+      const strength = Math.min(1, smile * (0.45 + 0.55 * open));
+      const teethH = h * (0.55 + 0.3 * open);
+
+      target.save();
+      target.beginPath();
+      inner.forEach((p, i) => (i === 0 ? target.moveTo(p.x, p.y) : target.lineTo(p.x, p.y)));
+      target.closePath();
+      target.clip();
+      target.globalAlpha = strength;
+
+      const gold = target.createLinearGradient(0, top, 0, top + teethH);
+      gold.addColorStop(0, '#fff8c8');
+      gold.addColorStop(0.3, '#ffdf58');
+      gold.addColorStop(0.65, '#f0b31a');
+      gold.addColorStop(1, '#9c6b00');
+      target.fillStyle = gold;
+      target.fillRect(left, top, w, teethH);
+
+      // Tooth separators.
+      const teeth = Math.max(4, Math.min(8, Math.round(w / Math.max(6, faceW * 0.055))));
+      target.strokeStyle = 'rgba(94, 62, 0, 0.55)';
+      target.lineWidth = Math.max(1, w * 0.012);
+      for (let i = 1; i < teeth; i++) {
+        const x = left + (w * i) / teeth;
+        target.beginPath();
+        target.moveTo(x, top);
+        target.lineTo(x, top + teethH);
+        target.stroke();
+      }
+
+      // A highlight that sweeps across the grill while it is on screen.
+      const sweep = ((now || 0) / 950) % 1;
+      const sx = left - w * 0.35 + sweep * w * 1.7;
+      const shine = target.createLinearGradient(sx - w * 0.2, top, sx + w * 0.2, top + teethH);
+      shine.addColorStop(0, 'rgba(255, 255, 255, 0)');
+      shine.addColorStop(0.5, 'rgba(255, 255, 255, 0.8)');
+      shine.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      target.fillStyle = shine;
+      target.fillRect(left, top, w, teethH);
+      target.restore();
+
+      // Thin gold rim on the lip opening.
+      target.save();
+      target.globalAlpha = strength * 0.9;
+      target.beginPath();
+      inner.forEach((p, i) => (i === 0 ? target.moveTo(p.x, p.y) : target.lineTo(p.x, p.y)));
+      target.closePath();
+      target.strokeStyle = 'rgba(255, 219, 88, 0.85)';
+      target.lineWidth = Math.max(1, w * 0.015);
+      target.stroke();
+      target.restore();
+
+      // Twinkles at the mouth corners.
+      const twinkle = (Math.sin((now || 0) / 260) + 1) / 2;
+      drawSparkle(target, left, top + h * 0.35, Math.max(3, w * 0.05), '#fff3a0', 0.35 + 0.5 * twinkle);
+      drawSparkle(target, right, top + h * 0.35, Math.max(3, w * 0.05), '#fff3a0', 0.35 + 0.5 * (1 - twinkle));
+    }
+
+    // The whole outfit: cap, shades, dollar chain, gold grill and a blunt.
+    function drawBoss(target, rect, box, expr, faceW, faceH, now) {
       drawArtCap(target, rect, box, faceW, faceH);
       drawArtChain(target, rect, box, ART.chainBoss, faceW, faceH, 0.75, -0.16);
       drawShades(target, rect, box, faceW, faceH);
-      drawArtBlunt(target, rect, box, faceW, faceH);
+      drawGoldGrill(target, rect, box, expr, faceW, now);
+      drawArtBlunt(target, rect, box, faceW, faceH, now);
     }
 
     // Shades, a long link chain and a lit joint.
-    function drawBling(target, rect, box, faceW, faceH) {
+    function drawBling(target, rect, box, faceW, faceH, now) {
       drawShades(target, rect, box, faceW, faceH);
       drawArtChain(target, rect, box, ART.chainBling, faceW, faceH, 1.26, -0.12);
-      drawArtJoint(target, rect, box, faceW, faceH, 0.62);
+      drawArtJoint(target, rect, box, faceW, faceH, 0.62, now);
     }
 
-    function drawJointFuel(target, rect, box, faceW, faceH) {
-      drawArtJoint(target, rect, box, faceW, faceH, 0.8);
+    function drawJointFuel(target, rect, box, faceW, faceH, now) {
+      drawArtJoint(target, rect, box, faceW, faceH, 0.8, now);
     }
 
     // Over the top on purpose: gold 8-bit shades, a slowly turning illuminati
@@ -1154,9 +2080,66 @@
           lens: '#241600', edge: '#ffd400', glint: '#ffffff'
         });
       }
-      drawArtJoint(target, rect, box, faceW, faceH);
+      drawArtJoint(target, rect, box, faceW, faceH, undefined, now);
 
       drawIlluminati(target, top.x, top.y - faceH * 0.3, faceW * 0.2, Math.sin(t * 0.8) * 0.5);
+    }
+
+    // ---------- face swap ----------
+    // Everyone in frame wears the face of the next person along the row: the
+    // faces are sorted by screen position and the cycle is shifted, so a group
+    // of any size swaps in one pass instead of only working for two people.
+    function faceScreenMetrics(rect, box) {
+      const a = toScreen(rect, box.eyeA);
+      const b = toScreen(rect, box.eyeB);
+      const center = toScreen(rect, {
+        x: (box.left + box.right) / 2,
+        y: (box.top + box.bottom) / 2
+      });
+      let angle = Math.atan2(b.y - a.y, b.x - a.x);
+      if (angle > Math.PI / 2) angle -= Math.PI;
+      if (angle < -Math.PI / 2) angle += Math.PI;
+      return {
+        center,
+        angle,
+        width: Math.max(8, Math.abs(box.right - box.left) * rect.w),
+        height: Math.max(8, Math.abs(box.bottom - box.top) * rect.h)
+      };
+    }
+
+    // Copies `from`'s face onto `to`: a feathered elliptical patch sampled from
+    // the raw frame (not from the canvas), scaled, rotated and shifted so the
+    // eyes and mouth line up. Sampling the video is what stops several swaps
+    // from feeding into each other when a whole row of people trades faces.
+    function swapFaceOnto(target, rect, from, to) {
+      const src = faceScreenMetrics(rect, from);
+      const dst = faceScreenMetrics(rect, to);
+      const scaleX = dst.width / src.width;
+      const scaleY = dst.height / src.height;
+
+      warpPatch(
+        target, rect, dst.center,
+        Math.max(12, dst.width * 0.66), Math.max(12, dst.height * 0.6),
+        (ctx) => {
+          ctx.rotate(dst.angle);
+          ctx.scale(scaleX, scaleY);
+          ctx.rotate(-src.angle);
+          ctx.translate(dst.center.x - src.center.x, dst.center.y - src.center.y);
+        }
+      );
+    }
+
+    function drawFaceSwap(target, rect, boxes) {
+      if (!boxes || boxes.length < 2) return false;
+      const order = boxes.slice().sort((a, b) => {
+        const ax = toScreen(rect, a.eyeA).x + toScreen(rect, a.eyeB).x;
+        const bx = toScreen(rect, b.eyeA).x + toScreen(rect, b.eyeB).x;
+        return ax - bx;
+      });
+      for (let i = 0; i < order.length; i++) {
+        swapFaceOnto(target, rect, order[(i + 1) % order.length], order[i]);
+      }
+      return true;
     }
 
     function drawFilter(target, rect, box, id, expr, now, skin) {
@@ -1164,19 +2147,23 @@
       const faceW = Math.max(1, Math.abs(box.right - box.left) * rect.w);
       const faceH = Math.max(1, Math.abs(box.bottom - box.top) * rect.h);
       const faceExpr = expr || ZERO_EXPR;
-      if (id === 'thug') return drawThug(target, rect, box, faceW, faceH);
+      if (id === 'thug') return drawThug(target, rect, box, faceW, faceH, now);
       if (id === 'mlg') return drawMlg(target, rect, box, faceW, faceH, now);
       if (id === 'shades') return drawShades(target, rect, box, faceW, faceH);
-      if (id === 'boss') return drawBoss(target, rect, box, faceW, faceH);
-      if (id === 'bling') return drawBling(target, rect, box, faceW, faceH);
-      if (id === 'joint') return drawJointFuel(target, rect, box, faceW, faceH);
+      if (id === 'boss') return drawBoss(target, rect, box, faceExpr, faceW, faceH, now);
+      if (id === 'bling') return drawBling(target, rect, box, faceW, faceH, now);
+      if (id === 'joint') return drawJointFuel(target, rect, box, faceW, faceH, now);
       if (id === 'big') return drawBigEyes(target, rect, box, faceExpr, faceW, faceH, now, skin);
       if (id === 'cheeky') return drawCheeky(target, rect, box, faceExpr, faceW, faceH);
-      if (id === 'unibrow') return drawUnibrow(target, rect, box, faceW, faceH);
+      if (id === 'unibrow') return drawUnibrow(target, rect, box, faceExpr, faceW, faceH);
+      if (id === 'cat') return drawCat(target, rect, box, faceW, faceH);
+      if (id === 'bunny') return drawBunny(target, rect, box, faceW, faceH, now);
+      if (id === 'hearts') return drawHearts(target, rect, box, faceW, faceH, now);
+      if (id === 'makeup') return drawMakeup(target, rect, box, faceW, faceH);
       if (id === 'squish') return drawSquish(target, rect, box, faceW, faceH);
       if (id === 'melt') return drawMelt(target, rect, box, faceW, faceH);
       if (id === 'jelly') return drawJelly(target, rect, box, faceW, faceH, now);
-      if (id === 'clown') return drawClown(target, rect, box, faceExpr, faceW, faceH);
+      if (id === 'clown') return drawClown(target, rect, box, faceExpr, faceW, faceH, now);
       if (id === 'dog') return drawDog(target, rect, box);
       if (id === 'classic') return drawClassic(target, rect, box);
       return undefined;
@@ -1269,6 +2256,12 @@
 
       drawMirroredVideo(target, rect);
       if (faces) {
+        // Face swap works across the whole group, so it needs every face at
+        // once instead of the per-face overlay pass below.
+        if (activeFilter === 'faceswap') {
+          drawFaceSwap(target, rect, faces.map((entry) => entry.box));
+          return;
+        }
         for (const entry of faces) {
           drawFilter(target, rect, entry.box, activeFilter, entry.expr, now, entry.skin);
         }
@@ -1316,11 +2309,15 @@
         // Reuse the faces the preview is tracking; their coordinates are
         // normalized, so they land on the same heads at sensor resolution.
         const live = tracks.filter((track) => now - track.lastSeen < FACE_GRACE_MS * 2);
-        if (!live.length) {
-          drawFilter(target, rect, fallbackFrame(rect, width, height), activeFilter, ZERO_EXPR, now, fallbackSkin);
-        }
-        for (const track of live) {
-          drawFilter(target, rect, track.face, activeFilter, track.expr, now, track.skin);
+        if (activeFilter === 'faceswap') {
+          drawFaceSwap(target, rect, live.map((track) => track.face));
+        } else {
+          if (!live.length) {
+            drawFilter(target, rect, fallbackFrame(rect, width, height), activeFilter, ZERO_EXPR, now, fallbackSkin);
+          }
+          for (const track of live) {
+            drawFilter(target, rect, track.face, activeFilter, track.expr, now, track.skin);
+          }
         }
       }
 

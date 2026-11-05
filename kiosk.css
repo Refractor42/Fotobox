@@ -2145,7 +2145,10 @@ body.orientation-landscape #camera.is-reviewing .review-actions .round-action:di
 }
 #stampPanel [data-action="clear-stickers"] {
   flex: 0 0 auto;
-  margin-right: var(--slot-pad-x, 20px);
+  /* Nur ein schmaler Abstand zum abgerundeten Pillenende: der Mülleimer soll
+     direkt neben dem Sticker-Knopf sitzen und nicht weit im Inneren schweben.
+     Der Kreis passt sich der runden Kappe an, ein kleiner Innenabstand genügt. */
+  margin-right: clamp(8px, 0.7vw, 12px);
 }
 #stampPanel.has-drag-trash [data-action="clear-stickers"] { visibility: hidden; }
 #stampSwipeHint .bar-swipe-hint__trail { right: auto; left: -10px; }
