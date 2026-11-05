@@ -21,8 +21,8 @@
   "buttonTransparency": 15,
   "brandName": "SnapBox",
   "qrTtlHours": 24,
-  "challengeEnabled": false,
+  "challengeEnabled": true,
   "challengeLocation": "lcc",
   "challengeAppUrl": "https://site-6e612acb7a47490692d7da5a7b9d9292.freebuff.page",
-  "updatedAt": "2026-11-04T23:46:29.010Z"
+  "updatedAt": "2026-11-05T05:24:00.523Z"
 }

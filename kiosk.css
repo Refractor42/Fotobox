@@ -1968,8 +1968,7 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
 .bar-slot--stamp { display: none; }
 
 #camera.is-reviewing .capture-bar {
-  /* Reserve Start's fixed footprint first; center the action pair within
-     the remaining width. Menu columns no longer need their own reserves. */
+  /* Keep the action pair centered on the bar, independent of control scale. */
   --review-start-reserve: calc(var(--bar-edge-inset) + var(--home-size) + var(--bar-gap));
   --review-home: 0px;
   --review-accept: 0px;
@@ -1978,12 +1977,12 @@ body.orientation-landscape .bar-options > #captureOptionsToggle { order: 5; flex
   column-gap: clamp(20px, 2.5vw, 40px);
   align-items: end;
   align-content: end;
-  padding-left: var(--review-start-reserve);
+  padding-left: var(--bar-edge-inset);
   padding-right: var(--bar-edge-inset);
 }
 /* Die Leiste rückt im Review nicht zur Seite: die Pillen liegen in der Leiste. */
 #camera.is-reviewing .capture-bar.is-menu-open {
-  padding-left: var(--review-start-reserve);
+  padding-left: var(--bar-edge-inset);
   padding-right: var(--bar-edge-inset);
 }
 #camera.is-reviewing .capture-bar > .bar-btn--review-sticker {

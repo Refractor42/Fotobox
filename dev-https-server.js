@@ -5,6 +5,7 @@
      local network via https://YOUR_IP:8443
    — Usage:  npm start
    — Then open: https://<your-ip>:8443  on any device on the network
+   — Admin panel: https://localhost:8443/admin
    Note:  Browsers will show a "Your connection is not private"
           warning for self-signed certs. Click "Advanced" →
           "Proceed to <ip>" to continue.
@@ -1802,8 +1803,7 @@ function startServer(server, protocol) {
     console.log(`  Local:     ${protocol.toLowerCase()}://localhost:` + PORT);
     console.log(`  Network:   ${protocol.toLowerCase()}://${localIP}:` + PORT);
     console.log('');
-    console.log('  On other devices (phones, tablets), open:');
-    console.log(`  ${protocol.toLowerCase()}://${localIP}:` + PORT);
+    console.log(`  Admin Panel: ${protocol.toLowerCase()}://localhost:${PORT}/admin`);
     console.log('');
     if (protocol === 'HTTPS') {
       console.log('  Accept the self-signed certificate warning');
