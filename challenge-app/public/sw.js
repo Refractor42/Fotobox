@@ -1,6 +1,6 @@
 /* SnapBox Service Worker für PWA-Installation & Offline-Caching */
 
-const CACHE_NAME = 'snapbox-challenge-v3';
+const CACHE_NAME = 'snapbox-challenge-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
