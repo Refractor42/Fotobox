@@ -1450,17 +1450,17 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
   background: rgba(0 0 0 / 0.7);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  padding: 1.5rem;
+  padding: clamp(0.5rem, 2vw, 1.5rem);
 }
 .modal__card {
   width: 100%;
   /* Wächst mit der Barrierefreiheits-Skalierung: sonst schieben große
      Buttons/Schrift die Aktionen aus der Karte heraus. */
-  max-width: min(calc(340px * var(--a11y-control-scale, 1) * var(--a11y-text-scale, 1)), 100%);
+  max-width: min(calc(480px * var(--a11y-control-scale, 1) * var(--a11y-text-scale, 1)), 100%);
   background: #161616;
   border: 1px solid rgba(255 255 255 / 0.1);
   border-radius: var(--radius-lg);
-  padding: 1.5rem;
+  padding: clamp(1.125rem, 3vw, 1.5rem);
   box-shadow: 0 24px 64px rgba(0 0 0 / 0.55);
 }
 .modal__title { font-size: calc((1.1rem) * var(--a11y-text-scale, 1)); font-weight: 600; margin-bottom: 0.5rem; }
@@ -1473,13 +1473,32 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
   justify-content: flex-end;
   gap: calc((0.5rem) * var(--a11y-control-scale, 1));
 }
-/* Der rote Button steht links neben der sicheren Aktion. Etwas schmalere
-   Innenabstände lassen beide bei normaler Skalierung in einer Zeile Platz;
-   bei großer Schrift bleibt der Umbruch als Sicherheitsnetz erhalten. */
+/* Der rote Button steht links neben der sicheren Aktion. Die größeren
+   Buttons bleiben dank der schlankeren Außenabstände auch bei „groß“ in
+   einer Zeile; der Umbruch bleibt das Sicherheitsnetz für sehr schmale
+   Displays. */
 .modal__actions .btn {
-  padding-inline: calc((0.9rem) * var(--a11y-control-scale, 1));
+  min-height: calc((56px) * var(--a11y-control-scale, 1));
+  padding-block: calc((0.85rem) * var(--a11y-control-scale, 1));
+  padding-inline: calc((0.8rem) * var(--a11y-control-scale, 1));
+  font-size: calc((1.05rem) * var(--a11y-text-scale, 1));
+  line-height: 1.2;
 }
 .modal__actions .btn--danger { order: -1; }
+
+/* Auf sehr schmalen Displays den Dialog bis an den Rand ziehen und die
+   horizontalen Button-Innenabstände so weit reduzieren, dass die größeren
+   Buttons auch bei „groß“ nebeneinander bleiben. */
+@media (max-width: 400px) {
+  .modal { padding: 0.25rem; }
+  .modal__card { padding: 1rem; }
+  .modal__actions { gap: calc((0.4rem) * var(--a11y-control-scale, 1)); }
+  .modal__actions .btn { padding-inline: calc((0.75rem) * var(--a11y-control-scale, 1)); }
+}
+
+@media (max-width: 380px) {
+  .modal__actions .btn { padding-inline: calc((0.6rem) * var(--a11y-control-scale, 1)); }
+}
 
 .btn--danger { background: var(--c-danger); color: #fff; border: 1px solid var(--c-danger); }
 .btn--danger:hover {
