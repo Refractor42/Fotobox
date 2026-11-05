@@ -593,8 +593,9 @@ async function handleOverview(request, env) {
     'SELECT month FROM challenge_entries UNION SELECT month FROM challenge_trophies ORDER BY month DESC LIMIT 36'
   ).all();
   const nowMonth = currentMonth();
+  const MIN_CHALLENGE_MONTH = '2026-11';
   const months = [...new Set((monthRows.results || []).map((row) => row.month))]
-    .filter((value) => value <= nowMonth);
+    .filter((value) => value >= MIN_CHALLENGE_MONTH && value <= nowMonth);
 
   return json({
     ok: true,

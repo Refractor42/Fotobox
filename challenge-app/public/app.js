@@ -1,5 +1,8 @@
 /* SnapBox Challenge — öffentliche Galerie & Leaderboard */
 
+const MIN_MONTH = '2026-11';
+
+
 const THEMES = [
   'Neuer Start',
   'Liebe & Winter',
@@ -61,7 +64,7 @@ let credentialId = (() => {
   }
 })();
 let state = {
-  month: currentMonth(),
+  month: currentMonth() < MIN_MONTH ? MIN_MONTH : currentMonth(),
   data: null,
   controller: null,
   pendingVotes: new Set(),
@@ -81,8 +84,9 @@ function currentMonth() {
   }).format(new Date());
 }
 
+
 function isSelectableMonth(value) {
-  return typeof value === 'string' && /^\d{4}-\d{2}$/.test(value) && value <= currentMonth();
+  return typeof value === 'string' && /^\d{4}-\d{2}$/.test(value) && value >= MIN_MONTH && value <= currentMonth();
 }
 
 function monthLabel(month) {
@@ -265,18 +269,28 @@ function populateMonths(months) {
   const values = new Set();
   const now = currentMonth();
   if (state.month > now) state.month = now;
-  values.add(now);
-  values.add(state.month);
+  if (state.month < MIN_MONTH) state.month = now >= MIN_MONTH ? now : MIN_MONTH;
+  if (now >= MIN_MONTH) values.add(now);
+  if (state.month >= MIN_MONTH) values.add(state.month);
 
-  // Nur laufende und vergangene Monate: niemals Optionen aus der Zukunft.
+  // Nur Monate ab November 2026 und bis zum aktuellen Monat:
   for (const month of months || []) {
     if (isSelectableMonth(month)) values.add(month);
   }
 
-  const [year, month] = now.split('-').map(Number);
-  for (let i = 1; i <= 11; i += 1) {
-    const d = new Date(Date.UTC(year, month - 1 - i, 15));
-    values.add(d.toISOString().slice(0, 7));
+  // Zusätzliche Monate ab MIN_MONTH bis heute generieren
+  const [minYear, minMonth] = MIN_MONTH.split('-').map(Number);
+  const [nowYear, nowMonth] = now.split('-').map(Number);
+  let curY = nowYear;
+  let curM = nowMonth;
+  while (curY > minYear || (curY === minYear && curM >= minMonth)) {
+    const mStr = String(curM).padStart(2, '0');
+    values.add(`${curY}-${mStr}`);
+    curM--;
+    if (curM < 1) {
+      curM = 12;
+      curY--;
+    }
   }
 
   const sorted = [...values].filter(isSelectableMonth).sort().reverse();
@@ -703,14 +717,19 @@ function render() {
 
   const gallerySub = $('gallerySub');
   if (gallerySub) {
-    gallerySub.textContent = data.votingOpen
-      ? 'Ein Like pro Foto und Gerät – jederzeit wieder zurücknehmbar.'
-      : 'Die Abstimmung für diesen Monat ist beendet.';
+    if (!data.votingOpen) {
+      gallerySub.textContent = 'Die Abstimmung für diesen Monat ist beendet.';
+      gallerySub.hidden = false;
+    } else {
+      gallerySub.textContent = '';
+      gallerySub.hidden = true;
+    }
   }
 }
 
 async function loadOverview({ silent = false } = {}) {
   if (state.month > currentMonth()) state.month = currentMonth();
+  if (state.month < MIN_MONTH) state.month = currentMonth() >= MIN_MONTH ? currentMonth() : MIN_MONTH;
   if (!state.data) showSkeletons();
 
   const controller = new AbortController();
@@ -901,3 +920,13 @@ state.ticker = setInterval(() => {
 
 updateActiveTab();
 loadOverview();
+
+
+// Service Worker für PWA-Installation registrieren
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('Service Worker Registrierung fehlgeschlagen:', err);
+    });
+  });
+}
