@@ -1463,8 +1463,8 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
   padding: clamp(1.125rem, 3vw, 1.5rem);
   box-shadow: 0 24px 64px rgba(0 0 0 / 0.55);
 }
-.modal__title { font-size: calc((1.1rem) * var(--a11y-text-scale, 1)); font-weight: 600; margin-bottom: 0.5rem; }
-.modal__text { font-size: calc((0.9rem) * var(--a11y-text-scale, 1)); color: var(--c-text-2); line-height: 1.5; margin-bottom: 1.25rem; }
+.modal__title { font-size: calc((1.15rem) * var(--a11y-text-scale, 1)); font-weight: 600; margin-bottom: 0.5rem; }
+.modal__text { font-size: calc((0.95rem) * var(--a11y-text-scale, 1)); color: var(--c-text-2); line-height: 1.5; margin-bottom: 1.25rem; }
 /* Umbruch als Sicherheitsnetz: passen die Aktionen (z. B. in einer langen
    Übersetzung bei großer Skalierung) nicht nebeneinander, stapeln sie. */
 .modal__actions {
@@ -1481,7 +1481,7 @@ body:not(.photo-session-active) .gallery__delete { display: none; }
   min-height: calc((56px) * var(--a11y-control-scale, 1));
   padding-block: calc((0.85rem) * var(--a11y-control-scale, 1));
   padding-inline: calc((0.8rem) * var(--a11y-control-scale, 1));
-  font-size: calc((1.05rem) * var(--a11y-text-scale, 1));
+  font-size: calc((1.1rem) * var(--a11y-text-scale, 1));
   line-height: 1.2;
 }
 .modal__actions .btn--danger { order: -1; }
