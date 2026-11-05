@@ -124,7 +124,6 @@ const I18N = {
     btnAccept: 'Fertig',
     btnDone: 'Zurück zum Start',
     endQr: 'QR-Code',
-    endInsta: 'Instagram',
     endPrint: 'Drucken',
     sideFilter: 'Filter',
     sideOverlay: 'Overlay',
@@ -379,7 +378,6 @@ const I18N = {
     btnAccept: 'Done',
     btnDone: 'Back to start',
     endQr: 'QR Code',
-    endInsta: 'Instagram',
     endPrint: 'Print',
     sideFilter: 'Filters',
     sideOverlay: 'Overlays',
@@ -682,6 +680,9 @@ const APP_SETTINGS_DEFAULTS = Object.freeze({
   buttonTransparency: 15,
   brandName: 'SnapBox',
   qrTtlHours: 24,
+  endQrEnabled: true,
+  endPrintEnabled: true,
+  endGalleryEnabled: true,
   challengeEnabled: false,
   challengeLocation: 'lcc',
   challengeAppUrl: 'https://site-6e612acb7a47490692d7da5a7b9d9292.freebuff.page',
@@ -757,6 +758,9 @@ function normalizeAppSettings(data, base = APP_SETTINGS_DEFAULTS) {
     buttonTransparency: intInRange(merged.buttonTransparency, APP_SETTINGS_DEFAULTS.buttonTransparency, 0, 100),
     brandName: brand || APP_SETTINGS_DEFAULTS.brandName,
     qrTtlHours: intInRange(merged.qrTtlHours, APP_SETTINGS_DEFAULTS.qrTtlHours, 1, 168),
+    endQrEnabled: merged.endQrEnabled !== false,
+    endPrintEnabled: merged.endPrintEnabled !== false,
+    endGalleryEnabled: merged.endGalleryEnabled !== false,
     challengeEnabled: merged.challengeEnabled === true,
     challengeLocation: merged.challengeLocation === 'coburg' ? 'coburg' : 'lcc',
     challengeAppUrl: normalizeChallengeUrl(merged.challengeAppUrl),
@@ -1237,6 +1241,7 @@ function applyAppSettings(data) {
   applyThemeSettings(appSettings);
   applyBrandSettings(appSettings.brandName);
   applyFeatureAvailability();
+  applyEndScreenActions();
 
   // Nur bei geänderter Challenge-Konfiguration neu laden, nicht bei jedem
   // 2,5-Sekunden-Sync.
@@ -6678,29 +6683,6 @@ function returnToIdle(options = {}) {
   renderSplashChain();
 }
 
-async function shareEndPhoto() {
-  if (!endPhotoUrl) return;
-  try {
-    const blob = await (await fetch(endPhotoUrl)).blob();
-    const file = new File([blob], brandFileBase() + '.jpg', { type: blob.type || 'image/jpeg' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      await navigator.share({ files: [file], title: appSettings.brandName });
-      trackUsageEvent('share');
-      return;
-    }
-  } catch (err) {
-    /* Web Share nicht verfügbar — Download-Fallback */
-  }
-  const link = document.createElement('a');
-  link.href = endPhotoUrl;
-  link.download = brandFileBase() + '.jpg';
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  trackUsageEvent('download');
-  showToast(t('toastDownloaded'));
-}
-
 // Druckt über einen unsichtbaren iframe. So öffnet sich weder ein neuer Tab
 // noch ein sichtbares Fenster. Den System-Druckdialog kann eine Webseite
 // nicht selbst unterdrücken; im Kioskmodus erledigt das der Browserstart mit
@@ -6943,8 +6925,6 @@ document.querySelectorAll('.endscreen__action').forEach((btn) => {
     if (btn.dataset.end === 'qr') {
       if (lastPhoto && lastPhoto.id) showQrDialog(lastPhoto.id);
       else showToast(t('qrNotSaved'), { error: true });
-    } else if (btn.dataset.end === 'insta') {
-      shareEndPhoto();
     } else if (btn.dataset.end === 'print') {
       startPrintFlow();
     } else if (btn.dataset.end === 'gallery') {
@@ -6952,6 +6932,20 @@ document.querySelectorAll('.endscreen__action').forEach((btn) => {
     }
   });
 });
+
+function applyEndScreenActions() {
+  const actionSettings = {
+    qr: appSettings.endQrEnabled,
+    print: appSettings.endPrintEnabled,
+    gallery: appSettings.endGalleryEnabled
+  };
+  const buttons = Array.from(document.querySelectorAll('.endscreen__action'));
+  buttons.forEach((button) => {
+    button.hidden = actionSettings[button.dataset.end] === false;
+  });
+  const actions = document.querySelector('.endscreen__actions');
+  if (actions) actions.hidden = buttons.every((button) => button.hidden);
+}
 if ($cancelHome) {
   $cancelHome.addEventListener('click', async () => {
     if (isDiscardingPhoto || sessionCompletion) return;
@@ -7403,4 +7397,3 @@ setInterval(() => {
   }
   if (now >= idleWarnUntil) resetToStartScreen();
 }, 250);
-

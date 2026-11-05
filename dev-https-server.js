@@ -1132,6 +1132,9 @@ const DEFAULT_SETTINGS = Object.freeze({
   buttonTransparency: 15,
   brandName: 'SnapBox',
   qrTtlHours: 24,
+  endQrEnabled: true,
+  endPrintEnabled: true,
+  endGalleryEnabled: true,
   challengeEnabled: false,
   challengeLocation: 'lcc',
   challengeAppUrl: 'https://site-6e612acb7a47490692d7da5a7b9d9292.freebuff.page',
@@ -1198,6 +1201,9 @@ function sanitizeSettings(data) {
     buttonTransparency: numberInRange(raw.buttonTransparency, DEFAULT_SETTINGS.buttonTransparency, 0, 100),
     brandName: brand || DEFAULT_SETTINGS.brandName,
     qrTtlHours: numberInRange(raw.qrTtlHours, DEFAULT_SETTINGS.qrTtlHours, 1, 168),
+    endQrEnabled: raw.endQrEnabled !== false,
+    endPrintEnabled: raw.endPrintEnabled !== false,
+    endGalleryEnabled: raw.endGalleryEnabled !== false,
     challengeEnabled: raw.challengeEnabled === true,
     challengeLocation: raw.challengeLocation === 'coburg' ? 'coburg' : 'lcc',
     challengeAppUrl: sanitizeChallengeAppUrl(raw.challengeAppUrl),
@@ -1331,6 +1337,11 @@ function validateSettingsPatch(patch) {
     next.brandName = brand;
   }
   if (has('qrTtlHours')) next.qrTtlHours = assertInteger(patch.qrTtlHours, 'QR-Gültigkeit', 1, 168);
+  ['endQrEnabled', 'endPrintEnabled', 'endGalleryEnabled'].forEach((key) => {
+    if (!has(key)) return;
+    if (typeof patch[key] !== 'boolean') throw new Error('Ungültige Endscreen-Aktion.');
+    next[key] = patch[key];
+  });
   if (has('challengeEnabled')) {
     if (typeof patch.challengeEnabled !== 'boolean') throw new Error('Ungültiger Challenge-Schalter.');
     next.challengeEnabled = patch.challengeEnabled;

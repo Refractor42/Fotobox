@@ -1182,6 +1182,8 @@ body.orientation-landscape .endscreen {
   gap: clamp(30px, 6vw, 96px);
   margin-top: 6px;
 }
+.endscreen__actions[hidden],
+.endscreen__action[hidden] { display: none; }
 .endscreen__action {
   display: flex;
   flex-direction: column;

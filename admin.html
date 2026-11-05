@@ -1758,6 +1758,7 @@
       <a href="#language">Sprache</a>
       <a href="#retentionSection">Aufbewahrung</a>
       <a href="#times">Zeiten</a>
+      <a href="#endScreenSettings">Endscreen</a>
       <a href="#capture">Aufnahme</a>
       <a href="#appearance">Darstellung</a>
       <a href="#adminGallery">Fotos</a>
@@ -1863,19 +1864,6 @@
       <div class="settings-stack">
         <div class="setting-row">
           <div class="setting-row__copy">
-            <label class="setting-row__title" for="idleEndRange">Nach dem Foto</label>
-            <p class="setting-row__desc">Endscreen mit QR-Code, Teilen und Drucken. Kurz halten, damit die Warteschlange weiterläuft.</p>
-          </div>
-          <div class="setting-control">
-            <div class="range-wrap">
-              <input type="range" id="idleEndRange" min="15" max="180" step="5" value="40" />
-              <output class="range-value" id="idleEndValue" for="idleEndRange">40 s</output>
-            </div>
-          </div>
-        </div>
-
-        <div class="setting-row">
-          <div class="setting-row__copy">
             <label class="setting-row__title" for="idleProcessRange">Mitten im Ablauf</label>
             <p class="setting-row__desc">Kamera, Review, Galerie, Papierkorb und QR-Dialog. Mehr Zeit zum Positionieren, Requisiten holen oder Tippen.</p>
           </div>
@@ -1913,6 +1901,37 @@
           </div>
         </div>
 
+      </div>
+
+    </section>
+
+    <!-- Section: End Screen -->
+    <section class="section-card" id="endScreenSettings">
+      <div class="section-header">
+        <div>
+          <h2 class="section-header__title">
+            <span class="section-kicker">02</span>
+            Endscreen
+          </h2>
+          <p class="section-header__desc">Dauer und Aktionen auf dem Bildschirm nach einem Foto festlegen.</p>
+        </div>
+        <button class="btn btn--ghost section-reset" type="button" data-reset-section="endScreen" aria-label="Standardwerte für den Endscreen wiederherstellen">Standardwerte wiederherstellen</button>
+      </div>
+
+      <div class="settings-stack">
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <label class="setting-row__title" for="idleEndRange">Anzeigedauer</label>
+            <p class="setting-row__desc">Wie lange der Endscreen nach dem Foto angezeigt wird, bevor die Fotobox zum Start zurückkehrt.</p>
+          </div>
+          <div class="setting-control">
+            <div class="range-wrap">
+              <input type="range" id="idleEndRange" min="15" max="180" step="5" value="40" />
+              <output class="range-value" id="idleEndValue" for="idleEndRange">40 s</output>
+            </div>
+          </div>
+        </div>
+
         <div class="setting-row">
           <div class="setting-row__copy">
             <label class="setting-row__title" for="qrTtlHours">QR-Link gültig</label>
@@ -1923,8 +1942,46 @@
             <span class="section-note">Stunden</span>
           </div>
         </div>
-      </div>
 
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">QR-Code anzeigen</span>
+            <p class="setting-row__desc">QR-Code-Button auf dem Endscreen anzeigen.</p>
+          </div>
+          <div class="setting-control">
+            <button class="switch" id="endQrEnabledToggle" type="button" role="switch" aria-checked="true">
+              <span class="switch__track" aria-hidden="true"></span>
+              <span id="endQrEnabledText">Ein</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Drucken anzeigen</span>
+            <p class="setting-row__desc">Drucken-Button auf dem Endscreen anzeigen.</p>
+          </div>
+          <div class="setting-control">
+            <button class="switch" id="endPrintEnabledToggle" type="button" role="switch" aria-checked="true">
+              <span class="switch__track" aria-hidden="true"></span>
+              <span id="endPrintEnabledText">Ein</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-row__copy">
+            <span class="setting-row__title">Galerie anzeigen</span>
+            <p class="setting-row__desc">Galerie-Button auf dem Endscreen anzeigen.</p>
+          </div>
+          <div class="setting-control">
+            <button class="switch" id="endGalleryEnabledToggle" type="button" role="switch" aria-checked="true">
+              <span class="switch__track" aria-hidden="true"></span>
+              <span id="endGalleryEnabledText">Ein</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- Section: Capture Defaults -->
@@ -1932,7 +1989,7 @@
       <div class="section-header">
         <div>
           <h2 class="section-header__title">
-            <span class="section-kicker">02</span>
+            <span class="section-kicker">03</span>
             Aufnahme-Standard
           </h2>
           <p class="section-header__desc">Diese Werte gelten für jeden neuen Gast. Gäste können sie während ihrer Sitzung weiterhin selbst ändern; beim Zurückspringen werden sie wieder auf den Standard gesetzt. Filter, Sticker und Overlays lassen sich zusätzlich für alle Gäste ausblenden — diese Schalter wirken sofort.</p>
@@ -2040,7 +2097,7 @@
       <div class="section-header">
         <div>
           <h2 class="section-header__title">
-            <span class="section-kicker">03</span>
+            <span class="section-kicker">04</span>
             Darstellung
           </h2>
           <p class="section-header__desc">Marke und Farben der Fotobox. Die Vorschau zeigt sofort, wie Startbutton, Auslöser und Verlauf auf den Gäste-Bildschirmen aussehen.</p>
@@ -2136,7 +2193,7 @@
       <div class="section-header">
         <div>
           <h2 class="section-header__title">
-            <span class="section-kicker">04</span>
+            <span class="section-kicker">05</span>
             Galerie & Leistung
           </h2>
           <p class="section-header__desc">Galerie und Papierkorb laden Fotos seitenweise. Eine kleinere Seite startet schneller; „Mehr laden“ bleibt für alle weiteren Fotos sichtbar.</p>
@@ -2172,7 +2229,7 @@
               <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4Z"></path>
               <path d="M7 6H4a3 3 0 0 0 3 3M17 6h3a3 3 0 0 1-3 3"></path>
             </svg>
-            <span class="section-kicker">05</span>
+            <span class="section-kicker">06</span>
             Monats-Challenge
           </h2>
           <p class="section-header__desc">Verknüpft diese Fotobox mit der öffentlichen Challenge-Web-App. Standort, Adresse und API-Schlüssel werden hier hinterlegt. Der Schlüssel bleibt auf dem Server und wird nie an den Kiosk-Browser ausgeliefert.</p>
@@ -2564,6 +2621,9 @@
         buttonTransparency: 15,
         brandName: 'SnapBox',
         qrTtlHours: 24,
+        endQrEnabled: true,
+        endPrintEnabled: true,
+        endGalleryEnabled: true,
         challengeEnabled: false,
         challengeLocation: 'lcc',
         challengeAppUrl: 'https://site-6e612acb7a47490692d7da5a7b9d9292.freebuff.page'
@@ -2572,7 +2632,8 @@
       const SECTION_RESET_FIELDS = Object.freeze({
         language: ['defaultLanguage'],
         retention: ['trashRetentionDays'],
-        times: ['idleEndSeconds', 'idleProcessSeconds', 'idleWarnSeconds', 'a11yResetSeconds', 'qrTtlHours'],
+        times: ['idleProcessSeconds', 'idleWarnSeconds', 'a11yResetSeconds'],
+        endScreen: ['idleEndSeconds', 'qrTtlHours', 'endQrEnabled', 'endPrintEnabled', 'endGalleryEnabled'],
         capture: ['defaultCaptureMode', 'defaultCountdownSeconds', 'defaultSound', 'cameraFacingMode', 'filtersEnabled', 'stickersEnabled', 'overlaysEnabled'],
         appearance: ['brandName', 'accentColor', 'secondaryColor', 'backgroundColor', 'buttonColor', 'buttonTransparency'],
         gallery: ['galleryPageSize'],
@@ -2582,6 +2643,7 @@
         language: 'Standard-Sprache',
         retention: 'Papierkorb-Aufbewahrung',
         times: 'Zeiten',
+        endScreen: 'Endscreen',
         capture: 'Aufnahme-Standards',
         appearance: 'Darstellung',
         gallery: 'Galerie',
@@ -2612,6 +2674,11 @@
       const $countdownOptions = Array.from(document.querySelectorAll('[data-default-countdown]'));
       const $defaultSoundToggle = document.getElementById('defaultSoundToggle');
       const $defaultSoundText = document.getElementById('defaultSoundText');
+      const $endScreenActionToggles = ['endQrEnabled', 'endPrintEnabled', 'endGalleryEnabled'].map((key) => ({
+        key,
+        button: document.getElementById(key + 'Toggle'),
+        text: document.getElementById(key + 'Text')
+      }));
       const $filtersEnabledToggle = document.getElementById('filtersEnabledToggle');
       const $filtersEnabledText = document.getElementById('filtersEnabledText');
       const $stickersEnabledToggle = document.getElementById('stickersEnabledToggle');
@@ -2840,6 +2907,10 @@
         });
         $defaultSoundToggle.setAttribute('aria-checked', String(currentSettings.defaultSound));
         $defaultSoundText.textContent = currentSettings.defaultSound ? 'Ein' : 'Aus';
+        $endScreenActionToggles.forEach(({ key, button, text }) => {
+          button.setAttribute('aria-checked', String(currentSettings[key]));
+          text.textContent = currentSettings[key] ? 'Ein' : 'Aus';
+        });
         $filtersEnabledToggle.setAttribute('aria-checked', String(currentSettings.filtersEnabled));
         $filtersEnabledText.textContent = currentSettings.filtersEnabled ? 'Ein' : 'Aus';
         $stickersEnabledToggle.setAttribute('aria-checked', String(currentSettings.stickersEnabled));
@@ -3337,6 +3408,13 @@
       $defaultSoundToggle.addEventListener('click', () => {
         const enabled = !currentSettings.defaultSound;
         persistSettings({ defaultSound: enabled }, enabled ? 'Ton für neue Gäste eingeschaltet.' : 'Ton für neue Gäste ausgeschaltet.');
+      });
+
+      $endScreenActionToggles.forEach(({ key, button }) => {
+        button.addEventListener('click', () => {
+          const enabled = !currentSettings[key];
+          persistSettings({ [key]: enabled }, enabled ? 'Endscreen-Button eingeschaltet.' : 'Endscreen-Button ausgeblendet.');
+        });
       });
 
       $cameraFacingMode.addEventListener('change', () => {
