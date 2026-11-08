@@ -4082,26 +4082,6 @@ function openLightbox(photoUrl, photoId = null) {
   img.alt = t('photoPreviewAlt');
   lightbox.appendChild(img);
 
-  // QR-Übergabe: Foto per signiertem Link aufs Handy laden
-  if (photoId) {
-    const bar = document.createElement('div');
-    bar.className = 'lb__bar';
-    const qrBtn = document.createElement('button');
-    qrBtn.className = 'btn btn--ghost lb__qr';
-    qrBtn.type = 'button';
-    qrBtn.innerHTML = `
-      <span class="btn__icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"></rect><rect x="14" y="3" width="7" height="7" rx="1"></rect><rect x="3" y="14" width="7" height="7" rx="1"></rect><path d="M14 14h3v3h-3zM21 14v.01M14 21v.01M17.5 17.5L21 21"></path></svg>
-      </span>
-      ${t('qrBtnLabel')}`;
-    qrBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      showQrDialog(photoId);
-    });
-    bar.appendChild(qrBtn);
-    lightbox.appendChild(bar);
-  }
-
   lightbox.addEventListener('click', () => {
     const tl = timeline({
       onComplete: () => { lightbox.remove(); lightbox = null; }
